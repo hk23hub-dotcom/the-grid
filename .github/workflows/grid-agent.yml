@@ -1,0 +1,40 @@
+name: grid-agent
+
+# Keeps THE GRID current with zero manual edits.
+on:
+  schedule:
+    - cron: "0 */6 * * *"   # every 6 hours
+  workflow_dispatch: {}       # lets you run it on-demand from the Actions tab
+
+permissions:
+  contents: write             # so the agent can commit grid.json
+
+jobs:
+  refresh-grid:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run the grid agent
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: node scripts/grid-agent.mjs
+
+      - name: Commit if grid changed
+        run: |
+          git config user.name  "grid-agent"
+          git config user.email "grid-agent@users.noreply.github.com"
+          if ! git diff --quiet -- grid.json; then
+            git add grid.json
+            git commit -m "grid: auto-refresh $(date -u +%Y-%m-%dT%H:%MZ)"
+            git push
+          else
+            echo "Grid unchanged."
+          fi

@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GRID Command Center</title>
+<style>
+  :root{color-scheme:light;
+    --bg:#faf9f7; --panel:#ffffff; --panel2:#f4f2ee; --line:#e7e4dd; --line2:#d8d4ca;
+    --ink:#18181b; --mut:#6b6b73; --mut2:#9a9aa2; --gold:#a9801a; --goldbg:#fbf4dd;
+    --live:#1a9d63; --local:#a9801a; --building:#b8860b; --down:#d23b3b; --blue:#2b6fd6;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+  button{font:inherit;cursor:pointer;color:inherit;background:none;border:none}
+  input,textarea,select{font:inherit;color:var(--ink);background:#fff;border:1px solid var(--line2);
+    border-radius:8px;padding:8px 10px;width:100%;outline:none}
+  input:focus,textarea:focus,select:focus{border-color:var(--gold)}
+  textarea{resize:vertical;min-height:58px}
+  .wrap{max-width:1180px;margin:0 auto;padding:18px 16px 70px}
+  header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .brand{font-weight:800;letter-spacing:-.01em;font-size:19px}
+  .brand small{display:block;letter-spacing:.26em;font-size:9px;color:var(--mut);font-weight:600;margin-top:2px}
+  .creed{color:var(--gold);letter-spacing:.14em;font-size:10px;font-weight:700;margin-top:6px}
+  .sync{color:var(--mut);font-size:11.5px}.sync b{color:var(--live)}
+  .toolbar{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;margin-top:6px}
+  nav{display:flex;gap:4px;margin:18px 0 18px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .tab{padding:9px 14px;color:var(--mut);font-weight:600;font-size:13.5px;border-bottom:2px solid transparent;margin-bottom:-1px}
+  .tab:hover{color:var(--ink)}.tab.on{color:var(--ink);border-color:var(--gold)}
+  .tab .n{display:inline-block;min-width:16px;text-align:center;font-size:10.5px;color:#fff;background:var(--mut);border-radius:999px;padding:1px 6px;margin-left:5px}
+  .tab.on .n{background:var(--gold)}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:18px}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 14px}
+  .kpi .v{font-size:24px;font-weight:800}.kpi .v.live{color:var(--live)}.kpi .v.local{color:var(--gold)}
+  .kpi .l{color:var(--mut);font-size:11px;letter-spacing:.04em;text-transform:uppercase;margin-top:2px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+  .card .hd{height:7px}
+  .card .b{padding:12px 13px}
+  .card .nm{font-weight:700;font-size:13.5px}
+  .card .ds{color:var(--mut);font-size:12px;margin-top:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .card .ft{display:flex;justify-content:space-between;align-items:center;margin-top:10px}
+  .badge{font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:999px;border:1px solid var(--line2);color:var(--mut)}
+  .badge.live{color:var(--live);border-color:#bfe6d2;background:#eafaf2}
+  .badge.local{color:var(--gold);border-color:#ecdca6;background:var(--goldbg)}
+  .badge.building{color:var(--building);border-color:#ecdca6;background:var(--goldbg)}
+  .badge.down{color:var(--down);border-color:#f1c2c2;background:#fdeee e}
+  .mini{font-size:11px;color:var(--mut2)}
+  .noteln{font-size:11px;color:var(--blue);margin-top:8px;cursor:pointer}.noteln:hover{text-decoration:underline}
+  .sh{display:flex;justify-content:space-between;align-items:center;margin:0 0 14px;gap:10px;flex-wrap:wrap}
+  .sh h2{font-size:16px;margin:0}
+  .btn{background:var(--gold);color:#fff;font-weight:700;border-radius:8px;padding:8px 13px;font-size:12.5px}
+  .btn:hover{filter:brightness(1.06)}
+  .btn.ghost{background:#fff;border:1px solid var(--line2);color:var(--ink);font-weight:600}
+  .btn.ghost:hover{border-color:var(--gold)}
+  .btn.sm{padding:5px 9px;font-size:11.5px}
+  .row{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:12px 13px;margin-bottom:9px}
+  .row.done{opacity:.5}
+  .row .top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+  .row .ttl{font-weight:700}
+  .row .meta{color:var(--mut);font-size:11.5px;margin-top:3px}
+  .row .body{color:#3a3a40;font-size:13px;margin-top:7px;white-space:pre-wrap}
+  .count{font-variant-numeric:tabular-nums;font-weight:700;font-size:12px}
+  .count.soon{color:var(--building)}.count.over{color:var(--down)}.count.future{color:var(--live)}
+  .acts{display:flex;gap:6px;flex-shrink:0;align-items:center}
+  .x{color:var(--mut2);font-size:13px}.x:hover{color:var(--down)}
+  .form{background:var(--panel2);border:1px solid var(--line2);border-radius:12px;padding:14px;margin-bottom:16px;display:none}
+  .form.open{display:block}
+  .form .g{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:9px}
+  .form label{font-size:10.5px;color:var(--mut);letter-spacing:.04em;text-transform:uppercase;display:block;margin-bottom:4px}
+  .form .full{grid-column:1/-1}
+  .right{display:flex;gap:7px;justify-content:flex-end;margin-top:2px}
+  .board{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  @media(max-width:880px){.board{grid-template-columns:1fr 1fr}}
+  @media(max-width:520px){.board{grid-template-columns:1fr}}
+  .col{background:#f3f1ec;border:1px solid var(--line);border-radius:11px;padding:9px;min-height:110px}
+  .col h3{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);margin:3px 4px 9px;display:flex;justify-content:space-between}
+  .idea{background:#fff;border:1px solid var(--line2);border-radius:9px;padding:10px 11px;margin-bottom:8px;box-shadow:0 1px 1px rgba(0,0,0,.03)}
+  .idea .it{font-weight:700;font-size:13px}
+  .idea .ib{color:var(--mut);font-size:11.5px;margin-top:4px;white-space:pre-wrap}
+  .tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:7px}
+  .tag{font-size:9.5px;color:var(--gold);border:1px solid #ecdca6;background:var(--goldbg);border-radius:999px;padding:2px 7px}
+  .link{font-size:10.5px;color:var(--blue);margin-top:6px;display:block}
+  .idea .mv{display:flex;gap:6px;margin-top:8px;color:var(--mut2);font-size:11px}
+  .idea .mv button:hover{color:var(--gold)}
+  .empty{color:var(--mut2);font-size:12px;text-align:center;padding:18px}
+  .hide{display:none!important}
+  code{background:#f0eee8;padding:1px 5px;border-radius:5px;font-size:11.5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="brand">GRID · COMMAND CENTER<small>HK23 · UNIVERSE</small></div>
+      <div class="creed">NOT GIVEN. TAKEN.</div>
+    </div>
+    <div style="text-align:right">
+      <div class="sync" id="sync"></div>
+      <div class="toolbar">
+        <button class="btn ghost sm" onclick="exportAll()">↧ Exportar</button>
+        <button class="btn ghost sm" onclick="document.getElementById('imp').click()">↥ Importar</button>
+        <input id="imp" type="file" accept="application/json" class="hide" onchange="importAll(event)">
+      </div>
+    </div>
+  </header>
+
+  <nav id="nav">
+    <button class="tab on" data-t="overview">Estado</button>
+    <button class="tab" data-t="notes">Notas <span class="n" id="nNotes">0</span></button>
+    <button class="tab" data-t="schedule">Agenda <span class="n" id="nSched">0</span></button>
+    <button class="tab" data-t="brainstorm">Brainstorm <span class="n" id="nIdeas">0</span></button>
+  </nav>
+
+  <section id="overview">
+    <div class="kpis" id="kpis"></div>
+    <div class="grid" id="worlds"></div>
+  </section>
+
+  <section id="notes" class="hide">
+    <div class="sh"><h2>Notas</h2><button class="btn" onclick="toggleForm('noteForm')">+ Nota</button></div>
+    <div class="form" id="noteForm">
+      <div class="g">
+        <div class="full"><label>Título</label><input id="nf_title" placeholder="Idea, recordatorio, decisión…"></div>
+        <div class="full"><label>Nota</label><textarea id="nf_body" placeholder="Escribe aquí…"></textarea></div>
+        <div><label>Mundo (opcional)</label><select id="nf_world"></select></div>
+        <div><label>Etiqueta</label><input id="nf_tag" placeholder="growth, bug, idea…"></div>
+      </div>
+      <div class="right"><button class="btn ghost sm" onclick="toggleForm('noteForm')">Cancelar</button><button class="btn sm" onclick="addNote()">Guardar</button></div>
+    </div>
+    <div id="noteList"></div>
+  </section>
+
+  <section id="schedule" class="hide">
+    <div class="sh"><h2>Ejecuciones programadas</h2><button class="btn" onclick="toggleForm('schForm')">+ Programar</button></div>
+    <div class="form" id="schForm">
+      <div class="g">
+        <div class="full"><label>Qué se ejecuta</label><input id="sf_title" placeholder="Ej: refrescar grid, publicar post, deploy…"></div>
+        <div><label>Fecha y hora</label><input id="sf_when" type="datetime-local"></div>
+        <div><label>Mundo / target</label><select id="sf_world"></select></div>
+        <div><label>Repetir</label><select id="sf_rep"><option value="none">Una vez</option><option value="daily">Diario</option><option value="weekly">Semanal</option><option value="monthly">Mensual</option></select></div>
+        <div><label>Comando / acción (opcional)</label><input id="sf_cmd" placeholder="node scripts/grid-agent.mjs"></div>
+        <div class="full"><label>Detalle</label><textarea id="sf_body" placeholder="Notas de la ejecución…"></textarea></div>
+      </div>
+      <div class="right"><button class="btn ghost sm" onclick="toggleForm('schForm')">Cancelar</button><button class="btn sm" onclick="addSched()">Programar</button></div>
+    </div>
+    <div id="schList"></div>
+  </section>
+
+  <section id="brainstorm" class="hide">
+    <div class="sh"><h2>Brainstorm — propuestas & ideas</h2><button class="btn" onclick="toggleForm('ideaForm')">+ Idea</button></div>
+    <div class="form" id="ideaForm">
+      <div class="g">
+        <div class="full"><label>Título de la idea</label><input id="if_title" placeholder="Propuesta, hipótesis, mejora…"></div>
+        <div class="full"><label>Descripción</label><textarea id="if_body" placeholder="¿Qué es? ¿Por qué? ¿Cómo complementa otra idea o mundo?"></textarea></div>
+        <div><label>Mundo relacionado</label><select id="if_world"></select></div>
+        <div><label>Etiquetas (coma)</label><input id="if_tags" placeholder="growth, producto, monetización"></div>
+        <div class="full"><label>Complementa a (idea existente)</label><select id="if_link"></select></div>
+      </div>
+      <div class="right"><button class="btn ghost sm" onclick="toggleForm('ideaForm')">Cancelar</button><button class="btn sm" onclick="addIdea()">Agregar</button></div>
+    </div>
+    <div class="board" id="board"></div>
+  </section>
+</div>
+
+<script>
+/* ===== datos de los mundos (embebidos; el agente regenera grid.json afuera) ===== */
+const GRID={generatedAt:"2026-06-26T06:23:00.746Z",worlds:[
+{id:"chile-goldmine",name:"CHILE GOLDMINE",description:"Turn the map collection into sales and funnel followers to the La Iglesia Goldmine landing page.",url:"https://hk23universe.vercel.app/chile-goldmine",status:"local",lastPush:"2026-06-22T03:04:49Z"},
+{id:"vicegolfer-command-center",name:"VICEGOLFER COMMAND CENTER",description:"Capture archive — raw intel accumulating before the final dashboard.",url:"https://hk23universe.vercel.app/vicegolfer-command-center",status:"local",lastPush:"2026-06-21T08:37:03Z"},
+{id:"cryptovice-honeyscam",name:"CRYPTOVICE HONEYSCAM",description:"Honeypot pitch deck — a world in progress.",url:"https://hk23universe.vercel.app/cryptovice-honeyscam",status:"local",lastPush:"2026-06-21T08:35:09Z"},
+{id:"uno-al-dia-soprole",name:"UNO AL DIA SOPROLE",description:"Arma tu Mundo — creative concepts & skins kit.",url:"https://hk23universe.vercel.app/uno-al-dia-soprole",status:"local",lastPush:"2026-06-21T03:58:25Z"},
+{id:"affiliate-growth-agent",name:"AFFILIATE GROWTH AGENT",description:"Pre-launch growth system — content engine, funnels, automation stack.",url:"https://hk23universe.vercel.app/affiliate-growth-agent",status:"local",lastPush:"2026-06-18T11:50:47Z"},
+{id:"atlas-x",name:"ATLAS X",description:"Adaptive Thinking, Learning & Action System.",url:"https://hk23universe.vercel.app/atlas-x",status:"local",lastPush:"2026-06-18T06:15:13Z"},
+{id:"hk23-vice-os-ecosystem",name:"HK23 VICE OS ECOSYSTEM",description:"Get all 7 agents running · 15 min setup.",url:"https://hk23universe.vercel.app/hk23-vice-os-ecosystem",status:"local",lastPush:"2026-05-27T02:23:41Z"},
+{id:"how-to-use-claude",name:"HOW TO USE CLAUDE",description:"Claude Cowork project instructions & launch assets.",url:"https://hk23universe.vercel.app/how-to-use-claude",status:"local",lastPush:"2026-05-24T16:56:18Z"}
+]};
+const HUE={live:"#1a9d63",local:"#a9801a",building:"#b8860b",down:"#d23b3b"};
+
+/* ===== store (persiste en el navegador de Cowork) ===== */
+const KEY="grid_command_v1";
+const COLS=[["proposal","Propuestas"],["exploring","Explorando"],["approved","Aprobadas"],["shipped","Lanzadas"]];
+let DB=load();
+function load(){try{return JSON.parse(localStorage.getItem(KEY))||seed()}catch(e){return seed()}}
+function seed(){return{notes:[],schedules:[],ideas:[]}}
+function save(){localStorage.setItem(KEY,JSON.stringify(DB));paintCounts()}
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const esc=s=>(s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmt=d=>new Date(d).toLocaleString(undefined,{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"});
+function worldName(id){const w=GRID.worlds.find(x=>x.id===id);return w?w.name:id}
+
+/* ===== overview ===== */
+function paintSync(){document.getElementById("sync").innerHTML=GRID.generatedAt?`agente · última corrida <b>${fmt(GRID.generatedAt)}</b>`:"";}
+function paintOverview(){
+  const w=GRID.worlds,by=s=>w.filter(x=>(x.status||"local")===s).length;
+  const k=[["TOTAL",w.length,""],["LIVE",by("live"),"live"],["LOCAL",by("local"),"local"],["IDEAS",DB.ideas.length,""],["AGENDA",DB.schedules.filter(s=>!s.done).length,""]];
+  document.getElementById("kpis").innerHTML=k.map(([l,v,c])=>`<div class="kpi"><div class="v ${c}">${v}</div><div class="l">${l}</div></div>`).join("");
+  document.getElementById("worlds").innerHTML=w.map(x=>{
+    const st=x.status||"local",n=DB.notes.filter(z=>z.world===x.id).length;
+    return `<div class="card"><div class="hd" style="background:${HUE[st]||"#a9801a"}"></div><div class="b">
+      <div class="nm">${esc(x.name)}</div><div class="ds">${esc(x.description||"")}</div>
+      <div class="ft"><span class="badge ${st}">${st}</span><span class="mini">${x.lastPush?"push "+fmt(x.lastPush):""}</span></div>
+      <div class="noteln" onclick="quickNote('${x.id}')">+ nota${n?` · ${n}`:""}</div></div></div>`;
+  }).join("");
+}
+function fillWorldSelects(){
+  const opts=`<option value="">— ninguno —</option>`+GRID.worlds.map(w=>`<option value="${w.id}">${esc(w.name)}</option>`).join("");
+  ["nf_world","sf_world","if_world"].forEach(id=>{const e=document.getElementById(id);if(e)e.innerHTML=opts});
+  const il=document.getElementById("if_link");if(il)il.innerHTML=`<option value="">— ninguna —</option>`+DB.ideas.map(i=>`<option value="${i.id}">${esc(i.title)}</option>`).join("");
+}
+
+/* ===== notes ===== */
+function quickNote(world){switchTab("notes");toggleForm("noteForm",true);document.getElementById("nf_world").value=world;document.getElementById("nf_title").focus()}
+function addNote(){const t=document.getElementById("nf_title").value.trim(),b=document.getElementById("nf_body").value.trim();if(!t&&!b)return;
+  DB.notes.unshift({id:uid(),title:t||"(sin título)",body:b,world:document.getElementById("nf_world").value,tag:document.getElementById("nf_tag").value.trim(),at:Date.now()});
+  save();["nf_title","nf_body","nf_tag"].forEach(i=>document.getElementById(i).value="");toggleForm("noteForm",false);paintNotes();paintOverview()}
+function delNote(id){DB.notes=DB.notes.filter(n=>n.id!==id);save();paintNotes();paintOverview()}
+function paintNotes(){document.getElementById("noteList").innerHTML=DB.notes.length?DB.notes.map(n=>`<div class="row"><div class="top">
+  <div><div class="ttl">${esc(n.title)}</div><div class="meta">${fmt(n.at)}${n.world?` · ${esc(worldName(n.world))}`:""}${n.tag?` · #${esc(n.tag)}`:""}</div></div>
+  <div class="acts"><button class="x" onclick="delNote('${n.id}')">✕</button></div></div>${n.body?`<div class="body">${esc(n.body)}</div>`:""}</div>`).join(""):`<div class="empty">Sin notas todavía.</div>`}
+
+/* ===== schedule ===== */
+function addSched(){const t=document.getElementById("sf_title").value.trim(),when=document.getElementById("sf_when").value;if(!t||!when){alert("Falta título o fecha");return}
+  DB.schedules.push({id:uid(),title:t,when:new Date(when).getTime(),world:document.getElementById("sf_world").value,repeat:document.getElementById("sf_rep").value,cmd:document.getElementById("sf_cmd").value.trim(),body:document.getElementById("sf_body").value.trim(),done:false});
+  save();["sf_title","sf_cmd","sf_body"].forEach(i=>document.getElementById(i).value="");toggleForm("schForm",false);paintSched();paintOverview()}
+function delSched(id){DB.schedules=DB.schedules.filter(s=>s.id!==id);save();paintSched();paintOverview()}
+function toggleDone(id){const s=DB.schedules.find(x=>x.id===id);if(s)s.done=!s.done;save();paintSched();paintOverview()}
+function countdown(ts){const d=ts-Date.now(),day=864e5;if(d<0)return["vencido","over"];if(d<36e5)return[Math.round(d/6e4)+" min","soon"];if(d<day)return[Math.round(d/36e5)+" h","soon"];return[Math.round(d/day)+" d","future"]}
+function paintSched(){const list=[...DB.schedules].sort((a,b)=>a.when-b.when);
+  document.getElementById("schList").innerHTML=list.length?list.map(s=>{const[c,cls]=countdown(s.when);
+    return `<div class="row ${s.done?"done":""}"><div class="top"><div><div class="ttl">${esc(s.title)} ${s.repeat!=="none"?`<span class="tag">↻ ${s.repeat}</span>`:""}</div>
+    <div class="meta">${fmt(s.when)}${s.world?` · ${esc(worldName(s.world))}`:""}${s.cmd?` · <code>${esc(s.cmd)}</code>`:""}</div></div>
+    <div class="acts"><span class="count ${cls}">${s.done?"hecho":c}</span><button class="btn ghost sm" onclick="toggleDone('${s.id}')">${s.done?"↺":"✓"}</button><button class="x" onclick="delSched('${s.id}')">✕</button></div></div>${s.body?`<div class="body">${esc(s.body)}</div>`:""}</div>`}).join(""):`<div class="empty">Sin ejecuciones programadas.</div>`}
+
+/* ===== brainstorm ===== */
+function addIdea(){const t=document.getElementById("if_title").value.trim();if(!t)return;
+  DB.ideas.unshift({id:uid(),title:t,body:document.getElementById("if_body").value.trim(),world:document.getElementById("if_world").value,tags:document.getElementById("if_tags").value.split(",").map(x=>x.trim()).filter(Boolean),link:document.getElementById("if_link").value,status:"proposal",at:Date.now()});
+  save();["if_title","if_body","if_tags"].forEach(i=>document.getElementById(i).value="");toggleForm("ideaForm",false);fillWorldSelects();paintBoard();paintOverview()}
+function delIdea(id){DB.ideas=DB.ideas.filter(i=>i.id!==id);save();fillWorldSelects();paintBoard();paintOverview()}
+function moveIdea(id,dir){const i=DB.ideas.find(x=>x.id===id);if(!i)return;const o=COLS.map(c=>c[0]);let idx=o.indexOf(i.status)+dir;idx=Math.max(0,Math.min(o.length-1,idx));i.status=o[idx];save();paintBoard()}
+function ideaTitle(id){const i=DB.ideas.find(x=>x.id===id);return i?i.title:""}
+function paintBoard(){document.getElementById("board").innerHTML=COLS.map(([key,label])=>{const items=DB.ideas.filter(i=>(i.status||"proposal")===key);
+  return `<div class="col"><h3>${label}<span>${items.length}</span></h3>${items.map(i=>`<div class="idea"><div class="it">${esc(i.title)}</div>
+    ${i.body?`<div class="ib">${esc(i.body)}</div>`:""}${i.world?`<div class="link">◆ ${esc(worldName(i.world))}</div>`:""}${i.link?`<div class="link">↳ complementa: ${esc(ideaTitle(i.link))}</div>`:""}
+    ${i.tags&&i.tags.length?`<div class="tags">${i.tags.map(t=>`<span class="tag">${esc(t)}</span>`).join("")}</div>`:""}
+    <div class="mv"><button onclick="moveIdea('${i.id}',-1)">◀</button><button onclick="moveIdea('${i.id}',1)">▶</button><button onclick="delIdea('${i.id}')" style="margin-left:auto">✕</button></div></div>`).join("")||`<div class="empty">—</div>`}</div>`}).join("")}
+
+/* ===== export/import ===== */
+function download(name,obj){const b=new Blob([JSON.stringify(obj,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=name;a.click()}
+function exportAll(){download("grid-command-export.json",{exportedAt:new Date().toISOString(),...DB})}
+function importAll(ev){const f=ev.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{try{const d=JSON.parse(rd.result);DB.notes=d.notes||DB.notes;DB.schedules=d.schedules||DB.schedules;DB.ideas=d.ideas||DB.ideas;save();renderAll();alert("Importado.")}catch(e){alert("Archivo inválido")}};rd.readAsText(f);ev.target.value=""}
+
+/* ===== ui ===== */
+function toggleForm(id,force){const e=document.getElementById(id);e.classList.toggle("open",force!==undefined?force:!e.classList.contains("open"))}
+function switchTab(t){document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("on",b.dataset.t===t));["overview","notes","schedule","brainstorm"].forEach(s=>document.getElementById(s).classList.toggle("hide",s!==t))}
+document.getElementById("nav").addEventListener("click",e=>{const b=e.target.closest(".tab");if(b)switchTab(b.dataset.t)});
+function paintCounts(){document.getElementById("nNotes").textContent=DB.notes.length;document.getElementById("nSched").textContent=DB.schedules.filter(s=>!s.done).length;document.getElementById("nIdeas").textContent=DB.ideas.length}
+function renderAll(){paintSync();paintOverview();paintNotes();paintSched();paintBoard();fillWorldSelects();paintCounts()}
+renderAll();
+setInterval(()=>{if(!document.getElementById("schedule").classList.contains("hide"))paintSched()},30000);
+</script>
+</body>
+</html>
