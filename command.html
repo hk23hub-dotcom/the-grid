@@ -7,7 +7,7 @@
 <style>
   :root{
     --bg:#08080a; --panel:#101014; --panel2:#15151b; --line:#1d1d22; --line2:#2a2a33;
-    --ink:#f4f4f5; --mut:#8a8a92; --mut2:#5d5d66; --gold:#d4af37;
+    --ink:#f4f4f5; --mut:#8a8a92; --mut2:#5d5d66; --gold:#d4af37; --goldbg:#2a2410;
     --live:#3ecf8e; --local:#d4af37; --building:#e0b341; --down:#ef5b5b; --blue:#5b9cf0;
   }
   *{box-sizing:border-box}
@@ -26,7 +26,6 @@
   .creed{color:var(--gold);letter-spacing:.16em;font-size:11px;font-weight:700}
   .sync{color:var(--mut);font-size:12px}
   .sync b{color:var(--live)}
-  /* tabs */
   nav{display:flex;gap:6px;margin:22px 0 20px;border-bottom:1px solid var(--line);flex-wrap:wrap}
   .tab{padding:10px 16px;color:var(--mut);font-weight:600;font-size:14px;border-bottom:2px solid transparent;margin-bottom:-1px}
   .tab:hover{color:var(--ink)}
@@ -34,13 +33,11 @@
   .tab .n{display:inline-block;min-width:18px;text-align:center;font-size:11px;color:var(--bg);
     background:var(--mut);border-radius:999px;padding:1px 6px;margin-left:6px}
   .tab.on .n{background:var(--gold)}
-  /* kpis */
   .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:22px}
   .kpi{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:15px 16px}
   .kpi .v{font-size:28px;font-weight:800}
   .kpi .l{color:var(--mut);font-size:12px;letter-spacing:.04em;text-transform:uppercase;margin-top:2px}
   .kpi .v.live{color:var(--live)} .kpi .v.local{color:var(--gold)}
-  /* cards grid */
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
   .card .shot{aspect-ratio:16/9;object-fit:cover;width:100%;background:#0d0d10}
@@ -54,7 +51,6 @@
   .mini{font-size:11.5px;color:var(--mut2)}
   .noteln{font-size:11.5px;color:var(--blue);margin-top:8px;cursor:pointer}
   .noteln:hover{text-decoration:underline}
-  /* section header */
   .sh{display:flex;justify-content:space-between;align-items:center;margin:0 0 16px;gap:12px;flex-wrap:wrap}
   .sh h2{font-size:18px;margin:0}
   .btn{background:var(--gold);color:#1a1405;font-weight:700;border-radius:9px;padding:9px 15px;font-size:13px}
@@ -62,7 +58,6 @@
   .btn.ghost{background:transparent;border:1px solid var(--line2);color:var(--ink);font-weight:600}
   .btn.ghost:hover{border-color:var(--gold)}
   .btn.sm{padding:5px 10px;font-size:12px}
-  /* list rows */
   .row{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 15px;margin-bottom:10px}
   .row.done{opacity:.5}
   .row .top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
@@ -73,14 +68,12 @@
   .count.soon{color:var(--building)} .count.over{color:var(--down)} .count.future{color:var(--live)}
   .acts{display:flex;gap:6px;flex-shrink:0}
   .x{color:var(--mut2);font-size:13px} .x:hover{color:var(--down)}
-  /* form panel */
   .form{background:var(--panel2);border:1px solid var(--line2);border-radius:14px;padding:16px;margin-bottom:20px;display:none}
   .form.open{display:block}
   .form .g{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
   .form label{font-size:11px;color:var(--mut);letter-spacing:.05em;text-transform:uppercase;display:block;margin-bottom:4px}
   .form .full{grid-column:1/-1}
   .right{display:flex;gap:8px;justify-content:flex-end;margin-top:4px}
-  /* brainstorm board */
   .board{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
   @media(max-width:900px){.board{grid-template-columns:1fr 1fr}}
   @media(max-width:560px){.board{grid-template-columns:1fr}}
@@ -98,11 +91,43 @@
   .empty{color:var(--mut2);font-size:12.5px;text-align:center;padding:20px}
   .hide{display:none!important}
   .toolbar{display:flex;gap:8px;flex-wrap:wrap}
-  /* modal */
   .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:20px;z-index:50}
   .modal.open{display:flex}
   .sheet{background:var(--panel);border:1px solid var(--line2);border-radius:16px;padding:20px;max-width:440px;width:100%}
   .sheet h3{margin:0 0 14px}
+  .stylewrap{display:flex;gap:18px;flex-wrap:wrap}
+  .stylecol{min-width:240px}.stylecol.grow{flex:1;min-width:300px}
+  .styleblock{margin-bottom:16px}
+  .styleblock label,.stylecol>label{font-size:11px;color:var(--mut);letter-spacing:.05em;text-transform:uppercase;display:block;margin-bottom:7px}
+  .chips{display:flex;flex-wrap:wrap;gap:7px}
+  .chip{border:1px solid var(--line2);background:var(--panel);border-radius:9px;padding:7px 12px;font-size:12.5px;font-weight:600;color:var(--ink);display:flex;align-items:center;gap:7px}
+  .chip:hover{border-color:var(--gold)}
+  .chip.on{border-color:var(--gold);background:var(--goldbg)}
+  .chip .sw{width:12px;height:12px;border-radius:3px;border:1px solid rgba(255,255,255,.15)}
+  .stylenote{font-size:12px;color:var(--live);margin-top:6px;min-height:16px}
+  .sp{border:1px solid var(--line2);border-radius:14px;padding:14px;background:var(--bg,#08080a)}
+  [data-skin="vice-gold"]{--pbg:#08080a;--ppanel:#101014;--pline:#1d1d22;--pink:#f4f4f5;--pmut:#8a8a92;--pacc:#d4af37}
+  [data-skin="neon"]{--pbg:#05060a;--ppanel:#0b0e16;--pline:#16202e;--pink:#eaf6ff;--pmut:#7d93ad;--pacc:#00e5ff}
+  [data-skin="mono"]{--pbg:#000;--ppanel:#0c0c0c;--pline:#242424;--pink:#fff;--pmut:#9a9a9a;--pacc:#fff}
+  [data-skin="light"]{--pbg:#faf9f7;--ppanel:#fff;--pline:#e7e4dd;--pink:#18181b;--pmut:#6b6b73;--pacc:#a9801a}
+  [data-skin="blood"]{--pbg:#0a0606;--ppanel:#150c0c;--pline:#2a1414;--pink:#f6ecec;--pmut:#a98a8a;--pacc:#ff3b3b}
+  [data-skin="cyber"]{--pbg:#050a06;--ppanel:#0a140a;--pline:#15301a;--pink:#d8ffe0;--pmut:#6fae7f;--pacc:#39ff14}
+  .sp{background:var(--pbg)}
+  .spgrid{display:grid;gap:10px;grid-template-columns:repeat(2,1fr)}
+  .sp[data-layout="compact"] .spgrid{grid-template-columns:repeat(3,1fr)}
+  .sp[data-layout="list"] .spgrid{grid-template-columns:1fr}
+  .sp[data-layout="list"] .spcard{flex-direction:row}
+  .sp[data-layout="list"] .spshot{width:90px;height:auto;aspect-ratio:auto}
+  .sp[data-layout="masonry"] .spgrid{display:block;column-count:2;column-gap:10px}
+  .sp[data-layout="masonry"] .spcard{break-inside:avoid;margin-bottom:10px}
+  .spcard{background:var(--ppanel);border:1px solid var(--pline);border-radius:10px;overflow:hidden;display:flex;flex-direction:column}
+  .spshot{aspect-ratio:4/3;width:100%;object-fit:cover;display:block;background:var(--pline)}
+  .sp[data-preview="contain"] .spshot{object-fit:contain}
+  .sp[data-preview="framed"] .spshot{padding:6px;background:var(--ppanel);border-radius:9px}
+  .sp[data-preview="grayscale"] .spshot{filter:grayscale(1)}
+  .spb{padding:8px 9px}
+  .spn{font-size:11px;font-weight:700;color:var(--pink)}
+  .spbadge{font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--pacc);margin-top:4px;display:inline-block}
 </style>
 </head>
 <body>
@@ -129,15 +154,14 @@
     <button class="tab" data-t="notes">Notas <span class="n" id="nNotes">0</span></button>
     <button class="tab" data-t="schedule">Agenda <span class="n" id="nSched">0</span></button>
     <button class="tab" data-t="brainstorm">Brainstorm <span class="n" id="nIdeas">0</span></button>
+    <button class="tab" data-t="styles">Estilos</button>
   </nav>
 
-  <!-- OVERVIEW -->
   <section id="overview">
     <div class="kpis" id="kpis"></div>
     <div class="grid" id="worlds"></div>
   </section>
 
-  <!-- NOTES -->
   <section id="notes" class="hide">
     <div class="sh"><h2>Notas</h2><button class="btn" onclick="toggleForm('noteForm')">+ Nota</button></div>
     <div class="form" id="noteForm">
@@ -152,7 +176,6 @@
     <div id="noteList"></div>
   </section>
 
-  <!-- SCHEDULE -->
   <section id="schedule" class="hide">
     <div class="sh"><h2>Ejecuciones programadas</h2><button class="btn" onclick="toggleForm('schForm')">+ Programar</button></div>
     <div class="form" id="schForm">
@@ -169,7 +192,6 @@
     <div id="schList"></div>
   </section>
 
-  <!-- BRAINSTORM -->
   <section id="brainstorm" class="hide">
     <div class="sh">
       <h2>Brainstorm — propuestas & ideas</h2>
@@ -187,30 +209,42 @@
     </div>
     <div class="board" id="board"></div>
   </section>
+
+  <section id="styles" class="hide">
+    <div class="sh"><h2>Estudio de Estilos</h2>
+      <button class="btn" onclick="saveTheme()">✓ Aplicar a la grilla</button></div>
+    <div class="stylewrap">
+      <div class="stylecol">
+        <div class="styleblock"><label>Skin · color</label><div class="chips" id="skinPicker"></div></div>
+        <div class="styleblock"><label>Layout de grilla</label><div class="chips" id="layoutPicker"></div></div>
+        <div class="styleblock"><label>Estilo de preview</label><div class="chips" id="previewPicker"></div></div>
+        <div class="stylenote" id="styleSaved"></div>
+      </div>
+      <div class="stylecol grow">
+        <label>Vista previa en vivo</label>
+        <div class="sp" id="stylePreview"></div>
+      </div>
+    </div>
+  </section>
 </div>
 
 <div class="modal" id="modal"><div class="sheet"><h3 id="mTitle"></h3><div id="mBody"></div>
   <div class="right" style="margin-top:16px"><button class="btn ghost sm" onclick="closeModal()">Cerrar</button></div></div></div>
 
 <script>
-/* ---------- CLOUD CONFIG ----------
-   Pega tu proyecto Supabase aquí para sincronizar en la nube (multi-dispositivo + agente).
-   Déjalo vacío y funciona solo-local (este navegador). Ver SETUP-CLOUD.md  */
 const CLOUD={
-  url:"https://qhklngvzdmwsbopbkiff.supabase.co",   // tu Project URL
+  url:"https://qhklngvzdmwsbopbkiff.supabase.co",
   key:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFoa2xuZ3Z6ZG13c2JvcGJraWZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3OTEwOTYsImV4cCI6MjA5NzM2NzA5Nn0.ttdBrxCF6Wl6I8yKOICfTq7WyPylMmSmdKGUb176BCs"
 };
 const ROW="hk23";
 
-/* ---------- store ---------- */
 const KEY="grid_command_v1";
 const COLS=[["proposal","Propuestas"],["exploring","Explorando"],["approved","Aprobadas"],["shipped","Lanzadas"]];
 let DB=load(), GRID={worlds:[],generatedAt:null};
 function load(){try{return JSON.parse(localStorage.getItem(KEY))||seed()}catch(e){return seed()}}
-function seed(){return{notes:[],schedules:[],ideas:[]}}
+function seed(){return{notes:[],schedules:[],ideas:[],theme:{skin:"vice-gold",layout:"cards",preview:"cover"}}}
 function save(){localStorage.setItem(KEY,JSON.stringify(DB));paintCounts();pushCloud()}
 
-/* ---------- cloud sync (Supabase REST) ---------- */
 function cloudOn(){return !!(CLOUD.url&&CLOUD.key)}
 function cloudHdr(){return{apikey:CLOUD.key,Authorization:"Bearer "+CLOUD.key,"Content-Type":"application/json"}}
 async function pullCloud(){
@@ -246,7 +280,6 @@ const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const esc=s=>(s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const fmt=d=>new Date(d).toLocaleString(undefined,{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"});
 
-/* ---------- grid status ---------- */
 async function refresh(){
   try{
     const r=await fetch("./grid.json",{cache:"no-store"});
@@ -282,7 +315,6 @@ function paintOverview(){
   }).join("") : `<div class="empty">Sin mundos. Corré el importador o el agente.</div>`;
 }
 
-/* ---------- selects ---------- */
 function fillWorldSelects(){
   const opts=`<option value="">— ninguno —</option>`+(GRID.worlds||[]).map(w=>`<option value="${w.id}">${esc(w.name)}</option>`).join("");
   ["nf_world","sf_world","if_world"].forEach(id=>{const e=document.getElementById(id);if(e)e.innerHTML=opts;});
@@ -290,7 +322,6 @@ function fillWorldSelects(){
   if(il)il.innerHTML=`<option value="">— ninguna —</option>`+DB.ideas.map(i=>`<option value="${i.id}">${esc(i.title)}</option>`).join("");
 }
 
-/* ---------- notes ---------- */
 function quickNote(world){switchTab("notes");toggleForm("noteForm",true);document.getElementById("nf_world").value=world;document.getElementById("nf_title").focus();}
 function addNote(){
   const t=document.getElementById("nf_title").value.trim();
@@ -313,7 +344,6 @@ function paintNotes(){
     :`<div class="empty">Sin notas todavía.</div>`;
 }
 
-/* ---------- schedule ---------- */
 function addSched(){
   const t=document.getElementById("sf_title").value.trim();
   const when=document.getElementById("sf_when").value;
@@ -348,7 +378,6 @@ function paintSched(){
   }).join(""):`<div class="empty">Sin ejecuciones programadas.</div>`;
 }
 
-/* ---------- brainstorm ---------- */
 function addIdea(){
   const t=document.getElementById("if_title").value.trim();if(!t)return;
   DB.ideas.unshift({id:uid(),title:t,body:document.getElementById("if_body").value.trim(),
@@ -382,14 +411,12 @@ function paintBoard(){
   }).join("");
 }
 
-/* ---------- export/import ---------- */
 function download(name,obj){
   const blob=new Blob([JSON.stringify(obj,null,2)],{type:"application/json"});
   const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;a.click();
 }
 function exportAll(){
   download("grid-command-export.json",{exportedAt:new Date().toISOString(),...DB});
-  // also emit schedules.json the agent/Action can consume
   download("schedules.json",{schedules:DB.schedules.filter(s=>!s.done).map(s=>({
     title:s.title,when:new Date(s.when).toISOString(),repeat:s.repeat,cmd:s.cmd,world:s.world}))});
 }
@@ -402,12 +429,31 @@ function importAll(ev){
   rd.readAsText(f);ev.target.value="";
 }
 
-/* ---------- ui plumbing ---------- */
 function toggleForm(id,force){const e=document.getElementById(id);const on=force!==undefined?force:!e.classList.contains("open");e.classList.toggle("open",on);}
 function switchTab(t){
   document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("on",b.dataset.t===t));
-  ["overview","notes","schedule","brainstorm"].forEach(s=>document.getElementById(s).classList.toggle("hide",s!==t));
+  ["overview","notes","schedule","brainstorm","styles"].forEach(s=>document.getElementById(s).classList.toggle("hide",s!==t));
 }
+
+const SKINS=[["vice-gold","Vice Gold","#d4af37"],["neon","Neon","#00e5ff"],["mono","Mono","#ffffff"],["light","Light","#a9801a"],["blood","Blood","#ff3b3b"],["cyber","Cyber","#39ff14"]];
+const LAYOUTS=[["cards","Cards"],["compact","Compacto"],["list","Lista"],["masonry","Mosaico"]];
+const PREVIEWS=[["cover","Cubrir"],["contain","Contener"],["framed","Marco"],["grayscale","B/N → color"]];
+function theme(){ if(!DB.theme)DB.theme={skin:"vice-gold",layout:"cards",preview:"cover"}; return DB.theme; }
+function renderStyles(){
+  const t=theme();
+  const chip=(arr,key,sw)=>arr.map(([v,l,c])=>`<button class="chip ${t[key]===v?"on":""}" onclick="setStyle('${key}','${v}')">${sw&&c?`<span class="sw" style="background:${c}"></span>`:""}${l}</button>`).join("");
+  document.getElementById("skinPicker").innerHTML=chip(SKINS,"skin",true);
+  document.getElementById("layoutPicker").innerHTML=chip(LAYOUTS,"layout");
+  document.getElementById("previewPicker").innerHTML=chip(PREVIEWS,"preview");
+  const sp=document.getElementById("stylePreview");
+  sp.dataset.skin=t.skin;sp.dataset.layout=t.layout;sp.dataset.preview=t.preview;
+  const ws=(GRID.worlds||[]).slice(0,6);
+  sp.innerHTML=`<div class="spgrid">${ws.map(w=>`<div class="spcard">
+    ${w.preview?`<img class="spshot" src="${esc(w.preview)}" alt="">`:`<div class="spshot"></div>`}
+    <div class="spb"><div class="spn">${esc(w.name)}</div><div class="spbadge">${w.status||"local"}</div></div></div>`).join("")||'<div class="empty">Sin mundos para previsualizar.</div>'}</div>`;
+}
+function setStyle(key,val){theme()[key]=val;save();renderStyles();}
+function saveTheme(){save();const e=document.getElementById("styleSaved");e.textContent="✓ Aplicado. La grilla pública toma el estilo al recargar.";setTimeout(()=>e.textContent="",4000);}
 document.getElementById("nav").addEventListener("click",e=>{const b=e.target.closest(".tab");if(b)switchTab(b.dataset.t);});
 function paintCounts(){
   document.getElementById("nNotes").textContent=DB.notes.length;
@@ -415,13 +461,12 @@ function paintCounts(){
   document.getElementById("nIdeas").textContent=DB.ideas.length;
 }
 function closeModal(){document.getElementById("modal").classList.remove("open");}
-function renderAll(){paintOverview();paintNotes();paintSched();paintBoard();fillWorldSelects();paintCounts();}
+function renderAll(){paintOverview();paintNotes();paintSched();paintBoard();fillWorldSelects();paintCounts();renderStyles();}
 
-/* ---------- boot ---------- */
 renderAll();refresh();setCloudState("ok");pullCloud();
-setInterval(refresh,60000);          // auto-actualiza estado cada 60s
-setInterval(pullCloud,45000);        // re-sincroniza desde la nube cada 45s
-setInterval(()=>{if(!document.getElementById("schedule").classList.contains("hide"))paintSched();},30000); // countdowns
+setInterval(refresh,60000);
+setInterval(pullCloud,45000);
+setInterval(()=>{if(!document.getElementById("schedule").classList.contains("hide"))paintSched();},30000);
 </script>
 </body>
 </html>
