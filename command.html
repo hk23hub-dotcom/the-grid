@@ -128,6 +128,9 @@
   .spb{padding:8px 9px}
   .spn{font-size:11px;font-weight:700;color:var(--pink)}
   .spbadge{font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--pacc);margin-top:4px;display:inline-block}
+  .sp[data-bg="glow"]{background-image:radial-gradient(420px 240px at 15% -10%, color-mix(in srgb, var(--pacc) 22%, transparent), transparent 60%)}
+  .sp[data-bg="grid"]{background-image:linear-gradient(var(--pline) 1px,transparent 1px),linear-gradient(90deg,var(--pline) 1px,transparent 1px);background-size:26px 26px}
+  .sp[data-bg="dots"]{background-image:radial-gradient(var(--pline) 1.1px,transparent 1.1px);background-size:16px 16px}
 </style>
 </head>
 <body>
@@ -160,6 +163,7 @@
   <section id="overview">
     <div class="kpis" id="kpis"></div>
     <div class="grid" id="worlds"></div>
+    <div id="archiveWrap" style="margin-top:26px"></div>
   </section>
 
   <section id="notes" class="hide">
@@ -218,6 +222,7 @@
         <div class="styleblock"><label>Skin · color</label><div class="chips" id="skinPicker"></div></div>
         <div class="styleblock"><label>Layout de grilla</label><div class="chips" id="layoutPicker"></div></div>
         <div class="styleblock"><label>Estilo de preview</label><div class="chips" id="previewPicker"></div></div>
+        <div class="styleblock"><label>Fondo</label><div class="chips" id="bgPicker"></div></div>
         <div class="stylenote" id="styleSaved"></div>
       </div>
       <div class="stylecol grow">
@@ -242,7 +247,7 @@ const KEY="grid_command_v1";
 const COLS=[["proposal","Propuestas"],["exploring","Explorando"],["approved","Aprobadas"],["shipped","Lanzadas"]];
 let DB=load(), GRID={worlds:[],generatedAt:null};
 function load(){try{return JSON.parse(localStorage.getItem(KEY))||seed()}catch(e){return seed()}}
-function seed(){return{notes:[],schedules:[],ideas:[],theme:{skin:"vice-gold",layout:"cards",preview:"cover"}}}
+function seed(){return{notes:[],schedules:[],ideas:[],archived:[],theme:{skin:"vice-gold",layout:"cards",preview:"cover",bg:"solid"}}}
 function save(){localStorage.setItem(KEY,JSON.stringify(DB));paintCounts();pushCloud()}
 
 function cloudOn(){return !!(CLOUD.url&&CLOUD.key)}
@@ -293,26 +298,38 @@ function paintSync(){
     el.innerHTML=`agente · última corrida <b>${fmt(GRID.generatedAt)}</b>`;
   }else{el.textContent="grid.json no encontrado (modo local)";}
 }
+function isArch(id){return (DB.archived||[]).includes(id);}
+function archiveWorld(id){DB.archived=DB.archived||[];if(!DB.archived.includes(id))DB.archived.push(id);save();paintOverview();}
+function restoreWorld(id){DB.archived=(DB.archived||[]).filter(x=>x!==id);save();paintOverview();}
+function worldCard(x,archived){
+  const st=x.status||"local";const nNotes=DB.notes.filter(n=>n.world===x.id).length;
+  return `<div class="card">
+    ${x.preview?`<img class="shot" loading="lazy" src="${esc(x.preview)}" alt="">`:`<div class="shot"></div>`}
+    <div class="b">
+      <div class="nm">${esc(x.name)}</div>
+      <div class="ds">${esc(x.description||"")}</div>
+      <div class="ft"><span class="badge ${st}">${st}</span>
+        <span class="mini">${x.lastPush?("push "+fmt(x.lastPush)):""}</span></div>
+      <div class="ft" style="margin-top:8px">
+        ${archived
+          ? `<span class="noteln" onclick="restoreWorld('${x.id}')">↩ restaurar</span>`
+          : `<span class="noteln" onclick="quickNote('${x.id}')">+ nota${nNotes?` · ${nNotes}`:""}</span><span class="noteln" style="color:var(--mut2)" onclick="archiveWorld('${x.id}')">▢ archivar</span>`}
+      </div>
+    </div></div>`;
+}
 function paintOverview(){
-  const w=GRID.worlds||[];
-  const by=s=>w.filter(x=>(x.status||"local")===s).length;
-  const k=[["TOTAL",w.length,""],["LIVE",by("live"),"live"],["LOCAL",by("local"),"local"],
-    ["IDEAS",DB.ideas.length,""],["AGENDA",DB.schedules.filter(s=>!s.done).length,""]];
+  const all=GRID.worlds||[];
+  const active=all.filter(x=>!isArch(x.id));
+  const arch=all.filter(x=>isArch(x.id));
+  const by=s=>active.filter(x=>(x.status||"local")===s).length;
+  const k=[["ACTIVOS",active.length,""],["LIVE",by("live"),"live"],["LOCAL",by("local"),"local"],
+    ["ARCHIVADOS",arch.length,""],["AGENDA",DB.schedules.filter(s=>!s.done).length,""]];
   document.getElementById("kpis").innerHTML=k.map(([l,v,c])=>
     `<div class="kpi"><div class="v ${c}">${v}</div><div class="l">${l}</div></div>`).join("");
-  document.getElementById("worlds").innerHTML = w.length? w.map(x=>{
-    const st=x.status||"local";
-    const nNotes=DB.notes.filter(n=>n.world===x.id).length;
-    return `<div class="card">
-      ${x.preview?`<img class="shot" loading="lazy" src="${esc(x.preview)}" alt="">`:`<div class="shot"></div>`}
-      <div class="b">
-        <div class="nm">${esc(x.name)}</div>
-        <div class="ds">${esc(x.description||"")}</div>
-        <div class="ft"><span class="badge ${st}">${st}</span>
-          <span class="mini">${x.lastPush?("push "+fmt(x.lastPush)):""}</span></div>
-        <div class="noteln" onclick="quickNote('${x.id}')">+ nota${nNotes?` · ${nNotes}`:""}</div>
-      </div></div>`;
-  }).join("") : `<div class="empty">Sin mundos. Corré el importador o el agente.</div>`;
+  document.getElementById("worlds").innerHTML = active.length? active.map(x=>worldCard(x,false)).join("") : `<div class="empty">Sin mundos activos.</div>`;
+  document.getElementById("archiveWrap").innerHTML = arch.length
+    ? `<div class="sh" style="margin:0 0 14px"><h2 style="font-size:15px;color:var(--mut)">Archivo · ${arch.length}</h2></div><div class="grid">${arch.map(x=>worldCard(x,true)).join("")}</div>`
+    : "";
 }
 
 function fillWorldSelects(){
@@ -424,7 +441,7 @@ function importAll(ev){
   const f=ev.target.files[0];if(!f)return;
   const rd=new FileReader();
   rd.onload=()=>{try{const d=JSON.parse(rd.result);
-    DB.notes=d.notes||DB.notes;DB.schedules=d.schedules||DB.schedules;DB.ideas=d.ideas||DB.ideas;
+    DB.notes=d.notes||DB.notes;DB.schedules=d.schedules||DB.schedules;DB.ideas=d.ideas||DB.ideas;DB.archived=d.archived||DB.archived;DB.theme=d.theme||DB.theme;
     save();renderAll();alert("Importado.");}catch(e){alert("Archivo inválido");}};
   rd.readAsText(f);ev.target.value="";
 }
@@ -438,15 +455,17 @@ function switchTab(t){
 const SKINS=[["vice-gold","Vice Gold","#d4af37"],["neon","Neon","#00e5ff"],["mono","Mono","#ffffff"],["light","Light","#a9801a"],["blood","Blood","#ff3b3b"],["cyber","Cyber","#39ff14"]];
 const LAYOUTS=[["cards","Cards"],["compact","Compacto"],["list","Lista"],["masonry","Mosaico"]];
 const PREVIEWS=[["cover","Cubrir"],["contain","Contener"],["framed","Marco"],["grayscale","B/N → color"]];
-function theme(){ if(!DB.theme)DB.theme={skin:"vice-gold",layout:"cards",preview:"cover"}; return DB.theme; }
+const BGS=[["solid","Sólido"],["glow","Glow"],["grid","Cuadrícula"],["dots","Puntos"]];
+function theme(){ if(!DB.theme)DB.theme={skin:"vice-gold",layout:"cards",preview:"cover",bg:"solid"}; if(!DB.theme.bg)DB.theme.bg="solid"; return DB.theme; }
 function renderStyles(){
   const t=theme();
   const chip=(arr,key,sw)=>arr.map(([v,l,c])=>`<button class="chip ${t[key]===v?"on":""}" onclick="setStyle('${key}','${v}')">${sw&&c?`<span class="sw" style="background:${c}"></span>`:""}${l}</button>`).join("");
   document.getElementById("skinPicker").innerHTML=chip(SKINS,"skin",true);
   document.getElementById("layoutPicker").innerHTML=chip(LAYOUTS,"layout");
   document.getElementById("previewPicker").innerHTML=chip(PREVIEWS,"preview");
+  document.getElementById("bgPicker").innerHTML=chip(BGS,"bg");
   const sp=document.getElementById("stylePreview");
-  sp.dataset.skin=t.skin;sp.dataset.layout=t.layout;sp.dataset.preview=t.preview;
+  sp.dataset.skin=t.skin;sp.dataset.layout=t.layout;sp.dataset.preview=t.preview;sp.dataset.bg=t.bg;
   const ws=(GRID.worlds||[]).slice(0,6);
   sp.innerHTML=`<div class="spgrid">${ws.map(w=>`<div class="spcard">
     ${w.preview?`<img class="spshot" src="${esc(w.preview)}" alt="">`:`<div class="spshot"></div>`}
