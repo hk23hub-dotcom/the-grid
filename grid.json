@@ -1,94 +1,17 @@
 {
-  "generatedAt": "2026-06-26T06:23:00.746Z",
+  "generatedAt": "2026-06-26T08:50:24.880Z",
   "tagline": "NOT GIVEN. TAKEN.",
-  "featured": "chile-goldmine",
+  "featured": "vice-os-artifact",
   "worlds": [
     {
-      "id": "chile-goldmine",
-      "name": "CHILE GOLDMINE",
-      "description": "Goal: turn the map collection into sales and funnel followers to the La Iglesia Goldmine landing page. Copy-paste ready. Mix Spanish + Engli",
-      "url": "https://hk23universe.vercel.app/chile-goldmine",
-      "repo": null,
-      "status": "local",
-      "preview": "./previews/chile-goldmine.jpg",
-      "lastPush": "2026-06-22T03:04:49.464Z",
-      "topics": []
-    },
-    {
-      "id": "vicegolfer-command-center",
-      "name": "VICEGOLFER COMMAND CENTER",
-      "description": "Archivo de captura. Aquí se acumula la info cruda antes de construir el dashboard final.",
-      "url": "https://hk23universe.vercel.app/vicegolfer-command-center",
-      "repo": null,
-      "status": "local",
-      "preview": "./previews/vicegolfer-command-center.jpg",
-      "lastPush": "2026-06-21T08:37:03.241Z",
-      "topics": []
-    },
-    {
-      "id": "cryptovice-honeyscam",
-      "name": "CRYPTOVICE HONEYSCAM",
-      "description": "A world in progress.",
-      "url": "https://hk23universe.vercel.app/cryptovice-honeyscam",
-      "repo": null,
-      "status": "local",
-      "preview": "./previews/cryptovice-honeyscam.jpg",
-      "lastPush": "2026-06-21T08:35:09.703Z",
-      "topics": []
-    },
-    {
-      "id": "uno-al-dia-soprole",
-      "name": "UNO AL DIA SOPROLE",
-      "description": "A world in progress.",
-      "url": "https://hk23universe.vercel.app/uno-al-dia-soprole",
-      "repo": null,
-      "status": "local",
-      "preview": "./previews/uno-al-dia-soprole.jpg",
-      "lastPush": "2026-06-21T03:58:25.197Z",
-      "topics": []
-    },
-    {
-      "id": "affiliate-growth-agent",
-      "name": "AFFILIATE GROWTH AGENT",
-      "description": "Stage: Pre-launch / zero audience",
-      "url": "https://hk23universe.vercel.app/affiliate-growth-agent",
-      "repo": null,
-      "status": "local",
-      "preview": "./previews/affiliate-growth-agent.jpg",
-      "lastPush": "2026-06-18T11:50:47.487Z",
-      "topics": []
-    },
-    {
-      "id": "atlas-x",
-      "name": "ATLAS X",
-      "description": "Adaptive Thinking, Learning & Action System",
-      "url": "https://hk23universe.vercel.app/atlas-x",
-      "repo": null,
-      "status": "local",
-      "preview": "./previews/atlas-x.jpg",
-      "lastPush": "2026-06-18T06:15:13.369Z",
-      "topics": []
-    },
-    {
-      "id": "hk23-vice-os-ecosystem",
-      "name": "HK23 VICE OS ECOSYSTEM",
-      "description": "Get all 7 agents running · 15 min setup",
-      "url": "https://hk23universe.vercel.app/hk23-vice-os-ecosystem",
-      "repo": null,
-      "status": "local",
-      "preview": "./previews/hk23-vice-os-ecosystem.jpg",
-      "lastPush": "2026-05-27T02:23:41.900Z",
-      "topics": []
-    },
-    {
-      "id": "how-to-use-claude",
-      "name": "HOW TO USE CLAUDE",
-      "description": "Imported Claude Cowork project instructions",
-      "url": "https://hk23universe.vercel.app/how-to-use-claude",
-      "repo": null,
-      "status": "local",
-      "preview": "./previews/how-to-use-claude.jpg",
-      "lastPush": "2026-05-24T16:56:18.117Z",
+      "id": "vice-os-artifact",
+      "name": "VICE OS ARTIFACT",
+      "description": "",
+      "url": "https://hk23universe.vercel.app/vice-os-artifact",
+      "repo": "hk23hub-dotcom/vice-os-artifact",
+      "status": "live",
+      "preview": "https://image.thum.io/get/width/800/crop/600/https://hk23universe.vercel.app/vice-os-artifact",
+      "lastPush": "2026-06-21T02:26:30Z",
       "topics": []
     }
   ]
