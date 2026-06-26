@@ -75,6 +75,12 @@
   .grid[data-preview="framed"] .shot{padding:10px;background:var(--panel);border-radius:14px}
   .grid[data-preview="grayscale"] .shot{filter:grayscale(1) contrast(1.05);transition:filter .25s ease}
   .grid[data-preview="grayscale"] .card:hover .shot{filter:none}
+
+  /* ===== BACKGROUND / FONDO ===== */
+  body{background-attachment:fixed}
+  body[data-bg="glow"]{background-image:radial-gradient(900px 520px at 15% -8%, color-mix(in srgb, var(--gold) 16%, transparent), transparent 60%)}
+  body[data-bg="grid"]{background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:44px 44px}
+  body[data-bg="dots"]{background-image:radial-gradient(var(--line) 1.2px,transparent 1.2px);background-size:24px 24px}
 </style>
 </head>
 <body>
@@ -98,8 +104,6 @@
 </div>
 
 <script>
-// Embedded fallback so the page renders even from file:// (no fetch).
-// When deployed, live grid.json overrides this so the agent's updates flow through.
 const FALLBACK = {"generatedAt":"2026-06-26T06:30:00.000Z","tagline":"NOT GIVEN. TAKEN.","featured":"chile-goldmine","worlds":[
 {"id":"chile-goldmine","name":"CHILE GOLDMINE","description":"Turn the map collection into sales and funnel followers to the La Iglesia Goldmine landing page.","url":"https://hk23universe.vercel.app/chile-goldmine","status":"local","preview":"./previews/chile-goldmine.jpg"},
 {"id":"vicegolfer-command-center","name":"VICEGOLFER COMMAND CENTER","description":"Capture archive — raw intel accumulating before the final dashboard.","url":"https://hk23universe.vercel.app/vicegolfer-command-center","status":"local","preview":"./previews/vicegolfer-command-center.jpg"},
@@ -113,16 +117,19 @@ const FALLBACK = {"generatedAt":"2026-06-26T06:30:00.000Z","tagline":"NOT GIVEN.
 
 const STATUS_LABEL = {live:"live",local:"local",building:"building",idle:"idle",down:"down"};
 
+let GRIDDATA=null, ARCHIVED=new Set();
+function draw(){ if(GRIDDATA) render(GRIDDATA); }
 function render(data){
+  const worlds=(data.worlds||[]).filter(w=>!ARCHIVED.has(w.id));
   document.getElementById("creed").textContent = data.tagline || "NOT GIVEN. TAKEN.";
-  document.getElementById("count").textContent = data.worlds.length;
+  document.getElementById("count").textContent = worlds.length;
   if(data.generatedAt){
     const d = new Date(data.generatedAt);
     document.getElementById("updated").textContent =
       "updated " + d.toLocaleDateString(undefined,{month:"short",day:"numeric"});
   }
   const grid = document.getElementById("grid");
-  grid.innerHTML = data.worlds.map(w=>{
+  grid.innerHTML = worlds.map(w=>{
     const st = (w.status||"local");
     const shot = w.preview
       ? `<img class="shot" loading="lazy" src="${w.preview}" alt="${w.name}">`
@@ -142,24 +149,28 @@ function render(data){
   }).join("");
 }
 
-// ===== THEME (skin / layout / preview) — set from the Command Center =====
 const SUPA={url:"https://qhklngvzdmwsbopbkiff.supabase.co",key:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFoa2xuZ3Z6ZG13c2JvcGJraWZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3OTEwOTYsImV4cCI6MjA5NzM2NzA5Nn0.ttdBrxCF6Wl6I8yKOICfTq7WyPylMmSmdKGUb176BCs"};
 function applyTheme(t){
   t=t||{};
   document.body.dataset.skin=t.skin||"vice-gold";
+  document.body.dataset.bg=t.bg||"solid";
   const g=document.getElementById("grid");
   g.dataset.layout=t.layout||"cards";
   g.dataset.preview=t.preview||"cover";
 }
-applyTheme();   // default until cloud responds
+applyTheme();
 fetch(`${SUPA.url}/rest/v1/grid_command?id=eq.hk23&select=data`,{headers:{apikey:SUPA.key,Authorization:"Bearer "+SUPA.key},cache:"no-store"})
-  .then(r=>r.ok?r.json():[]).then(rows=>applyTheme(rows[0]&&rows[0].data&&rows[0].data.theme)).catch(()=>{});
+  .then(r=>r.ok?r.json():[]).then(rows=>{
+    const d=rows[0]&&rows[0].data;
+    applyTheme(d&&d.theme);
+    ARCHIVED=new Set((d&&d.archived)||[]);
+    draw();
+  }).catch(()=>{});
 
-// Prefer live grid.json (so the agent's updates appear); fall back to embedded.
 fetch("./grid.json",{cache:"no-store"})
   .then(r=>{ if(!r.ok) throw 0; return r.json(); })
-  .then(render)
-  .catch(()=>render(FALLBACK));
+  .then(d=>{ GRIDDATA=d; draw(); })
+  .catch(()=>{ GRIDDATA=FALLBACK; draw(); });
 </script>
 </body>
 </html>
