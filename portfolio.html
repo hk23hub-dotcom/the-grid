@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>HK23 — PORTAFOLIO · LA IDEA · BLOG</title>
+<meta name="description" content="Todo lo que HK23 construyó, la idea detrás, los reportes diarios y los agentes que lo mantienen vivo."/>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Space+Mono&display=swap');
+  :root{ --bg:#080808; --card:#101012; --line:#1E1E1E; --ink:#F0EDE8; --mut:#8a8a92; --dim:#444;
+    --red:#FF3A1F; --gold:#FFD200; --green:#AAFF00; --cyan:#00F0FF; --purple:#B84DFF; }
+  *{ margin:0; padding:0; box-sizing:border-box; }
+  html{ scroll-behavior:smooth; }
+  body{ background:var(--bg); color:var(--ink); font-family:'Space Grotesk',system-ui,sans-serif; }
+  a{ color:inherit; text-decoration:none; }
+  .mono{ font-family:'Space Mono',ui-monospace,monospace; }
+  .wrap{ max-width:1080px; margin:0 auto; padding:0 24px; }
+  .eyebrow{ font-family:'Space Mono',monospace; font-size:9px; letter-spacing:6px; color:var(--dim);
+    text-transform:uppercase; display:flex; align-items:center; gap:12px; margin-bottom:22px; }
+  .eyebrow::after{ content:''; flex:1; height:1px; background:var(--line); }
+  section{ padding:70px 0; }
+
+  /* NAV */
+  nav{ position:sticky; top:0; z-index:50; background:rgba(8,8,8,.92); backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line); }
+  nav .wrap{ display:flex; align-items:center; gap:18px; padding:16px 24px; }
+  .logo{ font-weight:700; letter-spacing:3px; font-size:14px; }
+  .logo span{ color:var(--red); }
+  nav .links{ margin-left:auto; display:flex; gap:16px; flex-wrap:wrap; }
+  nav .links a{ font-family:'Space Mono',monospace; font-size:9px; letter-spacing:2px; color:var(--mut);
+    text-transform:uppercase; transition:color .2s; }
+  nav .links a:hover{ color:var(--ink); }
+  nav .cta{ background:var(--red); color:#000; padding:7px 14px; border-radius:2px; font-weight:700; }
+  nav .cta:hover{ color:#000; opacity:.85; }
+
+  /* HERO */
+  header{ padding:110px 0 80px; position:relative; overflow:hidden; }
+  header::before{ content:''; position:absolute; inset:0;
+    background:radial-gradient(700px 400px at 80% -10%, rgba(255,58,31,.10), transparent 60%); pointer-events:none; }
+  h1{ font-size:clamp(44px,8vw,92px); font-weight:700; letter-spacing:-2px; line-height:.95; text-wrap:balance; }
+  h1 em{ font-style:normal; color:var(--red); }
+  .lede{ margin-top:22px; font-size:16px; color:var(--mut); max-width:560px; line-height:1.75; }
+  .lede b{ color:var(--ink); }
+  .creed{ margin-top:26px; font-family:'Space Mono',monospace; font-size:11px; letter-spacing:5px; color:var(--gold); }
+  .hero-btns{ margin-top:34px; display:flex; gap:10px; flex-wrap:wrap; }
+  .btn{ font-family:'Space Mono',monospace; font-size:10px; letter-spacing:3px; font-weight:700;
+    padding:13px 24px; border-radius:2px; text-transform:uppercase; display:inline-block; transition:opacity .2s; }
+  .btn:hover{ opacity:.82; }
+  .btn.red{ background:var(--red); color:#000; }
+  .btn.ghost{ border:1px solid var(--line); color:var(--mut); }
+
+  /* IDEA */
+  #idea .grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:14px; }
+  .principle{ border:1px solid var(--line); background:var(--card); padding:22px; border-radius:2px; }
+  .principle .n{ font-family:'Space Mono',monospace; font-size:9px; letter-spacing:3px; color:var(--red); margin-bottom:10px; }
+  .principle p{ font-size:13px; color:var(--mut); line-height:1.7; }
+  .principle p b{ color:var(--ink); }
+
+  /* PORTFOLIO */
+  .proj{ border:1px solid var(--line); background:var(--card); border-radius:2px; padding:26px;
+    margin-bottom:14px; display:grid; grid-template-columns:1fr auto; gap:18px; scroll-margin-top:90px; }
+  .proj:hover{ border-color:var(--accent,var(--red)); }
+  .proj .tag{ font-family:'Space Mono',monospace; font-size:8px; letter-spacing:3px; color:var(--accent,var(--red));
+    margin-bottom:8px; text-transform:uppercase; }
+  .proj h3{ font-size:24px; letter-spacing:-.5px; margin-bottom:8px; }
+  .proj p{ font-size:13px; color:var(--mut); line-height:1.75; max-width:640px; }
+  .proj .st{ align-self:start; font-family:'Space Mono',monospace; font-size:8px; letter-spacing:2px;
+    border:1px solid var(--line); padding:5px 10px; border-radius:999px; color:var(--mut); white-space:nowrap; }
+  .proj .st.live{ color:var(--green); border-color:rgba(170,255,0,.35); }
+  .proj .go{ font-family:'Space Mono',monospace; font-size:9px; letter-spacing:2px; color:var(--accent,var(--red));
+    margin-top:14px; display:inline-block; }
+
+  /* BLOG */
+  .post{ display:flex; gap:16px; align-items:baseline; padding:18px 0; border-bottom:1px solid var(--line); }
+  .post .d{ font-family:'Space Mono',monospace; font-size:9px; color:var(--dim); letter-spacing:1px; white-space:nowrap; }
+  .post h4{ font-size:16px; font-weight:500; }
+  .post:hover h4{ color:var(--gold); }
+  .post .k{ margin-left:auto; font-family:'Space Mono',monospace; font-size:8px; letter-spacing:2px; color:var(--dim); white-space:nowrap; }
+
+  /* AGENTS */
+  #agentes .grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:12px; }
+  .agent{ border:1px solid var(--line); background:var(--card); padding:20px; border-radius:2px; }
+  .agent .dot{ width:8px; height:8px; border-radius:50%; margin-bottom:12px; animation:pulse 2s infinite; }
+  @keyframes pulse{ 0%,100%{opacity:1} 50%{opacity:.35} }
+  .agent h4{ font-size:14px; letter-spacing:1px; margin-bottom:6px; }
+  .agent p{ font-size:11.5px; color:var(--mut); line-height:1.65; }
+
+  /* CTA */
+  #comprar{ text-align:center; border-top:1px solid var(--line); }
+  #comprar h2{ font-size:clamp(30px,5vw,54px); letter-spacing:-1.5px; text-wrap:balance; }
+  #comprar .sub{ color:var(--mut); margin:16px auto 30px; max-width:520px; font-size:14px; line-height:1.75; }
+  footer{ border-top:1px solid var(--line); padding:28px 0; text-align:center;
+    font-family:'Space Mono',monospace; font-size:9px; letter-spacing:3px; color:var(--dim); }
+  h2.sec{ font-size:clamp(26px,4vw,40px); letter-spacing:-1px; margin-bottom:30px; }
+  @media(max-width:640px){ .proj{ grid-template-columns:1fr; } .post .k{ display:none; } }
+</style>
+</head>
+<body>
+
+<nav><div class="wrap">
+  <a class="logo" href="#"><span>HK</span>23</a>
+  <div class="links">
+    <a href="#idea">La idea</a>
+    <a href="#portafolio">Portafolio</a>
+    <a href="#blog">Blog</a>
+    <a href="#agentes">Agentes</a>
+    <a class="cta" href="#comprar">Conseguir el template</a>
+  </div>
+</div></nav>
+
+<header><div class="wrap">
+  <div class="eyebrow">HK23 · HEYOKA UNIVERSE — PORTAFOLIO</div>
+  <h1>TODO LO QUE VES,<br><em>FUNCIONA.</em></h1>
+  <p class="lede">Un universo digital donde <b>cada botón ejecuta</b>, cada idea vuela hasta que alguien la completa,
+    y los agentes trabajan 24/7: reportan, curan, defienden y venden. Esto no es un mockup — es el sistema operativo de una marca.</p>
+  <div class="creed">NOT GIVEN. TAKEN.</div>
+  <div class="hero-btns">
+    <a class="btn red" href="./hk23-universe.html">ENTRAR AL UNIVERSO →</a>
+    <a class="btn ghost" href="#portafolio">VER LO CONSTRUIDO</a>
+  </div>
+</div></header>
+
+<section id="idea"><div class="wrap">
+  <div class="eyebrow">LA IDEA</div>
+  <h2 class="sec">Ninguna idea nace para no vivir.</h2>
+  <div class="grid">
+    <div class="principle"><div class="n">PRINCIPIO 01</div><p><b>Probabilidad sobre preferencia.</b> Cada decisión responde una sola pregunta: ¿qué aumenta la probabilidad de que una chispa se vuelva realidad?</p></div>
+    <div class="principle"><div class="n">PRINCIPIO 02</div><p><b>Nada es descartable.</b> Nada se borra, nada se desestima. Lo que no se usa hoy, vuela por el universo como entidad coleccionable hasta que le llega su momento.</p></div>
+    <div class="principle"><div class="n">PRINCIPIO 03</div><p><b>Todo se versiona.</b> Cada mundo, cada reporte, cada artefacto queda documentado. El universo tiene memoria.</p></div>
+    <div class="principle"><div class="n">PRINCIPIO 04</div><p><b>Todo lo visible ejecuta.</b> Si un elemento está en pantalla, tiene una acción real. Los que no la tenían fueron curados por un agente y hoy tienen misión.</p></div>
+    <div class="principle"><div class="n">PRINCIPIO 05</div><p><b>El camino más rápido a producto.</b> Velocidad sin descartar chispas: todo lo de esta página existe, está desplegado y se puede tocar.</p></div>
+    <div class="principle"><div class="n">LEY DEL MOTOR</div><p><b>Ninguna señal sin porqué.</b> Cuando un agente recomienda una oportunidad, entrega tesis, razones e invalidación. Si no puede explicarla, no la recomienda.</p></div>
+  </div>
+</div></section>
+
+<section id="portafolio"><div class="wrap">
+  <div class="eyebrow">PORTAFOLIO — LO QUE SE HIZO</div>
+  <h2 class="sec">Los mundos construidos.</h2>
+
+  <div class="proj" id="hk23-universe" style="--accent:var(--red)">
+    <div><div class="tag">PRODUCTO INSIGNIA · TEMPLATE</div>
+    <h3>HK23 UNIVERSE OS</h3>
+    <p>El universo interactivo completo: fondos vivos desde cualquier link (Shorts, TikTok, Spotify, mp4), QR gigante escaneable formado por entidades, ideas coleccionables, biblioteca con libros legibles adentro, backrooms para leechers, protocolo de defensa MEGA-HEYOKA y agentes que lo administran. Un solo HTML autocontenido — este es el template que se vende.</p>
+    <a class="go" href="./hk23-universe.html">ENTRAR →</a></div>
+    <span class="st live">LIVE</span>
+  </div>
+
+  <div class="proj" id="vicegolfer" style="--accent:var(--green)">
+    <div><div class="tag">SPORTS TECH · GOLF</div>
+    <h3>VICEGOLFER</h3>
+    <p>Golf Performance OS: DNA de juego, tracking de práctica, putting lab y blueprints de entrenamiento. La vertical deportiva más desarrollada del ecosistema VICE OS.</p>
+    <a class="go" href="https://vicegolfer.com" target="_blank" rel="noopener">VICEGOLFER.COM →</a></div>
+    <span class="st live">LIVE</span>
+  </div>
+
+  <div class="proj" id="la-iglesia" style="--accent:var(--gold)">
+    <div><div class="tag">MINERÍA · INVERSIÓN REAL</div>
+    <h3>LA IGLESIA — GOLDMINE</h3>
+    <p>Concesión minera en Chile documentada como mundo digital: contexto geológico, data engineering del yacimiento, equipo, timeline y funnel de inversión. El proyecto más físico del universo.</p>
+    <a class="go" href="https://hk23universe.vercel.app/chile-goldmine" target="_blank" rel="noopener">VER EL PROYECTO →</a></div>
+    <span class="st">EN DESARROLLO</span>
+  </div>
+
+  <div class="proj" id="james-craig-art" style="--accent:var(--purple)">
+    <div><div class="tag">FINE ART · MARCA</div>
+    <h3>JAMES CRAIG ART</h3>
+    <p>Marca de arte original: prints limitados, obras en canvas y comisiones. 47 obras, 12 prints, exhibición en Santiago. Todo numerado, todo documentado, todo real.</p>
+    <a class="go" href="https://hk23hub.gumroad.com" target="_blank" rel="noopener">VER PIEZAS DISPONIBLES →</a></div>
+    <span class="st live">LIVE</span>
+  </div>
+
+  <div class="proj" id="fallowood" style="--accent:var(--cyan)">
+    <div><div class="tag">IDENTIDAD · DISEÑO</div>
+    <h3>FALLOWOOD</h3>
+    <p>Proyecto de identidad y dirección de arte: sistema visual, brand identity y piezas de colección dentro del multiverso HK23.</p>
+    <a class="go" href="./hk23-universe.html">EXPLORAR EN EL UNIVERSO →</a></div>
+    <span class="st">EN DESARROLLO</span>
+  </div>
+
+  <div class="proj" id="rugby-vice" style="--accent:var(--green)">
+    <div><div class="tag">SPORTS TECH · RUGBY</div>
+    <h3>RUGBY VICE</h3>
+    <p>La vertical de rugby del VICE OS: Kick Tracker 2D para pateadores, métricas de performance y DNA deportivo aplicado al óvalo.</p>
+    <a class="go" href="./hk23-universe.html">EXPLORAR EN EL UNIVERSO →</a></div>
+    <span class="st">EN DESARROLLO</span>
+  </div>
+
+  <div class="proj" id="crypto-vice" style="--accent:var(--purple)">
+    <div><div class="tag">DEFI · SEÑALES CON PORQUÉ</div>
+    <h3>CRYPTO VICE</h3>
+    <p>Portfolio multi-chain, análisis on-chain y el motor de oportunidades con su ley de hierro: <b style="color:var(--ink)">ninguna señal se recomienda sin tesis, razones e invalidación.</b> El formato del porqué es el producto.</p>
+    <a class="go" href="./hk23-universe.html">VER SEÑALES DE HOY →</a></div>
+    <span class="st live">DEMO LIVE</span>
+  </div>
+
+  <div class="proj" id="hk23-hub" style="--accent:var(--cyan)">
+    <div><div class="tag">CONTENIDO · TIENDA DIGITAL</div>
+    <h3>HK23 HUB — THE GRID</h3>
+    <p>El grid auto-mantenido de todos los mundos (un agente lo actualiza cada 6 horas), la biblioteca con la Constitución HK23 y las guías, y la tienda digital de la marca.</p>
+    <a class="go" href="./index.html">VER THE GRID →</a></div>
+    <span class="st live">LIVE</span>
+  </div>
+</div></section>
+
+<section id="blog"><div class="wrap">
+  <div class="eyebrow">BLOG — EL UNIVERSO ESCRIBE SOLO</div>
+  <h2 class="sec">Reportes y lecturas.</h2>
+  <a class="post" href="./report.json" target="_blank" rel="noopener">
+    <span class="d">DIARIO · 09:00 UTC</span><h4>ORACLE — Reporte automático del estado del universo</h4><span class="k">JSON PARA AGENTES</span>
+  </a>
+  <a class="post" href="./reports/" target="_blank" rel="noopener">
+    <span class="d">ARCHIVO</span><h4>Todos los reportes diarios — qué se hizo, para dónde vamos, acciones ejecutables</h4><span class="k">MARKDOWN</span>
+  </a>
+  <a class="post" href="./hk23-universe.html">
+    <span class="d">LIBRO</span><h4>La Constitución HK23 — los 5 principios y las leyes L0–L13</h4><span class="k">LEER EN EL UNIVERSO</span>
+  </a>
+  <a class="post" href="./hk23-universe.html">
+    <span class="d">GUÍA</span><h4>Manual del Universo + Guía del Template — cómo operar y desplegar el tuyo</h4><span class="k">LEER EN EL UNIVERSO</span>
+  </a>
+</div></section>
+
+<section id="agentes"><div class="wrap">
+  <div class="eyebrow">AGENTES — NEVER OFFLINE</div>
+  <h2 class="sec">Quién mantiene esto vivo.</h2>
+  <div class="grid">
+    <div class="agent"><div class="dot" style="background:var(--cyan)"></div><h4>ATLAS</h4><p>Control central: QR vivo, ideas, fondos, galaxias. La barra de comandos del universo.</p></div>
+    <div class="agent"><div class="dot" style="background:var(--gold)"></div><h4>ORACLE</h4><p>El reporter. Genera el reporte diario (hecho / rumbo / acciones) y lo entrega a tus otros agentes.</p></div>
+    <div class="agent"><div class="dot" style="background:var(--purple)"></div><h4>CURATOR</h4><p>Nada existe sin misión: cura lo inerte, lo transforma en coleccionable, impulso o portal.</p></div>
+    <div class="agent"><div class="dot" style="background:var(--red)"></div><h4>MEGA-HEYOKA</h4><p>El protocolo de defensa final: todos los agentes convergen en un gigante cuando hay que proteger el universo.</p></div>
+    <div class="agent"><div class="dot" style="background:var(--green)"></div><h4>GRID-AGENT</h4><p>Cada 6 horas descubre el estado real de los mundos y reescribe el grid. Sin manos humanas.</p></div>
+    <div class="agent"><div class="dot" style="background:var(--cyan)"></div><h4>ARIA</h4><p>La capa reflexiva: lee el grafo vivo y propone conexiones. Ella sugiere; el humano decide.</p></div>
+  </div>
+</div></section>
+
+<section id="comprar"><div class="wrap">
+  <h2>ESTE UNIVERSO SE VENDE.<br>Y SE ENTREGA HOY.</h2>
+  <p class="sub">Un solo archivo HTML autocontenido con todo lo que viste: agentes, QR vivo, backrooms, biblioteca, señales con porqué. Lo subís a Vercel, cambiás los colores, y tu marca tiene universo propio.</p>
+  <div class="hero-btns" style="justify-content:center">
+    <a class="btn red" href="https://hk23hub.gumroad.com" target="_blank" rel="noopener">COMPRAR EL TEMPLATE →</a>
+    <a class="btn ghost" href="./hk23-universe.html">PROBARLO PRIMERO</a>
+  </div>
+</div></section>
+
+<footer>HK23 · HEYOKA UNIVERSE — TODO DOCUMENTADO · TODO MONETIZABLE · TODO REAL</footer>
+
+</body>
+</html>

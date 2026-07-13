@@ -1939,10 +1939,10 @@ const PROJECTS = [
             stats:[{l:'CHAINS',v:'ETH/SOL/BTC'},{l:'SEÑALES',v:'TBD'},{l:'ALERTAS',v:'TBD'},{l:'ETA',v:'FASE 3'}],
             action:'PRÓXIMAMENTE →', actionColor:'#00F0FF' }},
         { label: 'ALERTS &\nSIGNALS',  x:0.50, y:0.84, color:'#FFD200', size:11,
-          detail:{ title:'ALERTS & SIGNALS', status:'soon', eyebrow:'NOTIFICACIONES · AI',
-            desc:'Sistema de alertas inteligentes: precios, movimientos on-chain, oportunidades DeFi y señales generadas por IA.',
-            stats:[{l:'TIPOS',v:'TBD'},{l:'CANALES',v:'PUSH/EMAIL'},{l:'AI',v:'SÍ'},{l:'ETA',v:'FASE 3'}],
-            action:'PRÓXIMAMENTE →', actionColor:'#FFD200' }},
+          detail:{ title:'ALERTS & SIGNALS', status:'live', eyebrow:'OPORTUNIDADES · CON PORQUÉ',
+            desc:'El motor de señales del universo. Regla de hierro: ninguna oportunidad se recomienda sin su PORQUÉ — tesis, señales que la sostienen e invalidación clara. Si el agente no puede explicarlo, no lo recomienda.',
+            stats:[{l:'REGLA',v:'SIN PORQUÉ NO HAY SEÑAL'},{l:'CAMPOS',v:'TESIS+3 RAZONES'},{l:'INVALIDACIÓN',v:'SIEMPRE'},{l:'MODO',v:'DEMO HOY'}],
+            action:'VER SEÑALES DE HOY →', actionColor:'#FFD200', link:'#crypto-signals' }},
         { label: 'DeFi\nPROTOCOLS',    x:0.18, y:0.64, color:'#AAFF00', size:10,
           detail:{ title:'DeFi PROTOCOLS', status:'soon', eyebrow:'YIELD · LIQUIDITY',
             desc:'Integración con protocolos DeFi: yield farming, liquidity pools y estrategias de staking integradas al DNA financiero.',
@@ -3399,7 +3399,11 @@ function openFractalNodePanel(node, projectColor, projectLabel) {
     btn.textContent = d.action || 'ABRIR EN APP →';
     btn.style.background = node.color;
     btn.style.color = '#080808';
-    btn.onclick = () => { if (d.link) window.open(d.link, '_blank'); };
+    btn.onclick = () => {
+      if (d.link === '#crypto-signals' && window.CryptoSignals) { window.CryptoSignals.open(); return; }
+      if (d.link) window.open(d.link, '_blank');
+      else if (window.UniverseRoute) window.UniverseRoute(d);
+    };
   } else {
     ctaLive.style.display = 'none';
     ctaSoon.style.display = '';
@@ -7332,6 +7336,154 @@ var qrcode = function() {
   }
 
   logEvent('sistema','core agents en línea: GATE/ORACLE/CURATOR/BACKROOMS/DEFENSA');
+})();
+</script>
+<!-- ═══════════ CRYPTO SIGNALS — NINGUNA SEÑAL SIN PORQUÉ · + UNIVERSE ROUTER ═══════════ -->
+<style id="crypto-signals-style">
+  #ov-crypto .hkov-card{ width:min(760px,95vw); }
+  .cs-law{ font-family:'Space Mono',monospace; font-size:9px; letter-spacing:3px; color:#FFD200;
+    border:1px solid rgba(255,210,0,.3); border-radius:2px; padding:8px 12px; margin-bottom:16px;
+    background:rgba(255,210,0,.05); }
+  .cs-sig{ border:1px solid #1A1A1A; border-radius:2px; background:#0A0A0C; padding:16px 18px; margin-bottom:10px; }
+  .cs-top{ display:flex; align-items:center; gap:10px; margin-bottom:10px; flex-wrap:wrap; }
+  .cs-pair{ font-size:16px; font-weight:700; letter-spacing:.5px; }
+  .cs-act{ font-family:'Space Mono',monospace; font-size:8px; letter-spacing:2px; font-weight:700;
+    padding:4px 10px; border-radius:2px; color:#000; }
+  .cs-conf{ margin-left:auto; font-family:'Space Mono',monospace; font-size:9px; color:#555; }
+  .cs-why-label{ font-family:'Space Mono',monospace; font-size:8px; letter-spacing:3px; color:#FFD200; margin-bottom:6px; }
+  .cs-why{ list-style:none; margin:0 0 10px; padding:0; }
+  .cs-why li{ font-size:11.5px; color:#999; line-height:1.65; padding-left:16px; position:relative; margin-bottom:4px; }
+  .cs-why li::before{ content:'▸'; position:absolute; left:0; color:#FFD200; }
+  .cs-inv{ font-family:'Space Mono',monospace; font-size:9px; color:#FF3A1F; letter-spacing:.5px;
+    border-left:2px solid rgba(255,58,31,.4); padding-left:10px; line-height:1.6; }
+  .cs-risk{ display:inline-block; font-family:'Space Mono',monospace; font-size:7px; letter-spacing:2px;
+    padding:3px 8px; border:1px solid #2A2A2A; border-radius:2px; color:#777; margin-top:10px; }
+  .cs-teaser-lock{ text-align:center; padding:22px; border:1px dashed #222; border-radius:2px; margin-bottom:10px; }
+  .cs-buy{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:16px;
+    border-top:1px solid #141414; padding-top:16px; }
+  .cs-price{ font-size:20px; font-weight:700; color:#FFD200; }
+  .cs-price small{ font-size:10px; color:#555; font-weight:400; font-family:'Space Mono',monospace; }
+  .cs-disclaimer{ font-family:'Space Mono',monospace; font-size:7px; letter-spacing:1px; color:#2E2E2E;
+    margin-top:12px; line-height:1.7; }
+</style>
+
+<div class="hkov" id="ov-crypto"><div class="hkov-card">
+  <button class="hkov-x" onclick="document.getElementById('ov-crypto').classList.remove('open')">✕</button>
+  <div class="hkov-eyebrow">CRYPTO VICE · MOTOR DE OPORTUNIDADES</div>
+  <div class="hkov-title">SEÑALES DE HOY — <span style="color:#FFD200">CON PORQUÉ</span></div>
+  <div class="cs-law">⚖ LEY DEL MOTOR: NINGUNA OPORTUNIDAD SE RECOMIENDA SIN SU PORQUÉ — TESIS, MÍNIMO 3 RAZONES E INVALIDACIÓN. SI EL AGENTE NO PUEDE EXPLICARLA, NO EXISTE.</div>
+  <div id="cs-list"></div>
+  <div class="cs-buy">
+    <div><div class="cs-price">USD 23 <small>· MOTOR + TEMPLATE COMPLETO</small></div></div>
+    <button class="gate-cta" style="background:#FFD200;color:#000" id="cs-buy-btn">COMPRAR EN GUMROAD →</button>
+    <button class="gate-cta" style="background:transparent;border:1px solid #2A2A2A;color:#888" id="cs-code-btn">TENGO CÓDIGO →</button>
+  </div>
+  <div class="cs-disclaimer">MOTOR EN MODO DEMO EDUCATIVO — LAS SEÑALES ILUSTRAN EL FORMATO DEL PRODUCTO (TESIS + PORQUÉ + INVALIDACIÓN). NO ES CONSEJO FINANCIERO. DYOR SIEMPRE.</div>
+</div></div>
+
+<script>
+// ═══ CRYPTO SIGNALS — cada señal DEBE traer porqué + invalidación ═══
+(function(){
+  const $=id=>document.getElementById(id);
+  const log=(kind,detail)=>{ try{ const ev=JSON.parse(localStorage.getItem('hk23_eventos'))||[];
+    ev.push({t:new Date().toISOString(),kind,detail}); localStorage.setItem('hk23_eventos',JSON.stringify(ev)); }catch(e){} };
+
+  const ACTS={ ACUMULAR:'#AAFF00', OBSERVAR:'#00F0FF', ROTAR:'#FFD200', REDUCIR:'#FF3A1F' };
+  // dataset demo — el formato ES el producto: tesis + porqué(3) + invalidación + riesgo
+  const POOL=[
+    { pair:'BTC / USDT', act:'ACUMULAR', conf:74, risk:'MEDIO',
+      why:[ 'Flujo on-chain: salidas netas de exchanges por 12 días seguidos — la oferta líquida se seca.',
+            'Momentum: reclamó la media de 200 días y la sostiene como soporte por segunda semana.',
+            'Narrativa: ciclo post-halving históricamente favorable en esta ventana de meses.' ],
+      inv:'INVALIDACIÓN: cierre semanal bajo la media de 200d → la tesis muere, no se promedia a la baja.' },
+    { pair:'ETH / BTC', act:'OBSERVAR', conf:58, risk:'MEDIO',
+      why:[ 'El par está en zona de acumulación histórica — riesgo/retorno asimétrico si el ciclo rota a alts.',
+            'Actividad de desarrolladores y L2 en máximos: el uso real no acompaña (todavía) al precio.',
+            'Falta confirmación: sin quiebre del rango, es observación, no entrada.' ],
+      inv:'INVALIDACIÓN: pérdida del piso del rango de 2 años → ETH sigue débil vs BTC, no hay rotación.' },
+    { pair:'SOL / USDT', act:'ROTAR', conf:63, risk:'ALTO',
+      why:[ 'Volumen DEX del ecosistema supera al de la competencia por 3er mes — flujo de usuarios real.',
+            'Estructura de mercado: máximos y mínimos ascendentes intactos en el marco semanal.',
+            'Costo de oportunidad: fuerza relativa superior al resto de L1 en las últimas 8 semanas.' ],
+      inv:'INVALIDACIÓN: mínimo semanal descendente o caída del volumen DEX bajo el promedio de 90d.' },
+    { pair:'STABLES → DeFi', act:'OBSERVAR', conf:52, risk:'BAJO',
+      why:[ 'Rendimiento en pools blue-chip por encima del promedio anual — el mercado paga por liquidez.',
+            'TVL agregado creciendo 6 semanas seguidas: el capital vuelve antes que los titulares.',
+            'Riesgo de contrato acotado eligiendo solo protocolos con años de historial y auditorías.' ],
+      inv:'INVALIDACIÓN: APY comprimido bajo el rendimiento de tesorería USA → no compensa el riesgo.' },
+    { pair:'MEMECOINS', act:'REDUCIR', conf:81, risk:'EXTREMO',
+      why:[ 'Métricas de euforia: volumen especulativo en percentil 95 del año — históricamente techo local.',
+            'Concentración: wallets ballena distribuyendo a retail en las últimas 2 semanas (on-chain).',
+            'Asimetría invertida: el upside restante no paga el riesgo de drawdown del 70%+.' ],
+      inv:'INVALIDACIÓN: reset del volumen especulativo a percentil <50 — recién ahí se vuelve a mirar.' },
+    { pair:'BTC DOMINANCIA', act:'OBSERVAR', conf:66, risk:'BAJO',
+      why:[ 'La dominancia marca el régimen del mercado: define si es momento de BTC o de rotar a alts.',
+            'Se acerca a resistencia histórica de varios ciclos — zona de decisión, no de acción.',
+            'Es el semáforo del portfolio: operarlo directo no, leerlo siempre.' ],
+      inv:'INVALIDACIÓN: n/a — es un indicador de régimen, no una posición.' },
+  ];
+
+  // rotación diaria determinística (mismas señales todo el día)
+  function todaySignals(){
+    const day=Math.floor(Date.now()/864e5);
+    const n=POOL.length, count=4, out=[];
+    for(let i=0;i<count;i++) out.push(POOL[(day+i*2)%n]);
+    return out;
+  }
+  // LA LEY: el render rechaza señales sin porqué completo
+  function validate(s){ return s && Array.isArray(s.why) && s.why.length>=3 && s.inv && s.inv.length>10; }
+
+  function tier(){ try{ return JSON.parse(localStorage.getItem('hk23_tier'))||'visita'; }catch(e){ return 'visita'; } }
+
+  function card(s){
+    return '<div class="cs-sig">'+
+      '<div class="cs-top"><span class="cs-pair">'+s.pair+'</span>'+
+      '<span class="cs-act" style="background:'+(ACTS[s.act]||'#888')+'">'+s.act+'</span>'+
+      '<span class="cs-conf">CONVICCIÓN '+s.conf+'%</span></div>'+
+      '<div class="cs-why-label">POR QUÉ EL AGENTE LA RECOMIENDA</div>'+
+      '<ul class="cs-why">'+s.why.map(w=>'<li>'+w+'</li>').join('')+'</ul>'+
+      '<div class="cs-inv">'+s.inv+'</div>'+
+      '<span class="cs-risk">RIESGO: '+s.risk+'</span></div>';
+  }
+
+  function render(){
+    const list=$('cs-list'); const sigs=todaySignals().filter(validate);
+    const hasAccess=tier()!=='visita';
+    if(hasAccess){ list.innerHTML=sigs.map(card).join(''); }
+    else {
+      list.innerHTML=card(sigs[0])+
+        '<div class="cs-teaser-lock"><div style="font-size:22px;margin-bottom:8px">🔒</div>'+
+        '<div style="font-size:12px;color:#888;line-height:1.7">'+(sigs.length-1)+' señales más hoy — cada una con su porqué completo.<br>Entrá con tu código o llevate el motor.</div></div>';
+    }
+  }
+
+  const CS={ open(){ render(); $('ov-crypto').classList.add('open'); log('crypto','abrió señales ('+tier()+')'); } };
+  window.CryptoSignals=CS;
+
+  $('cs-buy-btn').onclick=()=>{ log('crypto','click comprar (gumroad)'); window.open('https://hk23hub.gumroad.com','_blank'); };
+  $('cs-code-btn').onclick=()=>{ $('ov-crypto').classList.remove('open'); document.getElementById('ov-gate').classList.add('open'); };
+
+  // comando ATLAS: "crypto" / "señales"
+  const cmd=document.getElementById('ag-cmd');
+  if(cmd) cmd.addEventListener('keydown',e=>{
+    if(e.key!=='Enter') return;
+    const s=(cmd.value||'').trim().toLowerCase();
+    if(/^(crypto|se[ñn]ales?)$/.test(s)){ e.stopImmediatePropagation(); e.preventDefault(); cmd.value=''; CS.open(); }
+  }, true);
+
+  // ═══ UNIVERSE ROUTER — ningún panel LIVE muere en "volver" ═══
+  // detalles live sin link → el agente los entrega a su ficha del portafolio
+  const SLUGS=[
+    [/kick|rugby/i,'rugby-vice'], [/iglesia|miner|inversi|geol|equipo|data eng/i,'la-iglesia'],
+    [/james|craig|brand identity/i,'james-craig-art'], [/fallowood/i,'fallowood'],
+    [/golf/i,'vicegolfer'], [/crypto/i,'crypto-vice'], [/hub|blog|libro/i,'hk23-hub']
+  ];
+  window.UniverseRoute=function(d){
+    const t=(d&&d.title)||'';
+    const hit=SLUGS.find(([re])=>re.test(t));
+    log('router', t+' → portafolio#'+(hit?hit[1]:'top'));
+    window.open('./portfolio.html#'+(hit?hit[1]:''), '_blank');
+  };
 })();
 </script>
 </body>
