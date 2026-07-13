@@ -1,5 +1,5 @@
 {
-  "generated": "2026-07-13T07:19:08.801Z",
+  "generated": "2026-07-13T12:10:19.713Z",
   "date": "2026-07-13",
   "worlds": [
     {
@@ -62,9 +62,10 @@
   },
   "featured": "chile-goldmine",
   "commits24h": [
+    "788ba45 Core agents, crypto signals with why, backrooms, defensa, portfolio (#2)",
     "895bc66 Add HK23 UNIVERSE: live-media backgrounds, entity QR, ATLAS agent (#1)"
   ],
-  "weekCommitCount": 1,
+  "weekCommitCount": 2,
   "actions": [
     "Reactivar 2 mundo(s) sin push en 30d: HK23 VICE OS ECOSYSTEM, HOW TO USE CLAUDE",
     "Ningún mundo está LIVE — conectar VERCEL_TOKEN o desplegar uno",
