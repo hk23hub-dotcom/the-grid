@@ -6528,5 +6528,811 @@ var qrcode = function() {
   requestAnimationFrame(loop);
 })();
 </script>
+<!-- ═══════════ HK23 CORE AGENTS — GATE · ORACLE · CURATOR · BACKROOMS · DEFENSA · GALAXIAS · BIBLIOTECA ═══════════ -->
+<style id="core-agents-style">
+  /* ── generic overlay ── */
+  .hkov{ position:fixed; inset:0; z-index:600; background:rgba(3,3,4,.94); display:none;
+    align-items:center; justify-content:center; backdrop-filter:blur(6px); }
+  .hkov.open{ display:flex; }
+  .hkov-card{ width:min(680px,94vw); max-height:88vh; overflow-y:auto; background:#060608;
+    border:1px solid #1E1E1E; border-radius:3px; padding:26px 28px;
+    scrollbar-width:thin; scrollbar-color:#1a1a1a #050505; }
+  .hkov-eyebrow{ font-family:'Space Mono',monospace; font-size:8px; letter-spacing:4px; color:#2E2E2E; margin-bottom:6px; text-transform:uppercase; }
+  .hkov-title{ font-size:22px; font-weight:700; letter-spacing:-.3px; margin-bottom:14px; }
+  .hkov-x{ float:right; background:none; border:none; color:#444; cursor:pointer; font-size:13px; }
+  .hkov-x:hover{ color:#fff; }
+
+  /* ── GATE badge ── */
+  #gate-badge{ position:fixed; top:20px; right:20px; z-index:525;
+    font-family:'Space Mono',monospace; font-size:8px; letter-spacing:3px; text-transform:uppercase;
+    padding:7px 12px; border-radius:2px; border:1px solid #222; color:#555; background:rgba(6,6,8,.85);
+    cursor:pointer; backdrop-filter:blur(6px); }
+  #gate-badge.t-referido{ border-color:#00F0FF; color:#00F0FF; }
+  #gate-badge.t-obsesionado{ border-color:#B84DFF; color:#B84DFF; }
+  #gate-badge.t-socio{ border-color:#FFD200; color:#FFD200; }
+  .gate-cta{ margin-top:16px; font-family:'Space Mono',monospace; font-size:9px; letter-spacing:3px;
+    font-weight:700; border:none; border-radius:2px; padding:11px 20px; cursor:pointer; text-transform:uppercase; }
+  .gate-input{ width:100%; background:#0C0C0E; border:1px solid #1A1A1A; border-radius:2px; color:#ccc;
+    font-family:'Space Mono',monospace; font-size:11px; padding:10px 12px; outline:none; margin:10px 0; text-transform:uppercase; }
+
+  /* ── ORACLE report ── */
+  #oracle-report{ font-family:'Space Mono',monospace; font-size:10px; color:#8a8; line-height:1.7;
+    background:#08080A; border:1px solid #141414; border-radius:2px; padding:14px; white-space:pre-wrap;
+    max-height:300px; overflow-y:auto; margin-bottom:10px; display:none; }
+
+  /* ── CURATOR list ── */
+  .cur-art{ border:1px solid #161616; border-radius:2px; padding:9px 11px; margin-bottom:6px; background:#0A0A0C;
+    display:flex; align-items:center; gap:10px; }
+  .cur-art .ico{ font-size:14px; flex-shrink:0; }
+  .cur-art .nm{ flex:1; font-size:10px; color:#888; font-family:'Space Mono',monospace; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .cur-art .mi{ font-family:'Space Mono',monospace; font-size:7px; letter-spacing:2px; padding:3px 7px; border-radius:2px; border:1px solid #222; color:#666; flex-shrink:0; }
+
+  /* ── BIBLIOTECA ── */
+  .bib-book{ border:1px solid #1A1A1A; border-radius:2px; padding:14px 16px; margin-bottom:8px; background:#0A0A0C;
+    cursor:pointer; transition:border-color .2s; }
+  .bib-book:hover{ border-color:#FFD200; }
+  .bib-book .bt{ font-size:14px; font-weight:700; margin-bottom:4px; }
+  .bib-book .bd{ font-size:11px; color:#555; line-height:1.6; }
+  .bib-book .bl{ font-family:'Space Mono',monospace; font-size:7px; letter-spacing:2px; color:#FFD200; margin-top:8px; }
+  #bib-reader{ font-size:14px; line-height:1.85; color:#BBB; }
+  #bib-reader h1{ font-size:24px; color:#F0EDE8; letter-spacing:-.5px; margin:18px 0 10px; }
+  #bib-reader h2{ font-size:17px; color:#FFD200; margin:20px 0 8px; }
+  #bib-reader h3{ font-size:14px; color:#00F0FF; margin:16px 0 6px; }
+  #bib-reader li{ margin:4px 0 4px 18px; }
+  #bib-reader p{ margin:8px 0; }
+  #bib-reader b{ color:#F0EDE8; }
+  #bib-locked{ text-align:center; padding:30px 20px; }
+
+  /* ── BACKROOMS ── */
+  #backrooms{ position:fixed; inset:0; z-index:900; display:none; background:#B8A93E; overflow:hidden;
+    font-family:'Space Mono',monospace; }
+  #backrooms.open{ display:block; }
+  #br-room{ position:absolute; inset:0;
+    background:
+      linear-gradient(rgba(0,0,0,.14),rgba(60,50,0,.30)),
+      repeating-linear-gradient(90deg, #C4B44A 0 90px, #B8A93E 90px 180px),
+      repeating-linear-gradient(0deg, transparent 0 140px, rgba(0,0,0,.06) 140px 145px); }
+  #br-ceiling{ position:absolute; top:0; left:0; right:0; height:16vh;
+    background:repeating-linear-gradient(90deg,#D6C965 0 60px,#CCBF55 60px 120px); box-shadow:0 8px 40px rgba(0,0,0,.25); }
+  #br-floor{ position:absolute; bottom:0; left:0; right:0; height:18vh;
+    background:repeating-linear-gradient(90deg,#8A7D2E 0 46px,#94862F 46px 92px); box-shadow:0 -8px 40px rgba(0,0,0,.3); }
+  .br-light{ position:absolute; top:4vh; width:90px; height:12px; background:#FFF7C0; box-shadow:0 0 60px 22px rgba(255,247,190,.55); animation:brflick 7s infinite; }
+  @keyframes brflick{ 0%,91%,100%{opacity:1} 92%,94%{opacity:.35} 93%{opacity:.8} }
+  .br-door{ position:absolute; bottom:18vh; width:110px; height:270px; background:#9C8D33;
+    border:4px solid #7D7028; border-bottom:none; cursor:pointer; transition:filter .2s; }
+  .br-door:hover{ filter:brightness(1.14); }
+  .br-door::after{ content:''; position:absolute; top:48%; right:12px; width:9px; height:9px; border-radius:50%; background:#5E5420; }
+  #br-hud{ position:absolute; top:18px; left:22px; color:rgba(40,34,0,.85); font-size:11px; letter-spacing:3px; line-height:2; z-index:5; }
+  #br-live{ position:absolute; top:18px; right:22px; text-align:right; z-index:5; }
+  #br-live .lv{ display:inline-block; background:#C0392B; color:#fff; font-size:9px; letter-spacing:3px; padding:4px 10px; border-radius:2px; animation:pulse 2s infinite; }
+  #br-live .vw{ color:rgba(40,34,0,.75); font-size:9px; letter-spacing:2px; margin-top:6px; }
+  #br-feed{ position:absolute; right:22px; top:80px; width:250px; max-height:46vh; overflow:hidden; z-index:5;
+    font-size:8px; letter-spacing:1px; color:rgba(40,34,0,.68); line-height:1.9; text-align:right; }
+  #br-msg{ position:absolute; left:50%; bottom:22vh; transform:translateX(-50%); color:rgba(40,34,0,.9);
+    font-size:12px; letter-spacing:2px; text-align:center; z-index:5; max-width:80vw; }
+  #br-terminal{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:min(430px,90vw);
+    background:#0A0A0A; border:2px solid #222; padding:22px; z-index:10; display:none; color:#AAFF00; }
+  #br-terminal .q{ font-size:11px; letter-spacing:1px; line-height:1.9; margin-bottom:14px; }
+  #br-terminal input{ width:100%; background:#000; border:1px solid #1E3A00; color:#AAFF00;
+    font-family:'Space Mono',monospace; font-size:11px; padding:9px 11px; outline:none; }
+  #br-terminal .er{ font-size:9px; color:#C0392B; letter-spacing:2px; margin-top:8px; min-height:12px; }
+  #br-noise{ position:absolute; inset:0; pointer-events:none; opacity:.5; mix-blend-mode:overlay; z-index:4;
+    background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E"); }
+
+  /* ── DEFENSA overlay text ── */
+  #def-caption{ position:fixed; bottom:8vh; left:50%; transform:translateX(-50%); z-index:495; display:none;
+    text-align:center; font-family:'Space Mono',monospace; }
+  #def-caption .t1{ font-size:16px; letter-spacing:8px; color:#FF3A1F; font-weight:700; margin-bottom:8px; }
+  #def-caption .t2{ font-size:9px; letter-spacing:4px; color:#666; }
+</style>
+
+<!-- gate badge -->
+<button id="gate-badge">◌ MODO VISITA — TOCÁ PARA ENTRAR</button>
+
+<!-- generic overlays -->
+<div class="hkov" id="ov-gate"><div class="hkov-card">
+  <button class="hkov-x" onclick="document.getElementById('ov-gate').classList.remove('open')">✕</button>
+  <div class="hkov-eyebrow">LA PUERTA</div>
+  <div class="hkov-title">EL TEMPLATE ES EL PRODUCTO.<br>LA ENTRADA ES EL ACCESO.</div>
+  <div style="font-size:12px;color:#666;line-height:1.8;margin-bottom:6px">
+    Sin acceso solo mirás. Con acceso: coleccionás las ideas que vuelan, usás los agentes,
+    leés la biblioteca completa y te llevás el template. Si venís por un referido, tu link ya te abre la puerta.
+  </div>
+  <input class="gate-input" id="gate-code" placeholder="INGRESÁ TU CÓDIGO DE ACCESO" />
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <button class="gate-cta" style="background:#B84DFF;color:#000" id="gate-enter">VALIDAR CÓDIGO →</button>
+    <button class="gate-cta" style="background:transparent;border:1px solid #2A2A2A;color:#888" onclick="goTo('gates');document.getElementById('ov-gate').classList.remove('open')">VER TIERS</button>
+  </div>
+  <div style="font-family:'Space Mono',monospace;font-size:8px;letter-spacing:1px;color:#2E2E2E;margin-top:14px;line-height:1.7">
+    ✦ Screenshot sin aportar, link sin referido, intentos de agarrar lo que no es tuyo… el universo lo ve. Y el universo tiene sótano.
+  </div>
+</div></div>
+
+<div class="hkov" id="ov-bib"><div class="hkov-card">
+  <button class="hkov-x" onclick="document.getElementById('ov-bib').classList.remove('open')">✕</button>
+  <div class="hkov-eyebrow">BIBLIOTECA HK23</div>
+  <div class="hkov-title" id="bib-title">LIBROS &amp; GUÍAS</div>
+  <div id="bib-list"></div>
+  <div id="bib-reader" style="display:none"></div>
+  <div id="bib-locked" style="display:none">
+    <div style="font-size:34px;margin-bottom:10px">🔒</div>
+    <div style="font-size:13px;color:#888;line-height:1.7;margin-bottom:16px">Este contenido completo es para miembros.<br>Con tu código de acceso se lee entero, acá mismo.</div>
+    <button class="gate-cta" style="background:#FFD200;color:#000" onclick="document.getElementById('ov-bib').classList.remove('open');document.getElementById('ov-gate').classList.add('open')">TENGO CÓDIGO →</button>
+  </div>
+  <button class="gate-cta" id="bib-back" style="background:transparent;border:1px solid #2A2A2A;color:#888;display:none">← VOLVER A LA BIBLIOTECA</button>
+</div></div>
+
+<div class="hkov" id="ov-art"><div class="hkov-card">
+  <button class="hkov-x" onclick="document.getElementById('ov-art').classList.remove('open')">✕</button>
+  <div class="hkov-eyebrow" id="art-eyebrow">ARTEFACTO CURADO</div>
+  <div class="hkov-title" id="art-title">—</div>
+  <div style="font-size:12px;color:#666;line-height:1.8;margin-bottom:16px" id="art-desc">—</div>
+  <button class="gate-cta" id="art-action" style="background:#00F0FF;color:#000">EJECUTAR →</button>
+</div></div>
+
+<!-- BACKROOMS -->
+<div id="backrooms">
+  <div id="br-room"></div>
+  <div id="br-ceiling"></div>
+  <div id="br-floor"></div>
+  <div id="br-noise"></div>
+  <div id="br-hud">NIVEL <span id="br-level">0</span><br>SECTOR <span id="br-sector">A-1</span><br><span id="br-time">00:00</span></div>
+  <div id="br-live"><span class="lv">● LIVE 24/7</span><div class="vw"><span id="br-viewers">1.2K</span> MIRANDO CÓMO INTENTÁS SALIR</div></div>
+  <div id="br-feed"></div>
+  <div id="br-msg">Tomaste lo que no era tuyo. Esto es el sótano del universo.<br>Hay una salida. Está escondida donde menos mirás.</div>
+  <div id="br-terminal">
+    <div class="q">TERMINAL ENCONTRADA_<br><br>EN EL UNIVERSO HK23, LO QUE VALE… ¿SE PIDE, SE DA, O SE TOMA?</div>
+    <input id="br-answer" autocomplete="off" spellcheck="false" placeholder="respuesta_" />
+    <div class="er" id="br-error"></div>
+  </div>
+</div>
+
+<div id="def-caption">
+  <div class="t1">MEGA-HEYOKA</div>
+  <div class="t2">PROTOCOLO DE DEFENSA FINAL — ATLAS + ORACLE + CURATOR + MEDIA UNIDOS</div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  HK23 CORE AGENTS — GATE · ORACLE · CURATOR · BACKROOMS ·
+//  DEFENSA · GALAXIAS · BIBLIOTECA
+// ═══════════════════════════════════════════════════════════
+(function(){
+  const $=id=>document.getElementById(id);
+  const store={ get(k,d){ try{ return JSON.parse(localStorage.getItem(k)) ?? d; }catch(e){ return d; } },
+                set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} } };
+
+  // ═══════ GATE — acceso / referidos / leechers ═══════
+  const CODES={ 'HEYOKA23':'obsesionado', 'TAKEN':'obsesionado', 'OWL':'obsesionado', 'SOCIO23':'socio' };
+  const GATE={
+    tier: store.get('hk23_tier','visita'),
+    leech: store.get('hk23_leech',0),
+    hasAccess(){ return this.tier!=='visita'; },
+    grant(t){ this.tier=t; store.set('hk23_tier',t); paintBadge();
+      logEvent('acceso','tier otorgado: '+t); },
+    strike(what){
+      this.leech++; store.set('hk23_leech',this.leech);
+      logEvent('leech', what+' sin acceso ('+this.leech+'/3)');
+      if(this.leech>=3){ this.leech=0; store.set('hk23_leech',0); Backrooms.enter('leech'); return true; }
+      toast('🔒 '+(4-this.leech-1>0? 'ESO ES DE MIEMBROS — '+(3-this.leech)+' INTENTOS MÁS Y CAES AL SÓTANO':'ÚLTIMO AVISO'));
+      $('ov-gate').classList.add('open');
+      return false;
+    }
+  };
+  // referral: ?ref=XXX abre la puerta; ?code=XXX aplica código
+  try{
+    const sp=new URLSearchParams(location.search);
+    const code=(sp.get('code')||'').toUpperCase();
+    if(sp.get('ref') && !GATE.hasAccess()){ GATE.tier='referido'; store.set('hk23_tier','referido'); store.set('hk23_ref',sp.get('ref')); }
+    if(CODES[code]) { GATE.tier=CODES[code]; store.set('hk23_tier',CODES[code]); }
+  }catch(e){}
+  function paintBadge(){
+    const b=$('gate-badge'); b.className='t-'+GATE.tier;
+    b.id='gate-badge';
+    const names={visita:'◌ MODO VISITA — TOCÁ PARA ENTRAR', referido:'◈ REFERIDO — PUERTA ABIERTA', obsesionado:'◈ OBSESIONADO', socio:'◆ SOCIO'};
+    b.textContent=names[GATE.tier]||names.visita;
+    if(GATE.tier!=='visita') b.classList.add('t-'+GATE.tier);
+  }
+  $('gate-badge').onclick=()=>$('ov-gate').classList.add('open');
+  $('gate-enter').onclick=()=>{
+    const c=($('gate-code').value||'').trim().toUpperCase();
+    if(CODES[c]){ GATE.grant(CODES[c]); $('ov-gate').classList.remove('open'); toast('◈ PUERTA ABIERTA — BIENVENIDO, '+CODES[c].toUpperCase()); }
+    else { $('gate-code').style.borderColor='#FF3A1F'; setTimeout(()=>$('gate-code').style.borderColor='',700);
+      GATE.strike('código inválido: '+c.slice(0,12)); }
+  };
+  $('gate-code').addEventListener('keydown',e=>{ if(e.key==='Enter') $('gate-enter').click(); });
+  paintBadge();
+
+  // eventos → ORACLE
+  function logEvent(kind,detail){
+    const ev=store.get('hk23_eventos',[]);
+    ev.push({t:new Date().toISOString(), kind, detail});
+    if(ev.length>400) ev.splice(0, ev.length-400);
+    store.set('hk23_eventos',ev);
+  }
+  function toast(msg){
+    const t=$('collect-toast'); if(!t) return;
+    const orig='✦ NUEVO COLECCIONABLE DESBLOQUEADO';
+    t.textContent=msg; t.classList.add('show');
+    clearTimeout(toast._t); toast._t=setTimeout(()=>{ t.classList.remove('show'); setTimeout(()=>t.textContent=orig,400); },2200);
+  }
+
+  // gatear la colección de ideas y biblioteca: envolver el modo colección
+  const collectBtn=$('idea-collect');
+  if(collectBtn){
+    const origHandler=collectBtn.onclick;
+    collectBtn.onclick=(e)=>{ if(!GATE.hasAccess()){ GATE.strike('modo colección'); return; } origHandler&&origHandler(e); };
+  }
+
+  // ═══════ BIBLIOTECA — libros y guías, lectura in-situ ═══════
+  const BIB_FALLBACK=[
+    { id:'manual-universo', title:'MANUAL DEL UNIVERSO HK23', tier:'referido',
+      desc:'Cómo se opera todo: media engine, QR vivo, ideas coleccionables, agentes, defensa.',
+      md:[ '# MANUAL DEL UNIVERSO HK23',
+        '## La regla',
+        'Todo lo que se ve, ejecuta. Nada existe de adorno. Si un objeto vuela, se puede agarrar. Si un botón brilla, hace algo.',
+        '## MEDIA ENGINE (◉ MEDIA)',
+        '- Pegá cualquier link: **Shorts, TikTok, Reels, Vimeo, Twitch, Spotify, SoundCloud, mp4, imágenes o webs.**',
+        '- Modos por capa: FULL, PIP arrastrable, MIRROR, FLIP, PIXELS, DUO, BLUR, SPLIT, GHOST.',
+        '- Corré varias capas a la vez; blend + opacidad + mute por capa.',
+        '## ATLAS (◈ AGENT)',
+        '- **QR VIVO:** las entidades forman un QR gigante escaneable. Cambiá el destino cuando quieras; exportá PNG.',
+        '- **IDEAS:** las ideas sin usar vuelan. Coleccioná sus piezas; al completarlas quedan VIVAS y listas para implementar.',
+        '- **COMANDOS:** qr <url> · bg <link> · idea <nombre> xN · galaxia <nombre> · defensa · dispersar · limpiar.',
+        '## ORACLE',
+        'El reporter del universo: genera el reporte de estado (qué se hizo, dónde estamos, próximas acciones) y lo exporta en Markdown/JSON para tus otros agentes.',
+        '## CURATOR',
+        'Nada muere en el universo: los elementos sin misión se curan, ganan una acción o se transforman en objetos que vuelan. Ojo: los más bonitos pueden ser la entrada al sótano.',
+        '## DEFENSA (🛡)',
+        'Protocolo final: todos los agentes convergen y forman a MEGA-HEYOKA, el gigante que une todas las cualidades.' ].join('\n\n') },
+    { id:'guia-template', title:'GUÍA DEL TEMPLATE — TU PROPIO UNIVERSO', tier:'obsesionado',
+      desc:'El producto. Qué incluye el template, cómo desplegarlo y cómo convertir tu marca en un universo.',
+      md:[ '# GUÍA DEL TEMPLATE',
+        '## Qué comprás',
+        'Un archivo. **Un solo HTML autocontenido** con: portal + mapa constelación, zonas, media engine multi-capa, QR vivo escaneable, campo de ideas coleccionables, agentes (ATLAS/ORACLE/CURATOR), gating por códigos y referidos, backrooms para leechers y protocolo de defensa.',
+        '## Desplegar en 5 minutos',
+        '1. Subí el HTML a Vercel/Netlify/GitHub Pages (es estático, no necesita backend).',
+        '2. Cambiá los colores en `:root` y el nombre en el portal.',
+        '3. Sembrá tus ideas con `idea <nombre> xN` y tus fondos con `bg <link>`.',
+        '4. Apuntá el QR a tu dominio de redirección para que sea dinámico después de impreso.',
+        '## Personalizar el gating',
+        'Editá los códigos en `CODES` y repartí links con `?ref=TU-CODIGO` a tus referidos. Sin referido = modo visita; tres intentos de manotear = backrooms.',
+        '## La filosofía',
+        'NOT GIVEN. TAKEN. El universo no se pide — se construye y se toma. Este template es la puerta: lo que hagas adentro es tuyo.' ].join('\n\n') }
+  ];
+  let BIB=BIB_FALLBACK;
+  fetch('./biblioteca.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(j=>{
+    if(j&&j.books&&j.books.length){ BIB=[...BIB_FALLBACK, ...j.books.map(b=>({...b, md:b.md||''}))]; renderBib(); }
+  }).catch(()=>{});
+  const TIER_RANK={visita:0, referido:1, obsesionado:2, socio:3};
+  function canRead(book){ return TIER_RANK[GATE.tier]>=TIER_RANK[book.tier||'referido']; }
+  function mdToHtml(md){
+    return md.split(/\n{2,}/).map(blk=>{
+      blk=blk.trim();
+      if(/^# /.test(blk))  return '<h1>'+esc(blk.slice(2))+'</h1>';
+      if(/^## /.test(blk)) return '<h2>'+esc(blk.slice(3))+'</h2>';
+      if(/^### /.test(blk))return '<h3>'+esc(blk.slice(4))+'</h3>';
+      if(/^[-\d]/.test(blk)&&/^([-]|\d+\.)\s/m.test(blk))
+        return '<ul>'+blk.split('\n').map(l=>'<li>'+inline(l.replace(/^([-]|\d+\.)\s*/,''))+'</li>').join('')+'</ul>';
+      return '<p>'+inline(blk)+'</p>';
+    }).join('');
+    function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+    function inline(s){ return esc(s).replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>').replace(/`([^`]+)`/g,'<b>$1</b>'); }
+  }
+  function renderBib(){
+    const list=$('bib-list'); list.innerHTML='';
+    $('bib-reader').style.display='none'; $('bib-locked').style.display='none'; $('bib-back').style.display='none';
+    list.style.display='';
+    $('bib-title').textContent='LIBROS & GUÍAS';
+    BIB.forEach(book=>{
+      const d=document.createElement('div'); d.className='bib-book';
+      d.innerHTML='<div class="bt">'+book.title+'</div><div class="bd">'+book.desc+'</div>'+
+        '<div class="bl">'+(canRead(book)?'◈ LEER AQUÍ MISMO →':'🔒 '+(book.tier||'referido').toUpperCase()+' — TEASER DISPONIBLE')+'</div>';
+      d.onclick=()=>openBook(book);
+      list.appendChild(d);
+    });
+  }
+  function openBook(book){
+    $('bib-list').style.display='none'; $('bib-back').style.display='';
+    $('bib-title').textContent=book.title;
+    logEvent('biblioteca','abrió: '+book.id+' ('+GATE.tier+')');
+    if(canRead(book)){
+      $('bib-reader').style.display=''; $('bib-locked').style.display='none';
+      $('bib-reader').innerHTML=mdToHtml(book.md||'*contenido en camino*');
+    } else {
+      const teaser=(book.md||'').split(/\n{2,}/).slice(0,2).join('\n\n');
+      $('bib-reader').style.display='';
+      $('bib-reader').innerHTML=mdToHtml(teaser)+'<p style="color:#333">— — — el resto es de miembros — — —</p>';
+      $('bib-locked').style.display='';
+      GATE.strike('leer libro completo');
+    }
+  }
+  $('bib-back').onclick=renderBib;
+  renderBib();
+
+  // ═══════ CURATOR — nada existe sin misión ═══════
+  const MISSIONS=['coleccionable','portal','impulso','reporte'];
+  const MISSION_META={
+    coleccionable:{ico:'✦', color:'#B84DFF', label:'COLECCIONABLE', desc:'Este artefacto suelta una pieza de idea al ejecutarse.'},
+    portal:{ico:'🚪', color:'#B8A93E', label:'PORTAL', desc:'Bonito por fuera. Es una entrada directa al sótano del universo.'},
+    impulso:{ico:'⚡', color:'#AAFF00', label:'IMPULSO', desc:'Recolorea el universo y deja una afirmación en el aire.'},
+    reporte:{ico:'📡', color:'#00F0FF', label:'REPORTE', desc:'Abre el canal de ORACLE con el estado del universo.'}
+  };
+  const artefactos=[];
+  function curate(){
+    const nodes=[...document.querySelectorAll('.raw-card'), ...document.querySelectorAll('.gate-tier')];
+    nodes.forEach((el,i)=>{
+      if(el.dataset.curated) return; el.dataset.curated='1';
+      const title=(el.querySelector('.card-title')||el.querySelector('[style*="font-size:28px"]')||{}).textContent||('ARTEFACTO '+(i+1));
+      const isTier=el.classList.contains('gate-tier');
+      if(isTier){
+        // los tiers son EL producto → CTA real de entrada
+        const btn=document.createElement('button');
+        btn.className='gate-cta';
+        const featured=el.classList.contains('featured');
+        btn.style.background=featured?'#B84DFF':'transparent';
+        btn.style.color=featured?'#000':'#888';
+        if(!featured) btn.style.border='1px solid #2A2A2A';
+        btn.textContent = /FREE|CURIOSO/i.test(el.textContent)?'ENTRAR GRATIS — MODO VISITA →':'TENGO CÓDIGO / QUIERO ENTRAR →';
+        btn.onclick=(e)=>{ e.stopPropagation();
+          if(/FREE|CURIOSO/i.test(el.textContent)){ toast('◌ MODO VISITA — MIRÁ TODO, TOCÁ NADA'); goTo('map'); }
+          else $('ov-gate').classList.add('open');
+        };
+        el.appendChild(btn);
+        return;
+      }
+      const mission=MISSIONS[i%MISSIONS.length];
+      const art={ id:'art'+i, title:title.trim(), mission, el };
+      artefactos.push(art);
+      el.addEventListener('click',()=>execArtefact(art));
+    });
+    store.set('hk23_artefactos', artefactos.map(a=>({id:a.id,title:a.title,mission:a.mission})));
+  }
+  function execArtefact(art){
+    const meta=MISSION_META[art.mission];
+    $('art-eyebrow').textContent='ARTEFACTO CURADO · MISIÓN: '+meta.label;
+    $('art-title').textContent=meta.ico+' '+art.title;
+    $('art-desc').textContent=meta.desc;
+    const b=$('art-action'); b.style.background=meta.color; b.style.color='#000';
+    b.textContent='EJECUTAR '+meta.label+' →';
+    b.onclick=()=>{
+      $('ov-art').classList.remove('open');
+      logEvent('artefacto', art.title+' → '+art.mission);
+      if(art.mission==='coleccionable'){
+        if(!GATE.hasAccess()){ GATE.strike('coleccionable de artefacto'); return; }
+        // suelta una pieza de la idea más cercana a completarse
+        try{
+          const st=store.get('hk23_universe_state',null);
+          if(st&&st.ideas){ const open=st.ideas.filter(x=>x.collected<x.pieces).sort((a,b)=>(b.collected/b.pieces)-(a.collected/a.pieces));
+            if(open[0]){ open[0].collected++; store.set('hk23_universe_state',st); toast('✦ PIEZA SOLTADA → '+open[0].name+' ('+open[0].collected+'/'+open[0].pieces+')'); } }
+        }catch(e){}
+      }
+      else if(art.mission==='portal'){ Backrooms.enter('portal'); }
+      else if(art.mission==='impulso'){
+        const cols=['#FF3A1F','#FFD200','#AAFF00','#00F0FF','#B84DFF'];
+        document.documentElement.style.setProperty('--red', cols[Math.floor(Math.random()*cols.length)]);
+        toast('⚡ IMPULSO — EL UNIVERSO CAMBIÓ DE PIEL');
+      }
+      else if(art.mission==='reporte'){ openOracle(); }
+    };
+    $('ov-art').classList.add('open');
+  }
+  curate();
+
+  // leads reales: AVISAR y RECOMENDACIÓN ahora persisten
+  const nb=$('fnp-notify-btn'), sb=$('fnp-submit-suggest');
+  if(nb) nb.addEventListener('click',()=>{
+    const em=($('fnp-email').value||'').trim();
+    if(em){ const L=store.get('hk23_leads',[]); L.push({t:new Date().toISOString(), email:em}); store.set('hk23_leads',L); logEvent('lead','email capturado'); }
+  });
+  if(sb) sb.addEventListener('click',()=>{
+    const s=($('fnp-suggestion').value||'').trim();
+    if(s){ const S=store.get('hk23_sugerencias',[]); S.push({t:new Date().toISOString(), text:s.slice(0,500)}); store.set('hk23_sugerencias',S); logEvent('sugerencia','recomendación recibida'); }
+  });
+
+  // ═══════ GALAXIAS — crear de verdad ═══════
+  const galaxias=store.get('hk23_galaxias',[]);
+  function sembrarGalaxia(nombre){
+    if(!GATE.hasAccess()){ GATE.strike('sembrar galaxia'); return; }
+    const cols=['#FF3A1F','#FFD200','#AAFF00','#00F0FF','#B84DFF'];
+    const g={ name:(nombre||'GALAXIA '+(galaxias.length+1)).toUpperCase().slice(0,24),
+      color:cols[galaxias.length%cols.length],
+      x:0.12+Math.random()*0.76, y:0.15+Math.random()*0.7,
+      stars:Array.from({length:14},()=>({dx:(Math.random()-0.5)*0.16,dy:(Math.random()-0.5)*0.1,r:Math.random()*1.6+0.6})) };
+    galaxias.push(g); store.set('hk23_galaxias',galaxias);
+    logEvent('galaxia','sembrada: '+g.name);
+    toast('✧ GALAXIA SEMBRADA — '+g.name);
+  }
+  function drawGalaxias(ctx,W,H,t){
+    galaxias.forEach(g=>{
+      const cx=g.x*W, cy=g.y*H;
+      ctx.save(); ctx.translate(cx,cy); ctx.rotate(t*0.00004);
+      g.stars.forEach(s=>{ ctx.beginPath(); ctx.arc(s.dx*W, s.dy*H, s.r, 0, 6.283);
+        ctx.fillStyle=g.color; ctx.globalAlpha=0.5; ctx.fill(); });
+      ctx.restore(); ctx.globalAlpha=1;
+      ctx.font='8px "Space Mono", monospace'; ctx.fillStyle=g.color; ctx.globalAlpha=0.55; ctx.textAlign='center';
+      ctx.fillText('✧ '+g.name, cx, cy - H*0.06); ctx.globalAlpha=1;
+    });
+  }
+
+  // ═══════ OBJETOS VOLADORES (curados) — ovnis/naves; los lindos son portales ═══════
+  const flyers=[];
+  const FLYER_KINDS=[
+    {kind:'ovni', portal:true},  {kind:'nave', portal:false},
+    {kind:'diamante', portal:true}, {kind:'cometa', portal:false}
+  ];
+  for(let i=0;i<7;i++){ const k=FLYER_KINDS[i%FLYER_KINDS.length];
+    flyers.push({ ...k, x:Math.random()*innerWidth, y:Math.random()*innerHeight,
+      vx:(Math.random()-0.5)*0.5, vy:(Math.random()-0.5)*0.3, ph:Math.random()*6.28 }); }
+  function drawFlyers(ctx,W,H,t){
+    flyers.forEach(f=>{
+      f.x+=f.vx; f.y+=f.vy;
+      if(f.x<-30) f.x=W+30; if(f.x>W+30) f.x=-30;
+      if(f.y<20) f.vy=Math.abs(f.vy); if(f.y>H-20) f.vy=-Math.abs(f.vy);
+      const bob=Math.sin(t*0.002+f.ph)*3;
+      ctx.save(); ctx.translate(f.x, f.y+bob);
+      if(f.kind==='ovni'){ ctx.fillStyle='#B84DFF'; ctx.globalAlpha=.85;
+        ctx.beginPath(); ctx.ellipse(0,0,13,4.5,0,0,6.283); ctx.fill();
+        ctx.fillStyle='#E9D5FF'; ctx.beginPath(); ctx.arc(0,-3.5,5,Math.PI,0); ctx.fill(); }
+      else if(f.kind==='nave'){ ctx.fillStyle='#00F0FF'; ctx.globalAlpha=.8;
+        ctx.beginPath(); ctx.moveTo(12,0); ctx.lineTo(-9,-6); ctx.lineTo(-5,0); ctx.lineTo(-9,6); ctx.closePath(); ctx.fill(); }
+      else if(f.kind==='diamante'){ ctx.fillStyle='#FFD200'; ctx.globalAlpha=.9;
+        ctx.beginPath(); ctx.moveTo(0,-8); ctx.lineTo(6,0); ctx.lineTo(0,8); ctx.lineTo(-6,0); ctx.closePath(); ctx.fill(); }
+      else { ctx.fillStyle='#FF3A1F'; ctx.globalAlpha=.75;
+        ctx.beginPath(); ctx.arc(0,0,3.4,0,6.283); ctx.fill();
+        ctx.strokeStyle='rgba(255,58,31,.35)'; ctx.lineWidth=2;
+        ctx.beginPath(); ctx.moveTo(-4,2); ctx.lineTo(-16,8); ctx.stroke(); }
+      ctx.restore(); ctx.globalAlpha=1;
+    });
+  }
+  function flyerAt(mx,my){
+    return flyers.find(f=>{ const dx=f.x-mx, dy=f.y-my; return dx*dx+dy*dy<26*26; });
+  }
+  // click en objetos: el bonito te traga
+  const fieldCv=$('entity-field');
+  if(fieldCv) fieldCv.addEventListener('click',e=>{
+    const f=flyerAt(e.clientX,e.clientY);
+    if(f){ if(f.portal){ logEvent('portal','cayó por un '+f.kind); Backrooms.enter('objeto'); }
+      else { toast('✦ '+f.kind.toUpperCase()+' AMISTOSO — SIGUE VOLANDO'); } }
+  });
+
+  // pintar galaxias + flyers sobre el loop existente sin tocarlo: segundo canvas? no — piggyback rAF propio
+  const overlayCv=document.createElement('canvas');
+  overlayCv.style.cssText='position:fixed;inset:0;z-index:2;pointer-events:none;';
+  document.body.insertBefore(overlayCv, fieldCv||document.body.firstChild);
+  const octx=overlayCv.getContext('2d');
+  function sizeOverlay(){ overlayCv.width=innerWidth; overlayCv.height=innerHeight; }
+  sizeOverlay(); addEventListener('resize',sizeOverlay);
+  (function oloop(t){ octx.clearRect(0,0,overlayCv.width,overlayCv.height);
+    drawGalaxias(octx,overlayCv.width,overlayCv.height,t||0);
+    drawFlyers(octx,overlayCv.width,overlayCv.height,t||0);
+    requestAnimationFrame(oloop); })(0);
+
+  // ═══════ BACKROOMS — el sótano streameado ═══════
+  const Backrooms={
+    level:0, t0:0, timer:null, feedTimer:null,
+    enter(reason){
+      this.level=0; this.t0=Date.now();
+      $('backrooms').classList.add('open');
+      $('br-level').textContent='0';
+      logEvent('backrooms','entró ('+reason+')');
+      this.buildRoom(); this.startClock(); this.startFeed();
+    },
+    exit(escaped){
+      $('backrooms').classList.remove('open');
+      clearInterval(this.timer); clearInterval(this.feedTimer);
+      logEvent('backrooms', escaped?'ESCAPÓ en nivel '+this.level:'salió (dev)');
+      if(escaped) toast('◈ SALISTE. NO TODOS PUEDEN DECIR LO MISMO.');
+    },
+    startClock(){
+      clearInterval(this.timer);
+      this.timer=setInterval(()=>{
+        const s=Math.floor((Date.now()-this.t0)/1000);
+        $('br-time').textContent=String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+      },1000);
+    },
+    startFeed(){
+      const feed=$('br-feed'); feed.innerHTML='';
+      const NAMES=['anon_442','leech_king','sc_shotter','copycat9','br_lurker','sin_ref','idea_thief','tmpl_pirate'];
+      const ACTS=['abrió una puerta equivocada','lleva 3 niveles dando vueltas','encontró una terminal y falló','gritó en el sector B-7','intentó F12 — no sirve acá','se quedó mirando la luz','juró que compraba el template si salía','entró de nuevo. increíble'];
+      clearInterval(this.feedTimer);
+      const push=()=>{
+        const line=document.createElement('div');
+        line.textContent='› '+NAMES[Math.floor(Math.random()*NAMES.length)]+' '+ACTS[Math.floor(Math.random()*ACTS.length)];
+        feed.prepend(line); while(feed.children.length>10) feed.lastChild.remove();
+        $('br-viewers').textContent=(1+Math.random()*2.4).toFixed(1)+'K';
+      };
+      push(); this.feedTimer=setInterval(push, 2600);
+    },
+    buildRoom(){
+      // limpiar puertas/luces previas
+      document.querySelectorAll('.br-door,.br-light').forEach(n=>n.remove());
+      $('br-terminal').style.display='none';
+      const room=$('backrooms');
+      const nDoors=2+Math.floor(Math.random()*3);
+      const nLights=3+Math.floor(Math.random()*3);
+      for(let i=0;i<nLights;i++){ const l=document.createElement('div'); l.className='br-light';
+        l.style.left=(8+Math.random()*84)+'vw'; l.style.animationDelay=(Math.random()*6)+'s'; room.appendChild(l); }
+      const hasTerminal=Math.random()<0.22 || this.level>=6; // la salida existe, escondida
+      for(let i=0;i<nDoors;i++){
+        const d=document.createElement('div'); d.className='br-door';
+        d.style.left=(10+i*(80/nDoors)+Math.random()*8)+'vw';
+        d.onclick=()=>{
+          this.level++; $('br-level').textContent=this.level;
+          $('br-sector').textContent=String.fromCharCode(65+Math.floor(Math.random()*6))+'-'+(1+Math.floor(Math.random()*9));
+          $('br-msg').style.opacity='0';
+          this.buildRoom();
+        };
+        room.appendChild(d);
+      }
+      if(hasTerminal){
+        const term=$('br-terminal'); term.style.display='block';
+        const inp=$('br-answer'); inp.value=''; $('br-error').textContent='';
+        inp.onkeydown=(e)=>{
+          if(e.key!=='Enter') return;
+          const a=inp.value.toLowerCase();
+          if(a.includes('toma')||a.includes('taken')){ this.exit(true); }
+          else { $('br-error').textContent='RESPUESTA RECHAZADA. LA TERMINAL SE APAGA.';
+            logEvent('backrooms','falló la pregunta en nivel '+this.level);
+            setTimeout(()=>{ this.level+=2; $('br-level').textContent=this.level; this.buildRoom(); },1200); }
+        };
+        setTimeout(()=>inp.focus(),300);
+      }
+    }
+  };
+  window.Backrooms=Backrooms;
+  // dev/socio escape: ESC sale solo si sos socio (los demás, a caminar)
+  addEventListener('keydown',e=>{
+    if(e.key==='Escape' && $('backrooms').classList.contains('open') && GATE.tier==='socio') Backrooms.exit(false);
+  });
+
+  // ═══════ DEFENSA FINAL — MEGA-HEYOKA ═══════
+  // bitmap del gigante (17 cols) — 1 = celda
+  const MECHA=[
+    '00000011111000000',
+    '00000111111100000',
+    '00000110101100000',
+    '00000111111100000',
+    '00000011111000000',
+    '00000001110000000',
+    '00111111111111100',
+    '01111111111111110',
+    '11101111111101111',
+    '11101111111101111',
+    '11101111111101111',
+    '01101111111101100',
+    '00001111111100000',
+    '00001111111100000',
+    '00001111111100000',
+    '00000111111000000',
+    '00000110011000000',
+    '00000110011000000',
+    '00000110011000000',
+    '00000110011000000',
+    '00001110011100000',
+    '00011110011110000'
+  ];
+  let defensa={ active:false, ents:[], cell:0 };
+  function activarDefensa(){
+    if(defensa.active) return;
+    const W=innerWidth, H=innerHeight;
+    const rows=MECHA.length, cols=MECHA[0].length;
+    const S=Math.min(W/cols, (H*0.78)/rows);
+    const x0=(W-cols*S)/2, y0=(H-rows*S)/2 - H*0.02;
+    const targets=[];
+    for(let r=0;r<rows;r++) for(let c=0;c<cols;c++) if(MECHA[r][c]==='1')
+      targets.push({tx:x0+c*S+S/2, ty:y0+r*S+S/2});
+    defensa.ents=targets.map(t=>({ x:Math.random()*W, y:Math.random()<0.5?-30:H+30, ...t }));
+    defensa.cell=S; defensa.active=true;
+    $('def-caption').style.display='block';
+    logEvent('defensa','protocolo activado');
+    toast('🛡 DEFENSA ACTIVADA — TODOS LOS AGENTES CONVERGEN');
+    // canvas propio arriba de todo
+    if(!defensa.cv){
+      defensa.cv=document.createElement('canvas');
+      defensa.cv.style.cssText='position:fixed;inset:0;z-index:490;pointer-events:none;';
+      document.body.appendChild(defensa.cv);
+    }
+    defensa.cv.width=W; defensa.cv.height=H; defensa.cv.style.display='block';
+    const dctx=defensa.cv.getContext('2d');
+    const AGENTS_N=['ATLAS','ORACLE','CURATOR','MEDIA'];
+    let frame=0;
+    (function dloop(){
+      if(!defensa.active) return;
+      frame++;
+      dctx.clearRect(0,0,W,H);
+      dctx.fillStyle='rgba(3,3,4,0.55)'; dctx.fillRect(0,0,W,H);
+      const flicker=0.82+0.18*Math.sin(frame*0.15);
+      defensa.ents.forEach((e,i)=>{
+        e.x+=(e.tx-e.x)*0.075; e.y+=(e.ty-e.y)*0.075;
+        const settled=Math.abs(e.tx-e.x)+Math.abs(e.ty-e.y)<defensa.cell*0.5;
+        if(settled){
+          dctx.fillStyle= (i%23===0)? '#FFD200' : '#FF3A1F';
+          dctx.globalAlpha=flicker;
+          dctx.fillRect(e.x-defensa.cell/2+1, e.y-defensa.cell/2+1, defensa.cell-2, defensa.cell-2);
+        } else {
+          dctx.fillStyle='#00F0FF'; dctx.globalAlpha=.9;
+          dctx.beginPath(); dctx.arc(e.x,e.y,2.4,0,6.283); dctx.fill();
+        }
+      });
+      dctx.globalAlpha=1;
+      // ojos
+      dctx.fillStyle='#AAFF00';
+      const eyeY=defensa.ents[0]? (defensa.ents[0].ty+defensa.cell*1.9):H*0.2;
+      dctx.fillRect(W/2-defensa.cell*1.6, eyeY, defensa.cell*0.9, defensa.cell*0.5);
+      dctx.fillRect(W/2+defensa.cell*0.7, eyeY, defensa.cell*0.9, defensa.cell*0.5);
+      // nombres de agentes orbitando
+      dctx.font='9px "Space Mono", monospace'; dctx.textAlign='center';
+      AGENTS_N.forEach((n,i)=>{
+        const a=frame*0.02+i*(Math.PI/2);
+        dctx.fillStyle='rgba(240,237,232,0.5)';
+        dctx.fillText('◈ '+n, W/2+Math.cos(a)*Math.min(W,H)*0.34, H/2+Math.sin(a)*Math.min(W,H)*0.4);
+      });
+      requestAnimationFrame(dloop);
+    })();
+    clearTimeout(defensa._off);
+    defensa._off=setTimeout(desactivarDefensa, 14000);
+  }
+  function desactivarDefensa(){
+    defensa.active=false;
+    if(defensa.cv) defensa.cv.style.display='none';
+    $('def-caption').style.display='none';
+  }
+  addEventListener('keydown',e=>{ if(e.key==='Escape'&&defensa.active) desactivarDefensa(); });
+
+  // ═══════ ORACLE — reporter del universo ═══════
+  function buildReport(){
+    const st=store.get('hk23_universe_state',{ideas:[]});
+    const ideas=st.ideas||[];
+    const vivas=ideas.filter(i=>i.collected>=i.pieces);
+    const ev=store.get('hk23_eventos',[]);
+    const leads=store.get('hk23_leads',[]);
+    const sug=store.get('hk23_sugerencias',[]);
+    const arts=store.get('hk23_artefactos',[]);
+    const gal=store.get('hk23_galaxias',[]);
+    const media=(window.MediaEngine&&window.MediaEngine.layers)||[];
+    const qrCfg=(st.qr)||{};
+    const leech=ev.filter(e=>e.kind==='leech'||e.kind==='backrooms'||e.kind==='portal');
+    const hoy=new Date().toISOString().slice(0,10);
+    const md=[
+      '# ORACLE · REPORTE DEL UNIVERSO HK23 — '+hoy,
+      '',
+      '## HECHO HASTA AHORA',
+      '- Ideas vivas (completadas): **'+vivas.length+'** de '+ideas.length+(vivas.length?' → '+vivas.map(v=>v.name).join(', '):''),
+      '- Piezas coleccionadas: **'+ideas.reduce((s,i)=>s+i.collected,0)+'**',
+      '- Galaxias sembradas: **'+gal.length+'**'+(gal.length?' → '+gal.map(g=>g.name).join(', '):''),
+      '- Artefactos curados con misión: **'+arts.length+'** (nada existe sin acción)',
+      '- Capas de media activas: **'+media.length+'**',
+      '- QR vivo apuntando a: '+(qrCfg.url||'—'),
+      '',
+      '## SEÑALES DE NEGOCIO',
+      '- Leads capturados (AVISAR): **'+leads.length+'**',
+      '- Recomendaciones recibidas: **'+sug.length+'**',
+      '- Tier del visitante actual: **'+GATE.tier+'**',
+      '- Eventos leech / backrooms: **'+leech.length+'**'+(leech.length?' (los que quisieron sacar sin aportar, ya saben dónde terminaron)':''),
+      '',
+      '## PARA DÓNDE VAMOS — ACCIONES EJECUTABLES',
+      ...ideas.filter(i=>i.collected<i.pieces).sort((a,b)=>(b.collected/b.pieces)-(a.collected/a.pieces)).slice(0,3)
+        .map(i=>'- [ ] Completar **'+i.name+'** — faltan '+(i.pieces-i.collected)+' piezas → al cerrar, pasar a implementación'),
+      ...(sug.length? ['- [ ] Revisar las '+sug.length+' recomendaciones y premiar las útiles (descuento/membresía)']:[]),
+      ...(leads.length? ['- [ ] Contactar los '+leads.length+' leads con el drop del template']:[]),
+      '- [ ] Repartir links ?ref= a los referidos de esta semana',
+      '',
+      '## EVENTOS RECIENTES',
+      ...ev.slice(-8).map(e=>'- `'+e.t.slice(5,16).replace('T',' ')+'` ['+e.kind+'] '+e.detail),
+      '',
+      '_Generado por ORACLE dentro del universo. Reporte diario automático: hk23universe.vercel.app/report.json_'
+    ].join('\n');
+    return md;
+  }
+  let lastReport='';
+  function openOracle(){
+    const p=$('ag-panel'); if(p) p.classList.add('open');
+    const tab=document.querySelector('.ag-tab[data-pane="oracle"]'); if(tab) tab.click();
+    genReport();
+  }
+  function genReport(){
+    lastReport=buildReport();
+    const out=$('oracle-report'); out.style.display='block'; out.textContent=lastReport;
+    logEvent('oracle','reporte generado');
+  }
+  function dl(name, text, mime){
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([text],{type:mime})); a.download=name; a.click();
+  }
+
+  // inyectar pestañas ORACLE + CURATOR + BIBLIOTECA en el panel de ATLAS
+  const tabsBar=$('ag-tabs'), agBody=document.querySelector('.ag-body');
+  if(tabsBar&&agBody){
+    [['oracle','ORACLE'],['curator','CURATOR'],['bib','BIBLIOTECA']].forEach(([k,lbl])=>{
+      const b=document.createElement('button'); b.className='ag-tab'; b.dataset.pane=k; b.textContent=lbl;
+      tabsBar.appendChild(b);
+      b.onclick=()=>{
+        document.querySelectorAll('.ag-tab').forEach(x=>x.classList.remove('active'));
+        document.querySelectorAll('.ag-pane').forEach(x=>x.classList.remove('active'));
+        b.classList.add('active');
+        document.querySelector('.ag-pane[data-pane="'+k+'"]').classList.add('active');
+        if(k==='curator') renderCurator();
+      };
+    });
+    const oraclePane=document.createElement('div');
+    oraclePane.className='ag-pane'; oraclePane.dataset.pane='oracle';
+    oraclePane.innerHTML=
+      '<div class="ag-label">ORACLE — REPORTER DEL UNIVERSO</div>'+
+      '<div class="ag-btnrow">'+
+        '<button class="ag-btn primary" id="or-gen">📡 GENERAR REPORTE</button>'+
+        '<button class="ag-btn ghost" id="or-md">↓ MARKDOWN</button>'+
+        '<button class="ag-btn ghost" id="or-json">↓ JSON</button>'+
+        '<button class="ag-btn ghost" id="or-copy">⧉ COPIAR</button>'+
+      '</div>'+
+      '<div id="oracle-report"></div>'+
+      '<div class="ag-note">Estado + hecho + hacia dónde + acciones ejecutables. Descargalo y entregáselo a tu otro agente. El reporte diario automático vive en <b>/report.json</b> del sitio (lo escribe el cron del repo cada día).</div>';
+    agBody.appendChild(oraclePane);
+    const curatorPane=document.createElement('div');
+    curatorPane.className='ag-pane'; curatorPane.dataset.pane='curator';
+    curatorPane.innerHTML=
+      '<div class="ag-label">CURATOR — NADA EXISTE SIN MISIÓN</div>'+
+      '<div class="ag-note" style="margin-bottom:12px">Todo elemento que estaba de adorno fue curado: ahora tiene una acción real. Los objetos lindos que vuelan… algunos son portales al sótano.</div>'+
+      '<div id="cur-list"></div>';
+    agBody.appendChild(curatorPane);
+    const bibPane=document.createElement('div');
+    bibPane.className='ag-pane'; bibPane.dataset.pane='bib';
+    bibPane.innerHTML=
+      '<div class="ag-label">BIBLIOTECA — LIBROS Y GUÍAS</div>'+
+      '<div class="ag-btnrow"><button class="ag-btn primary" id="bib-open-btn">📖 ABRIR BIBLIOTECA</button></div>'+
+      '<div class="ag-note">Todo publicado, todo legible acá adentro con tu código. Sin código: teaser + puerta.</div>';
+    agBody.appendChild(bibPane);
+    $('or-gen').onclick=genReport;
+    $('or-md').onclick=()=>{ if(!lastReport) genReport(); dl('oracle-reporte.md', lastReport, 'text/markdown'); };
+    $('or-json').onclick=()=>{ if(!lastReport) genReport();
+      dl('oracle-reporte.json', JSON.stringify({generado:new Date().toISOString(), tier:GATE.tier,
+        eventos:store.get('hk23_eventos',[]), leads:store.get('hk23_leads',[]),
+        sugerencias:store.get('hk23_sugerencias',[]), galaxias:store.get('hk23_galaxias',[]),
+        artefactos:store.get('hk23_artefactos',[]), estado:store.get('hk23_universe_state',{}) },null,2), 'application/json'); };
+    $('or-copy').onclick=()=>{ if(!lastReport) genReport();
+      navigator.clipboard&&navigator.clipboard.writeText(lastReport).then(()=>toast('⧉ REPORTE COPIADO — ENTREGÁSELO A TU AGENTE')); };
+    $('bib-open-btn').onclick=()=>{ renderBib(); $('ov-bib').classList.add('open'); };
+  }
+  function renderCurator(){
+    const list=$('cur-list'); if(!list) return; list.innerHTML='';
+    artefactos.forEach(a=>{
+      const meta=MISSION_META[a.mission];
+      const d=document.createElement('div'); d.className='cur-art';
+      d.innerHTML='<span class="ico">'+meta.ico+'</span><span class="nm">'+a.title+'</span>'+
+        '<span class="mi" style="border-color:'+meta.color+';color:'+meta.color+'">'+meta.label+'</span>';
+      list.appendChild(d);
+    });
+    if(!artefactos.length) list.innerHTML='<div class="ag-note">Sin artefactos pendientes — todo tiene misión.</div>';
+  }
+
+  // ═══════ NAV: botones reales inyectados ═══════
+  const nav=document.querySelector('.map-nav');
+  if(nav){
+    const mk=(txt,fn,color)=>{ const b=document.createElement('button'); b.className='nav-btn'; b.textContent=txt;
+      if(color) b.style.color=color, b.style.borderColor=color+'55'; b.onclick=fn; nav.prepend(b); return b; };
+    mk('🛡 DEFENSA', activarDefensa, '#FF3A1F');
+    mk('✧ GALAXIA', ()=>{ const n=prompt('Nombre de la nueva galaxia:'); if(n!==null) sembrarGalaxia(n); }, '#B84DFF');
+    mk('📖 BIBLIOTECA', ()=>{ renderBib(); $('ov-bib').classList.add('open'); }, '#FFD200');
+    mk('📡 ORACLE', openOracle, '#00F0FF');
+  }
+
+  // comandos nuevos en ATLAS: hook sobre el input existente
+  const cmd=$('ag-cmd');
+  if(cmd){
+    cmd.addEventListener('keydown',e=>{
+      if(e.key!=='Enter') return;
+      const s=(cmd.value||'').trim().toLowerCase();
+      if(/^defensa|^defense/.test(s)){ e.stopImmediatePropagation(); e.preventDefault(); cmd.value=''; activarDefensa(); }
+      else if(/^galaxia\s+(.+)/.test(s)){ e.stopImmediatePropagation(); e.preventDefault();
+        const n=s.replace(/^galaxia\s+/,''); cmd.value=''; sembrarGalaxia(n); }
+      else if(/^reporte|^oracle/.test(s)){ e.stopImmediatePropagation(); e.preventDefault(); cmd.value=''; openOracle(); }
+      else if(/^backrooms?$/.test(s)){ e.stopImmediatePropagation(); e.preventDefault(); cmd.value=''; Backrooms.enter('comando'); }
+      else if(/^biblioteca|^libros?$/.test(s)){ e.stopImmediatePropagation(); e.preventDefault(); cmd.value=''; renderBib(); $('ov-bib').classList.add('open'); }
+    }, true);
+  }
+
+  logEvent('sistema','core agents en línea: GATE/ORACLE/CURATOR/BACKROOMS/DEFENSA');
+})();
+</script>
 </body>
 </html>

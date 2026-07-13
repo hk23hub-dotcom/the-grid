@@ -1,0 +1,33 @@
+name: oracle-report
+
+on:
+  schedule:
+    - cron: "0 9 * * *" # daily 09:00 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Generate ORACLE daily report
+        run: node scripts/oracle-report.mjs
+
+      - name: Commit report
+        run: |
+          git config user.name "oracle-agent"
+          git config user.email "oracle@hk23.universe"
+          git add reports report.json
+          git diff --cached --quiet && echo "no changes" && exit 0
+          git commit -m "oracle: reporte diario $(date -u +%F)"
+          git push

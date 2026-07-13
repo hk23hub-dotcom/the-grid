@@ -1,0 +1,77 @@
+{
+  "generated": "2026-07-13T07:19:08.801Z",
+  "date": "2026-07-13",
+  "worlds": [
+    {
+      "id": "hk23-universe",
+      "name": "HK23 UNIVERSE",
+      "status": "local",
+      "lastPush": "2026-07-13T00:00:00.000Z"
+    },
+    {
+      "id": "chile-goldmine",
+      "name": "CHILE GOLDMINE",
+      "status": "local",
+      "lastPush": "2026-06-22T03:04:49.464Z"
+    },
+    {
+      "id": "vicegolfer-command-center",
+      "name": "VICEGOLFER COMMAND CENTER",
+      "status": "local",
+      "lastPush": "2026-06-21T08:37:03.241Z"
+    },
+    {
+      "id": "cryptovice-honeyscam",
+      "name": "CRYPTOVICE HONEYSCAM",
+      "status": "local",
+      "lastPush": "2026-06-21T08:35:09.703Z"
+    },
+    {
+      "id": "uno-al-dia-soprole",
+      "name": "UNO AL DIA SOPROLE",
+      "status": "local",
+      "lastPush": "2026-06-21T03:58:25.197Z"
+    },
+    {
+      "id": "affiliate-growth-agent",
+      "name": "AFFILIATE GROWTH AGENT",
+      "status": "local",
+      "lastPush": "2026-06-18T11:50:47.487Z"
+    },
+    {
+      "id": "atlas-x",
+      "name": "ATLAS X",
+      "status": "local",
+      "lastPush": "2026-06-18T06:15:13.369Z"
+    },
+    {
+      "id": "hk23-vice-os-ecosystem",
+      "name": "HK23 VICE OS ECOSYSTEM",
+      "status": "local",
+      "lastPush": "2026-05-27T02:23:41.900Z"
+    },
+    {
+      "id": "how-to-use-claude",
+      "name": "HOW TO USE CLAUDE",
+      "status": "local",
+      "lastPush": "2026-05-24T16:56:18.117Z"
+    }
+  ],
+  "byStatus": {
+    "local": 9
+  },
+  "featured": "chile-goldmine",
+  "commits24h": [
+    "895bc66 Add HK23 UNIVERSE: live-media backgrounds, entity QR, ATLAS agent (#1)"
+  ],
+  "weekCommitCount": 1,
+  "actions": [
+    "Reactivar 2 mundo(s) sin push en 30d: HK23 VICE OS ECOSYSTEM, HOW TO USE CLAUDE",
+    "Ningún mundo está LIVE — conectar VERCEL_TOKEN o desplegar uno",
+    "Revisar leads y sugerencias capturadas en el universo (ORACLE in-page → export JSON)",
+    "Repartir links ?ref= de la semana a los referidos"
+  ],
+  "reports": [
+    "2026-07-13.md"
+  ]
+}
