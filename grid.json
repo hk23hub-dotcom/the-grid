@@ -4,6 +4,17 @@
   "featured": "chile-goldmine",
   "worlds": [
     {
+      "id": "hk23-universe",
+      "name": "HK23 UNIVERSE",
+      "description": "Interactive universe OS — live-media backgrounds from any link (shorts, TikToks, Spotify, mp4), a scannable QR forged from the constellation, and the ATLAS agent that runs it all.",
+      "url": "https://hk23universe.vercel.app/hk23-universe",
+      "repo": null,
+      "status": "local",
+      "preview": "./previews/hk23-universe.jpg",
+      "lastPush": "2026-07-13T00:00:00.000Z",
+      "topics": []
+    },
+    {
       "id": "chile-goldmine",
       "name": "CHILE GOLDMINE",
       "description": "Goal: turn the map collection into sales and funnel followers to the La Iglesia Goldmine landing page. Copy-paste ready. Mix Spanish + Engli",
