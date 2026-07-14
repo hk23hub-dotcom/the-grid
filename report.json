@@ -1,6 +1,6 @@
 {
-  "generated": "2026-07-13T12:10:19.713Z",
-  "date": "2026-07-13",
+  "generated": "2026-07-14T10:51:08.493Z",
+  "date": "2026-07-14",
   "worlds": [
     {
       "id": "hk23-universe",
@@ -62,10 +62,9 @@
   },
   "featured": "chile-goldmine",
   "commits24h": [
-    "788ba45 Core agents, crypto signals with why, backrooms, defensa, portfolio (#2)",
-    "895bc66 Add HK23 UNIVERSE: live-media backgrounds, entity QR, ATLAS agent (#1)"
+    "42e223d oracle: reporte diario 2026-07-13"
   ],
-  "weekCommitCount": 2,
+  "weekCommitCount": 3,
   "actions": [
     "Reactivar 2 mundo(s) sin push en 30d: HK23 VICE OS ECOSYSTEM, HOW TO USE CLAUDE",
     "Ningún mundo está LIVE — conectar VERCEL_TOKEN o desplegar uno",
@@ -73,6 +72,7 @@
     "Repartir links ?ref= de la semana a los referidos"
   ],
   "reports": [
+    "2026-07-14.md",
     "2026-07-13.md"
   ]
 }
