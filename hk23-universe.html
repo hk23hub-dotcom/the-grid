@@ -6491,10 +6491,12 @@ var qrcode = function() {
     if(collectMode && qr.active) disperseQR();
   };
   document.getElementById('idea-add').onclick=()=>{
-    const nm=prompt('Nombre de la idea:'); if(!nm) return;
-    let p=parseInt(prompt('¿Cuántas piezas para completarla?','4'),10); if(!p||p<1) p=4;
-    state.ideas.push({id:'i'+Date.now(), name:nm.toUpperCase().slice(0,32), pieces:p, collected:0});
-    save(); rebuildIdeaEnts(); renderIdeas(); agentSay('Idea sembrada: '+nm);
+    const ask=window.hkPrompt||((t,ph,cb)=>{ const v=prompt(t); if(v!=null) cb(v); });
+    ask('Nueva idea (agregá "x4" para las piezas)', 'ej. RADIO HEYOKA x4', v=>{
+      const m=v.match(/^(.*?)(?:\s*x\s*(\d+))?$/i); const nm=(m[1]||v).trim(); let p=parseInt(m[2]||'4',10); if(!p||p<1) p=4;
+      state.ideas.push({id:'i'+Date.now(), name:nm.toUpperCase().slice(0,32), pieces:p, collected:0});
+      save(); rebuildIdeaEnts(); renderIdeas(); agentSay('Idea sembrada: '+nm);
+    });
   };
 
   // DESIGNS pane
@@ -6937,25 +6939,35 @@ var qrcode = function() {
   // ═══════ GALAXIAS — crear de verdad ═══════
   const galaxias=store.get('hk23_galaxias',[]);
   function sembrarGalaxia(nombre){
-    if(!GATE.hasAccess()){ GATE.strike('sembrar galaxia'); return; }
+    // crear galaxias es un acto del dueño — libre, no gateado
     const cols=['#FF3A1F','#FFD200','#AAFF00','#00F0FF','#B84DFF'];
     const g={ name:(nombre||'GALAXIA '+(galaxias.length+1)).toUpperCase().slice(0,24),
       color:cols[galaxias.length%cols.length],
-      x:0.12+Math.random()*0.76, y:0.15+Math.random()*0.7,
-      stars:Array.from({length:14},()=>({dx:(Math.random()-0.5)*0.16,dy:(Math.random()-0.5)*0.1,r:Math.random()*1.6+0.6})) };
+      x:0.14+Math.random()*0.72, y:0.18+Math.random()*0.62,
+      stars:Array.from({length:22},(_,k)=>{ const a=k/22*Math.PI*3.2, rad=0.02+k/22*0.12;
+        return { dx:Math.cos(a)*rad, dy:Math.sin(a)*rad*0.7, r:Math.random()*1.6+0.8 }; }) };
     galaxias.push(g); store.set('hk23_galaxias',galaxias);
     logEvent('galaxia','sembrada: '+g.name);
     toast('✧ GALAXIA SEMBRADA — '+g.name);
+    if(typeof currentScreen!=='undefined' && currentScreen!=='map' && typeof goTo==='function') goTo('map');
   }
   function drawGalaxias(ctx,W,H,t){
     galaxias.forEach(g=>{
       const cx=g.x*W, cy=g.y*H;
-      ctx.save(); ctx.translate(cx,cy); ctx.rotate(t*0.00004);
-      g.stars.forEach(s=>{ ctx.beginPath(); ctx.arc(s.dx*W, s.dy*H, s.r, 0, 6.283);
-        ctx.fillStyle=g.color; ctx.globalAlpha=0.5; ctx.fill(); });
+      // núcleo con glow
+      const grad=ctx.createRadialGradient(cx,cy,0,cx,cy,Math.min(W,H)*0.09);
+      grad.addColorStop(0, g.color+'AA'); grad.addColorStop(0.4, g.color+'22'); grad.addColorStop(1,'transparent');
+      ctx.fillStyle=grad; ctx.globalAlpha=0.6; ctx.beginPath(); ctx.arc(cx,cy,Math.min(W,H)*0.09,0,6.283); ctx.fill();
+      // brazos espirales
+      ctx.save(); ctx.translate(cx,cy); ctx.rotate(t*0.00008);
+      g.stars.forEach(s=>{ ctx.beginPath(); ctx.arc(s.dx*W, s.dy*W, s.r, 0, 6.283);
+        ctx.fillStyle=g.color; ctx.globalAlpha=0.9; ctx.fill(); });
       ctx.restore(); ctx.globalAlpha=1;
-      ctx.font='8px "Space Mono", monospace'; ctx.fillStyle=g.color; ctx.globalAlpha=0.55; ctx.textAlign='center';
-      ctx.fillText('✧ '+g.name, cx, cy - H*0.06); ctx.globalAlpha=1;
+      // núcleo brillante
+      ctx.beginPath(); ctx.arc(cx,cy,3,0,6.283); ctx.fillStyle='#fff'; ctx.globalAlpha=0.9; ctx.fill(); ctx.globalAlpha=1;
+      // etiqueta
+      ctx.font='700 10px "Space Mono", monospace'; ctx.fillStyle=g.color; ctx.textAlign='center';
+      ctx.fillText('✧ '+g.name, cx, cy - Math.min(W,H)*0.075);
     });
   }
 
@@ -7002,14 +7014,17 @@ var qrcode = function() {
 
   // pintar galaxias + flyers sobre el loop existente sin tocarlo: segundo canvas? no — piggyback rAF propio
   const overlayCv=document.createElement('canvas');
-  overlayCv.style.cssText='position:fixed;inset:0;z-index:2;pointer-events:none;';
-  document.body.insertBefore(overlayCv, fieldCv||document.body.firstChild);
+  overlayCv.style.cssText='position:fixed;inset:0;z-index:6;pointer-events:none;';
+  document.body.appendChild(overlayCv);
   const octx=overlayCv.getContext('2d');
   function sizeOverlay(){ overlayCv.width=innerWidth; overlayCv.height=innerHeight; }
   sizeOverlay(); addEventListener('resize',sizeOverlay);
   (function oloop(t){ octx.clearRect(0,0,overlayCv.width,overlayCv.height);
-    drawGalaxias(octx,overlayCv.width,overlayCv.height,t||0);
-    drawFlyers(octx,overlayCv.width,overlayCv.height,t||0);
+    const scr=(typeof currentScreen!=='undefined')?currentScreen:'map';
+    if(scr==='map'||scr==='portal'){
+      drawGalaxias(octx,overlayCv.width,overlayCv.height,t||0);
+      drawFlyers(octx,overlayCv.width,overlayCv.height,t||0);
+    }
     requestAnimationFrame(oloop); })(0);
 
   // ═══════ BACKROOMS — el sótano streameado ═══════
@@ -7129,6 +7144,8 @@ var qrcode = function() {
     defensa.ents=targets.map(t=>({ x:Math.random()*W, y:Math.random()<0.5?-30:H+30, ...t }));
     defensa.cell=S; defensa.active=true;
     $('def-caption').style.display='block';
+    if(typeof showDefBtn==='function') showDefBtn();
+    if(typeof currentScreen!=='undefined' && currentScreen!=='map' && typeof goTo==='function') goTo('map');
     logEvent('defensa','protocolo activado');
     toast('🛡 DEFENSA ACTIVADA — TODOS LOS AGENTES CONVERGEN');
     // canvas propio arriba de todo
@@ -7175,12 +7192,13 @@ var qrcode = function() {
       requestAnimationFrame(dloop);
     })();
     clearTimeout(defensa._off);
-    defensa._off=setTimeout(desactivarDefensa, 14000);
+    defensa._off=setTimeout(desactivarDefensa, 22000);
   }
   function desactivarDefensa(){
     defensa.active=false;
     if(defensa.cv) defensa.cv.style.display='none';
     $('def-caption').style.display='none';
+    if(defBtn) defBtn.style.display='none';
   }
   addEventListener('keydown',e=>{ if(e.key==='Escape'&&defensa.active) desactivarDefensa(); });
 
@@ -7309,13 +7327,51 @@ var qrcode = function() {
     if(!artefactos.length) list.innerHTML='<div class="ag-note">Sin artefactos pendientes — todo tiene misión.</div>';
   }
 
+  // ═══════ INPUT INLINE (sin prompt — funciona en cualquier sandbox) ═══════
+  function hkPrompt(title, placeholder, cb){
+    let ov=$('hk-prompt');
+    if(!ov){
+      ov=document.createElement('div'); ov.id='hk-prompt'; ov.className='hkov';
+      ov.innerHTML='<div class="hkov-card" style="width:min(430px,92vw)">'+
+        '<div class="hkov-eyebrow">ATLAS · CREAR</div>'+
+        '<div class="hkov-title" id="hkp-title" style="font-size:19px">—</div>'+
+        '<input class="gate-input" id="hkp-input" autocomplete="off" spellcheck="false" style="text-transform:none" />'+
+        '<div style="display:flex;gap:8px;margin-top:4px">'+
+          '<button class="gate-cta" id="hkp-ok" style="background:#B84DFF;color:#000">CREAR →</button>'+
+          '<button class="gate-cta" id="hkp-cancel" style="background:transparent;border:1px solid #2A2A2A;color:#888">CANCELAR</button>'+
+        '</div></div>';
+      document.body.appendChild(ov);
+    }
+    $('hkp-title').textContent=title; const inp=$('hkp-input'); inp.placeholder=placeholder||''; inp.value='';
+    ov.classList.add('open'); setTimeout(()=>inp.focus(),60);
+    const done=(val)=>{ ov.classList.remove('open'); if(val!=null && val.trim()) cb(val.trim()); };
+    $('hkp-ok').onclick=()=>done(inp.value);
+    $('hkp-cancel').onclick=()=>done(null);
+    inp.onkeydown=(e)=>{ if(e.key==='Enter'){ e.preventDefault(); done(inp.value); } if(e.key==='Escape') done(null); };
+  }
+  window.hkPrompt=hkPrompt;
+
+  // botón para replegar la defensa
+  let defBtn=null;
+  function showDefBtn(){
+    if(!defBtn){ defBtn=document.createElement('button'); defBtn.id='def-replegar';
+      defBtn.textContent='✕ REPLEGAR DEFENSA';
+      defBtn.style.cssText='position:fixed;top:22px;left:50%;transform:translateX(-50%);z-index:500;'+
+        "font-family:'Space Mono',monospace;font-size:10px;letter-spacing:4px;color:#000;background:#FF3A1F;"+
+        'border:none;border-radius:2px;padding:9px 18px;cursor:pointer;text-transform:uppercase;';
+      defBtn.onclick=()=>desactivarDefensa();
+      document.body.appendChild(defBtn);
+    }
+    defBtn.style.display='block';
+  }
+
   // ═══════ NAV: botones reales inyectados ═══════
   const nav=document.querySelector('.map-nav');
   if(nav){
     const mk=(txt,fn,color)=>{ const b=document.createElement('button'); b.className='nav-btn'; b.textContent=txt;
       if(color) b.style.color=color, b.style.borderColor=color+'55'; b.onclick=fn; nav.prepend(b); return b; };
     mk('🛡 DEFENSA', activarDefensa, '#FF3A1F');
-    mk('✧ GALAXIA', ()=>{ const n=prompt('Nombre de la nueva galaxia:'); if(n!==null) sembrarGalaxia(n); }, '#B84DFF');
+    mk('✧ GALAXIA', ()=> hkPrompt('Nombrá tu nueva galaxia', 'ej. GALAXIA VICE', n=> sembrarGalaxia(n)), '#B84DFF');
     mk('📖 BIBLIOTECA', ()=>{ renderBib(); $('ov-bib').classList.add('open'); }, '#FFD200');
     mk('📡 ORACLE', openOracle, '#00F0FF');
   }
