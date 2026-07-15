@@ -1,6 +1,6 @@
 {
-  "generated": "2026-07-14T10:51:08.493Z",
-  "date": "2026-07-14",
+  "generated": "2026-07-15T10:54:43.806Z",
+  "date": "2026-07-15",
   "worlds": [
     {
       "id": "hk23-universe",
@@ -62,9 +62,9 @@
   },
   "featured": "chile-goldmine",
   "commits24h": [
-    "42e223d oracle: reporte diario 2026-07-13"
+    "694863b Fix galaxy creation (visible + no prompt) and robust DEFENSA (#3)"
   ],
-  "weekCommitCount": 3,
+  "weekCommitCount": 5,
   "actions": [
     "Reactivar 2 mundo(s) sin push en 30d: HK23 VICE OS ECOSYSTEM, HOW TO USE CLAUDE",
     "Ningún mundo está LIVE — conectar VERCEL_TOKEN o desplegar uno",
@@ -72,6 +72,7 @@
     "Repartir links ?ref= de la semana a los referidos"
   ],
   "reports": [
+    "2026-07-15.md",
     "2026-07-14.md",
     "2026-07-13.md"
   ]
