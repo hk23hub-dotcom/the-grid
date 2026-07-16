@@ -7503,7 +7503,7 @@ var qrcode = function() {
     }
     $('hkp-title').textContent=title; const inp=$('hkp-input'); inp.placeholder=placeholder||''; inp.value='';
     ov.classList.add('open'); setTimeout(()=>inp.focus(),60);
-    const done=(val)=>{ ov.classList.remove('open'); if(val!=null && val.trim()) cb(val.trim()); };
+    const done=(val)=>{ ov.classList.remove('open'); inp.blur(); if(val!=null && val.trim()) cb(val.trim()); };
     $('hkp-ok').onclick=()=>done(inp.value);
     $('hkp-cancel').onclick=()=>done(null);
     inp.onkeydown=(e)=>{ if(e.key==='Enter'){ e.preventDefault(); done(inp.value); } if(e.key==='Escape') done(null); };
@@ -7552,6 +7552,11 @@ var qrcode = function() {
 
   // helpers compartidos para otros módulos del universo
   window.hkLog=logEvent; window.hkMd=mdToHtml;
+  window.hkGalaxia=()=>hkPrompt('Nombrá tu nueva galaxia','ej. GALAXIA VICE',n=>sembrarGalaxia(n));
+  window.hkDefensa=activarDefensa;
+  window.hkBiblioteca=()=>{ renderBib(); document.getElementById('ov-bib').classList.add('open'); };
+  window.hkOracle=openOracle;
+  window.hkBackrooms=()=>Backrooms.enter('shortcut');
   logEvent('sistema','core agents en línea: GATE/ORACLE/CURATOR/BACKROOMS/DEFENSA');
 })();
 </script>
@@ -7875,14 +7880,42 @@ var qrcode = function() {
     b.style.setProperty('--dc',color); b.style.color=color+'CC';
     b.onclick=fn; dock.appendChild(b);
   });
-  // teclas 1-7 = mapa y zonas
+  // ═══ HOTKEYS — el sistema clásico del universo ═══
+  const openPanelTab=(pane)=>{ const p=document.getElementById('ag-panel'); if(p) p.classList.add('open');
+    const t=document.querySelector('.ag-tab[data-pane="'+pane+'"]'); if(t) t.click(); };
+  const KEYS=[
+    ['G','Galaxia nueva',      ()=>{ if(window.hkGalaxia) window.hkGalaxia(); }],
+    ['C','Cripto · señales',   ()=>{ if(window.CryptoSignals) window.CryptoSignals.open(); }],
+    ['I','Ideas · blueprints', ()=>openPanelTab('ideas')],
+    ['Y','YouTube / media',    ()=>{ const p=document.getElementById('me-panel'); if(p) p.classList.toggle('open'); }],
+    ['M','Media engine',       ()=>{ const p=document.getElementById('me-panel'); if(p) p.classList.toggle('open'); }],
+    ['Q','QR vivo',            ()=>openPanelTab('qr')],
+    ['O','Oracle · reporte',   ()=>{ if(window.hkOracle) window.hkOracle(); }],
+    ['B','Biblioteca',         ()=>{ if(window.hkBiblioteca) window.hkBiblioteca(); }],
+    ['D','Defensa · Optimus',  ()=>{ if(window.hkDefensa) window.hkDefensa(); }],
+    ['A','Agent panel',        ()=>{ const p=document.getElementById('ag-panel'); if(p) p.classList.toggle('open'); }],
+    ['K','Backrooms',          ()=>{ if(window.hkBackrooms) window.hkBackrooms(); }],
+  ];
   const KEYMAP={ '1':'map','2':'arte','3':'lore','4':'viceos','5':'systems','6':'flow','7':'agents' };
+  // leyenda estilo clásico — se abre con ?
+  const leg=document.createElement('div'); leg.id='hk-legend';
+  leg.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:620;'+
+    'background:rgba(6,6,8,.97);border:1px solid #1E1E1E;border-radius:3px;padding:20px 24px;display:none;'+
+    "font-family:'Space Mono',monospace;backdrop-filter:blur(10px);min-width:280px;";
+  leg.innerHTML='<div style="font-size:10px;letter-spacing:4px;color:#555;margin-bottom:14px">SHORTCUTS DEL UNIVERSO</div>'+
+    KEYS.map(([k,l])=>'<div style="display:flex;gap:12px;align-items:center;margin-bottom:6px">'+
+      '<span style="border:1px solid #2A2A2A;border-radius:2px;padding:2px 7px;font-size:9px;color:#F0EDE8;min-width:18px;text-align:center">'+k+'</span>'+
+      '<span style="font-size:9px;letter-spacing:1px;color:#777">'+l+'</span></div>').join('')+
+    '<div style="display:flex;gap:12px;align-items:center;margin-bottom:6px"><span style="border:1px solid #2A2A2A;border-radius:2px;padding:2px 7px;font-size:9px;color:#F0EDE8">1-7</span><span style="font-size:9px;letter-spacing:1px;color:#777">Mapa y zonas</span></div>'+
+    '<div style="display:flex;gap:12px;align-items:center"><span style="border:1px solid #2A2A2A;border-radius:2px;padding:2px 7px;font-size:9px;color:#F0EDE8">X / ESC</span><span style="font-size:9px;letter-spacing:1px;color:#777">Volver / cerrar</span></div>'+
+    '<div style="font-size:8px;letter-spacing:2px;color:#333;margin-top:14px">? PARA CERRAR</div>';
+  document.body.appendChild(leg);
   addEventListener('keydown',e=>{
     if(/INPUT|TEXTAREA|SELECT/.test((document.activeElement||{}).tagName||'')) return;
-    if(KEYMAP[e.key]) goTo(KEYMAP[e.key]);
-    else if(e.key==='c'||e.key==='C'){ if(window.CryptoSignals) window.CryptoSignals.open(); }
-    else if(e.key==='m'||e.key==='M'){ const p=document.getElementById('me-panel'); if(p) p.classList.toggle('open'); }
-    else if(e.key==='a'||e.key==='A'){ const p=document.getElementById('ag-panel'); if(p) p.classList.toggle('open'); }
+    if(e.key==='?'){ leg.style.display=leg.style.display==='none'?'block':'none'; return; }
+    if(KEYMAP[e.key]){ goTo(KEYMAP[e.key]); return; }
+    const hit=KEYS.find(([k])=>k.toLowerCase()===e.key.toLowerCase());
+    if(hit) hit[2]();
   });
 })();
 </script>
