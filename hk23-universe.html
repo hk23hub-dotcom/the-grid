@@ -8138,5 +8138,350 @@ var qrcode = function() {
   });
 })();
 </script>
+<!-- ═══════════ ENTITY LAB — agarrá, fusioná, jugá, mapeá ═══════════ -->
+<style id="entity-lab-style">
+  #lab-canvas{ position:fixed; inset:0; z-index:7; pointer-events:none; }
+  body.lab-on #lab-canvas{ pointer-events:auto; cursor:grab; }
+  body.lab-on #lab-canvas.grabbing{ cursor:grabbing; }
+  #lab-bar{ position:fixed; top:68px; left:20px; z-index:516; display:none; gap:5px; flex-wrap:wrap;
+    background:rgba(6,6,8,.92); border:1px solid #1C1C1C; border-radius:3px; padding:7px 9px; backdrop-filter:blur(8px); }
+  body.lab-on #lab-bar{ display:flex; }
+  .lb{ font-family:'Space Mono',monospace; font-size:8px; letter-spacing:2px; text-transform:uppercase;
+    background:transparent; border:1px solid #222; border-radius:2px; color:#888; padding:6px 10px; cursor:pointer; }
+  .lb:hover{ color:#000; background:#B84DFF; border-color:#B84DFF; }
+  #lab-hint{ position:fixed; top:112px; left:20px; z-index:516; display:none;
+    font-family:'Space Mono',monospace; font-size:7px; letter-spacing:1px; color:#3A3A3A; line-height:1.8; }
+  body.lab-on #lab-hint{ display:block; }
+  .game-ov{ position:fixed; inset:0; z-index:800; background:rgba(2,2,3,.97); display:none;
+    align-items:center; justify-content:center; flex-direction:column; }
+  .game-ov.open{ display:flex; }
+  .game-hud{ font-family:'Space Mono',monospace; font-size:10px; letter-spacing:4px; color:#666; margin-bottom:12px; }
+  .game-hud b{ color:#F0EDE8; }
+  .game-x{ position:absolute; top:20px; right:24px; font-family:'Space Mono',monospace; font-size:10px;
+    letter-spacing:3px; color:#000; background:#FF3A1F; border:none; border-radius:2px; padding:8px 16px; cursor:pointer; }
+</style>
+
+<canvas id="lab-canvas"></canvas>
+<div id="lab-bar">
+  <button class="lb" id="lb-tetris">▦ TETRIS</button>
+  <button class="lb" id="lb-pong">◐ PONG</button>
+  <button class="lb" id="lb-foto">📷 MAPEAR FOTO</button>
+  <button class="lb" id="lb-lore">📜 LORE</button>
+  <button class="lb" id="lb-off" style="color:#FF3A1F">✕ SALIR DEL LAB</button>
+  <input type="file" id="lb-file" accept="image/*" style="display:none">
+</div>
+<div id="lab-hint">ARRASTRÁ PARA AGARRAR · RUEDA = TAMAÑO · SOLTÁ UN ÁTOMO SOBRE OTRO = FUSIÓN · DOBLE CLIC = REVELAR DESTINO</div>
+
+<div class="game-ov" id="tetris-ov">
+  <button class="game-x" onclick="document.getElementById('tetris-ov').classList.remove('open')">✕ SALIR</button>
+  <div class="game-hud">ENTITY TETRIS — <b id="tt-score">0</b> PTS · ←→ MOVER · ↑ ROTAR · ↓ CAER · LAS ENTIDADES SON LAS PIEZAS</div>
+  <canvas id="tt-cv"></canvas>
+</div>
+<div class="game-ov" id="pong-ov">
+  <button class="game-x" onclick="document.getElementById('pong-ov').classList.remove('open')">✕ SALIR</button>
+  <div class="game-hud">HEYOKA PONG — VOS <b id="pg-me">0</b> · <b id="pg-ai">0</b> ATLAS · MOVÉ EL MOUSE · PRIMERO A 5</div>
+  <canvas id="pg-cv"></canvas>
+</div>
+
+<script>
+// ═══ ENTITY LAB — las entidades son tuyas: agarralas, fusionalas, jugá ═══
+(function(){
+  const cv=document.getElementById('lab-canvas'), x=cv.getContext('2d');
+  let W,H; const fit=()=>{ W=cv.width=innerWidth; H=cv.height=innerHeight; };
+  fit(); addEventListener('resize',fit);
+  const store={ get(k,d){ try{ return JSON.parse(localStorage.getItem(k)) ?? d; }catch(e){ return d; } },
+    set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} } };
+  const log=(k,d)=>{ (window.hkLog||function(){})(k,d); };
+  const toast=(msg)=>{ const t=document.getElementById('collect-toast'); if(!t) return;
+    t.textContent=msg; t.classList.add('show'); clearTimeout(toast._t);
+    toast._t=setTimeout(()=>t.classList.remove('show'),2400); };
+
+  // ── EL LORE DE LAS ENTIDADES ──
+  const TYPES={
+    cubo:   { color:'#FFD200', lore:'Los CUBOS son ideas camufladas. Se hacen pasar por decoración, pero adentro llevan una pieza de blueprint. Reventalos.' },
+    ovni:   { color:'#B84DFF', lore:'Los OVNIS son taxis del sótano. Lindos por fuera. Doble clic y ya estás en las backrooms.' },
+    atomo:  { color:'#00F0FF', lore:'Los ÁTOMOS se fusionan. Soltá uno sobre otro y crecen. Con masa 5+, explotan en piezas de idea.' },
+    celula: { color:'#AAFF00', lore:'Las CÉLULAS están vivas: crecen solas y se dividen si las agrandás demasiado. El universo respira por ellas.' },
+    rombo:  { color:'#FF3A1F', lore:'Los ROMBOS son puertas a tus proyectos. Nunca sabés a cuál — el universo decide. Doble clic y viajás.' },
+  };
+  const KINDS=Object.keys(TYPES);
+  const lore=store.get('hk23_lab_lore',{fusiones:0, reveladas:0, viajes:0, fotos:0});
+
+  // ── población del laboratorio ──
+  let ents=[], photoMode=false;
+  function spawn(n){
+    for(let i=0;i<n;i++){
+      const kind=KINDS[Math.floor(Math.random()*KINDS.length)];
+      ents.push({ kind, x:Math.random()*W, y:Math.random()*H,
+        vx:(Math.random()-.5)*.4, vy:(Math.random()-.5)*.3,
+        r:6+Math.random()*8, mass:1, ph:Math.random()*6.28,
+        color:TYPES[kind].color, camo:'#'+['666','777','888','999'][i%4]+'', revealed:false,
+        tx:null, ty:null, pc:null });
+    }
+  }
+  spawn(26);
+
+  function drawEnt(e,t){
+    const bob=Math.sin(t*0.002+e.ph)*2;
+    const col=e.revealed? e.color : (photoMode&&e.pc? e.pc : e.camo);
+    x.save(); x.translate(e.x, e.y+bob); x.globalAlpha=.95;
+    if(e.kind==='cubo'){ x.fillStyle=col; x.fillRect(-e.r,-e.r,e.r*2,e.r*2);
+      x.strokeStyle='rgba(255,255,255,.25)'; x.strokeRect(-e.r,-e.r,e.r*2,e.r*2); }
+    else if(e.kind==='ovni'){ x.fillStyle=col;
+      x.beginPath(); x.ellipse(0,0,e.r*1.4,e.r*.5,0,0,6.283); x.fill();
+      x.fillStyle='rgba(255,255,255,.6)'; x.beginPath(); x.arc(0,-e.r*.4,e.r*.55,Math.PI,0); x.fill(); }
+    else if(e.kind==='atomo'){ x.strokeStyle=col; x.lineWidth=1.2;
+      for(let k=0;k<3;k++){ x.save(); x.rotate(k*Math.PI/3+t*0.001);
+        x.beginPath(); x.ellipse(0,0,e.r*1.5,e.r*.55,0,0,6.283); x.stroke(); x.restore(); }
+      x.fillStyle=col; x.beginPath(); x.arc(0,0,e.r*.5,0,6.283); x.fill(); }
+    else if(e.kind==='celula'){ x.fillStyle=col; x.globalAlpha=.35;
+      x.beginPath(); x.arc(0,0,e.r*1.4,0,6.283); x.fill();
+      x.globalAlpha=.9; x.beginPath(); x.arc(e.r*.2,-e.r*.2,e.r*.5,0,6.283); x.fill(); }
+    else { x.fillStyle=col; x.beginPath();
+      x.moveTo(0,-e.r*1.3); x.lineTo(e.r,0); x.lineTo(0,e.r*1.3); x.lineTo(-e.r,0); x.closePath(); x.fill(); }
+    if(e.mass>1){ x.fillStyle='#fff'; x.font='700 9px "Space Mono",monospace'; x.textAlign='center';
+      x.fillText('x'+e.mass, 0, -e.r-6); }
+    x.restore(); x.globalAlpha=1;
+  }
+
+  let grabbed=null, labOn=false;
+  function loop(t){
+    x.clearRect(0,0,W,H);
+    if(labOn||photoMode){
+      ents.forEach(e=>{
+        if(photoMode&&e.tx!=null){ e.x+=(e.tx-e.x)*.1; e.y+=(e.ty-e.y)*.1; }
+        else if(e!==grabbed){ e.x+=e.vx; e.y+=e.vy;
+          if(e.x<0||e.x>W) e.vx*=-1; if(e.y<0||e.y>H) e.vy*=-1;
+          if(e.kind==='celula'){ e.r+=0.004; if(e.r>22){ e.r=8; const c={...e, x:e.x+14, r:7}; ents.push(c); } } }
+        drawEnt(e,t);
+      });
+    }
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+  const hit=(mx,my)=>ents.slice().reverse().find(e=>Math.hypot(e.x-mx,e.y-my)<Math.max(16,e.r*1.6));
+
+  // ── agarrar / arrastrar / fusionar ──
+  cv.addEventListener('pointerdown',e=>{ if(!labOn) return;
+    grabbed=hit(e.clientX,e.clientY);
+    if(grabbed){ cv.classList.add('grabbing'); cv.setPointerCapture(e.pointerId);
+      if(!grabbed.revealed){ grabbed.revealed=true; } } // al agarrarla revela su color/destino
+  });
+  cv.addEventListener('pointermove',e=>{ if(grabbed){ grabbed.x=e.clientX; grabbed.y=e.clientY; } });
+  cv.addEventListener('pointerup',e=>{
+    if(!grabbed) return;
+    // fusión de átomos
+    if(grabbed.kind==='atomo'){
+      const other=ents.find(o=>o!==grabbed&&o.kind==='atomo'&&Math.hypot(o.x-grabbed.x,o.y-grabbed.y)<o.r+grabbed.r+6);
+      if(other){ other.mass+=grabbed.mass; other.r=Math.min(30, other.r+grabbed.r*.4);
+        ents=ents.filter(o=>o!==grabbed);
+        lore.fusiones++; store.set('hk23_lab_lore',lore);
+        toast('⚛ FUSIÓN — MASA x'+other.mass);
+        if(other.mass>=5){ ents=ents.filter(o=>o!==other); dropPieces(other.x,other.y);
+          toast('⚛ ÁTOMO CRÍTICO — EXPLOTÓ EN PIEZAS DE IDEA'); }
+      }
+    }
+    grabbed=null; cv.classList.remove('grabbing');
+  });
+  // rueda = tamaño
+  cv.addEventListener('wheel',e=>{ if(!labOn) return;
+    const t=hit(e.clientX,e.clientY); if(!t) return;
+    e.preventDefault();
+    t.r=Math.max(3, Math.min(34, t.r + (e.deltaY<0?1.6:-1.6)));
+  },{passive:false});
+  // doble clic = destino
+  cv.addEventListener('dblclick',e=>{ if(!labOn) return;
+    const t=hit(e.clientX,e.clientY); if(!t) return;
+    t.revealed=true;
+    if(t.kind==='ovni'){ lore.viajes++; store.set('hk23_lab_lore',lore);
+      if(window.hkBackrooms) window.hkBackrooms(); }
+    else if(t.kind==='rombo'){ lore.viajes++; store.set('hk23_lab_lore',lore);
+      if(typeof PROJECTS!=='undefined'&&typeof openFractalUniverse==='function'){
+        const pr=PROJECTS[Math.floor(Math.random()*PROJECTS.length)];
+        toast('◆ ROMBO → '+pr.label); openFractalUniverse(pr); } }
+    else if(t.kind==='cubo'){ ents=ents.filter(o=>o!==t); dropPieces(t.x,t.y,1);
+      lore.reveladas++; store.set('hk23_lab_lore',lore); }
+  });
+  // soltar piezas de idea reales (mismo estado que el campo de ideas)
+  function dropPieces(px,py,n){
+    const st=store.get('hk23_universe_state',null);
+    if(st&&st.ideas){
+      const open=st.ideas.filter(i=>i.collected<i.pieces)
+        .sort((a,b)=>(b.collected/b.pieces)-(a.collected/a.pieces));
+      const c=n||2;
+      for(let k=0;k<c&&open[k%open.length];k++){ const idea=open[k%open.length];
+        idea.collected=Math.min(idea.pieces, idea.collected+1); }
+      store.set('hk23_universe_state',st);
+      toast('✦ PIEZAS LIBERADAS — MIRÁ TUS IDEAS (I)');
+    }
+  }
+
+  // ── FOTO MAPPING: subí una imagen y las entidades la forman ──
+  document.getElementById('lb-foto').onclick=()=>document.getElementById('lb-file').click();
+  document.getElementById('lb-file').addEventListener('change',ev=>{
+    const f=ev.target.files[0]; if(!f) return;
+    const rd=new FileReader();
+    rd.onload=()=>{
+      const img=new Image();
+      img.onload=()=>{
+        const oc=document.createElement('canvas'), g=oc.getContext('2d');
+        const gw=48, gh=Math.max(8, Math.round(gw*img.height/img.width));
+        oc.width=gw; oc.height=gh; g.drawImage(img,0,0,gw,gh);
+        const d=g.getImageData(0,0,gw,gh).data, targets=[];
+        for(let r=0;r<gh;r++) for(let c=0;c<gw;c++){
+          const i=(r*gw+c)*4, lum=(d[i]+d[i+1]+d[i+2])/3;
+          if(d[i+3]>120 && lum>36) targets.push({ c, r, col:'rgb('+d[i]+','+d[i+1]+','+d[i+2]+')' });
+        }
+        const cap=800; while(targets.length>cap) targets.splice(Math.floor(Math.random()*targets.length),1);
+        while(ents.length<targets.length) spawn(20);
+        const S=Math.min(W/gw, (H*.8)/gh), x0=(W-gw*S)/2, y0=(H-gh*S)/2;
+        ents.forEach((e,i)=>{ const t=targets[i%targets.length];
+          e.tx=x0+t.c*S+S/2; e.ty=y0+t.r*S+S/2; e.pc=t.col; e.r=Math.max(3,S*.42); });
+        photoMode=true; lore.fotos++; store.set('hk23_lab_lore',lore);
+        toast('📷 LAS ENTIDADES ESTÁN FORMANDO TU IMAGEN — X PARA DISPERSAR');
+        log('lab','foto mapeada con '+targets.length+' entidades');
+      };
+      img.src=rd.result;
+    };
+    rd.readAsDataURL(f);
+  });
+  function disperse(){ photoMode=false; ents.forEach(e=>{ e.tx=null; e.ty=null; e.pc=null; }); }
+  addEventListener('keydown',e=>{ if(e.key==='Escape'&&photoMode) disperse(); });
+
+  // ── LORE overlay ──
+  document.getElementById('lb-lore').onclick=()=>{
+    let ov=document.getElementById('ov-lore');
+    if(!ov){ ov=document.createElement('div'); ov.id='ov-lore'; ov.className='hkov'; document.body.appendChild(ov); }
+    ov.innerHTML='<div class="hkov-card"><button class="hkov-x" onclick="this.closest(\'.hkov\').classList.remove(\'open\')">✕</button>'+
+      '<div class="hkov-eyebrow">EL LORE DE LAS ENTIDADES</div>'+
+      '<div class="hkov-title">NADA ACÁ ES DECORACIÓN.</div>'+
+      Object.entries(TYPES).map(([k,v])=>'<div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:12px">'+
+        '<span style="width:12px;height:12px;border-radius:2px;background:'+v.color+';flex-shrink:0;margin-top:3px"></span>'+
+        '<div><b style="font-size:12px;letter-spacing:1px">'+k.toUpperCase()+'</b>'+
+        '<div style="font-size:11px;color:#777;line-height:1.7">'+v.lore+'</div></div></div>').join('')+
+      '<div style="font-family:\'Space Mono\',monospace;font-size:8px;letter-spacing:1px;color:#444;border-top:1px solid #141414;padding-top:12px;line-height:1.9">'+
+      'TU HISTORIAL — FUSIONES: <b style="color:#00F0FF">'+lore.fusiones+'</b> · CUBOS REVELADOS: <b style="color:#FFD200">'+lore.reveladas+'</b> · VIAJES: <b style="color:#B84DFF">'+lore.viajes+'</b> · FOTOS MAPEADAS: <b style="color:#AAFF00">'+lore.fotos+'</b></div></div>';
+    ov.classList.add('open');
+  };
+
+  // ── TETRIS de entidades ──
+  const TT={ cv:document.getElementById('tt-cv'), on:false, score:0 };
+  const SHAPES=[[[1,1,1,1]],[[1,1],[1,1]],[[0,1,0],[1,1,1]],[[1,0],[1,0],[1,1]],[[0,1],[0,1],[1,1]],[[1,1,0],[0,1,1]],[[0,1,1],[1,1,0]]];
+  const TCOLS=Object.values(TYPES).map(t=>t.color);
+  function tetris(){
+    const c=TT.cv, g=c.getContext('2d');
+    const CW=10, CH=18, S=Math.min(innerWidth*.9/CW, (innerHeight-140)/CH);
+    c.width=CW*S; c.height=CH*S;
+    let grid=Array.from({length:CH},()=>Array(CW).fill(null));
+    let cur=null, dead=false; TT.score=0;
+    const newPiece=()=>{ const si=Math.floor(Math.random()*SHAPES.length);
+      cur={ s:SHAPES[si].map(r=>r.slice()), x:3, y:0, col:TCOLS[si%TCOLS.length] };
+      if(clash(cur.s,cur.x,cur.y)){ dead=true; } };
+    const clash=(s,px,py)=>s.some((row,r)=>row.some((v,cc)=>v&&(py+r>=CH||px+cc<0||px+cc>=CW||(py+r>=0&&grid[py+r][px+cc]))));
+    const lock=()=>{ cur.s.forEach((row,r)=>row.forEach((v,cc)=>{ if(v&&cur.y+r>=0) grid[cur.y+r][cur.x+cc]=cur.col; }));
+      for(let r=CH-1;r>=0;r--){ if(grid[r].every(Boolean)){ grid.splice(r,1); grid.unshift(Array(CW).fill(null)); TT.score+=100; r++; } }
+      document.getElementById('tt-score').textContent=TT.score; newPiece(); };
+    const rot=s=>s[0].map((_,i)=>s.map(row=>row[i]).reverse());
+    newPiece();
+    const keys=e=>{
+      if(!TT.on) return;
+      if(e.key==='ArrowLeft'&&!clash(cur.s,cur.x-1,cur.y)) cur.x--;
+      else if(e.key==='ArrowRight'&&!clash(cur.s,cur.x+1,cur.y)) cur.x++;
+      else if(e.key==='ArrowDown'&&!clash(cur.s,cur.x,cur.y+1)) cur.y++;
+      else if(e.key==='ArrowUp'){ const rs=rot(cur.s); if(!clash(rs,cur.x,cur.y)) cur.s=rs; }
+      if(e.key.startsWith('Arrow')) e.preventDefault();
+    };
+    addEventListener('keydown',keys);
+    let last=0;
+    (function frame(t){
+      if(!TT.on){ removeEventListener('keydown',keys); return; }
+      if(t-last>Math.max(160, 600-TT.score/2)){ last=t;
+        if(!dead){ if(!clash(cur.s,cur.x,cur.y+1)) cur.y++; else lock(); } }
+      g.fillStyle='#050507'; g.fillRect(0,0,c.width,c.height);
+      g.strokeStyle='rgba(255,255,255,.04)';
+      for(let r=0;r<CH;r++)for(let cc=0;cc<CW;cc++) g.strokeRect(cc*S,r*S,S,S);
+      const cell=(cc,r,col)=>{ g.fillStyle=col; g.fillRect(cc*S+1,r*S+1,S-2,S-2);
+        g.fillStyle='rgba(255,255,255,.22)'; g.fillRect(cc*S+2,r*S+2,S*.3,S*.3); };
+      grid.forEach((row,r)=>row.forEach((v,cc)=>{ if(v) cell(cc,r,v); }));
+      if(!dead) cur.s.forEach((row,r)=>row.forEach((v,cc)=>{ if(v&&cur.y+r>=0) cell(cur.x+cc,cur.y+r,cur.col); }));
+      if(dead){ g.fillStyle='rgba(2,2,3,.8)'; g.fillRect(0,0,c.width,c.height);
+        g.fillStyle='#FF3A1F'; g.font='700 22px "Space Grotesk",system-ui'; g.textAlign='center';
+        g.fillText('LAS ENTIDADES GANARON', c.width/2, c.height/2-10);
+        g.fillStyle='#666'; g.font='11px "Space Mono",monospace';
+        g.fillText('SCORE '+TT.score+' — clic para revancha', c.width/2, c.height/2+18);
+        c.onclick=()=>{ c.onclick=null; TT.on=false; setTimeout(()=>{ TT.on=true; tetris(); },50); }; }
+      requestAnimationFrame(frame);
+    })(0);
+  }
+  document.getElementById('lb-tetris').onclick=()=>{
+    document.getElementById('tetris-ov').classList.add('open'); TT.on=true; tetris(); log('lab','tetris'); };
+  new MutationObserver(()=>{ if(!document.getElementById('tetris-ov').classList.contains('open')) TT.on=false; })
+    .observe(document.getElementById('tetris-ov'),{attributes:true});
+
+  // ── HEYOKA PONG — grande, pantalla completa ──
+  const PG={ on:false };
+  function pong(){
+    const c=document.getElementById('pg-cv'), g=c.getContext('2d');
+    c.width=Math.min(innerWidth*.94,1400); c.height=innerHeight-140;
+    let my=c.height/2, ai=c.height/2, bx=c.width/2, by=c.height/2;
+    let vx=6*(Math.random()<.5?1:-1), vy=4*(Math.random()<.5?1:-1), sMe=0, sAi=0;
+    const PH=Math.max(80,c.height*.16), PW=12;
+    const mm=e=>{ const r=c.getBoundingClientRect(); my=(e.clientY-r.top); };
+    c.addEventListener('mousemove',mm);
+    const reset=dir=>{ bx=c.width/2; by=c.height/2; vx=6*dir; vy=4*(Math.random()<.5?1:-1); };
+    (function frame(t){
+      if(!PG.on){ c.removeEventListener('mousemove',mm); return; }
+      bx+=vx; by+=vy;
+      if(by<8||by>c.height-8) vy*=-1;
+      // paletas
+      ai+=( by-ai )*0.065; // ATLAS sigue la bola, imperfecto
+      if(bx<26 && Math.abs(by-my)<PH/2){ vx=Math.abs(vx)*1.045; vy+=(by-my)*.06; }
+      if(bx>c.width-26 && Math.abs(by-ai)<PH/2){ vx=-Math.abs(vx)*1.045; vy+=(by-ai)*.06; }
+      if(bx<0){ sAi++; reset(1); } if(bx>c.width){ sMe++; reset(-1); }
+      document.getElementById('pg-me').textContent=sMe; document.getElementById('pg-ai').textContent=sAi;
+      g.fillStyle='#050507'; g.fillRect(0,0,c.width,c.height);
+      g.strokeStyle='rgba(255,58,31,.25)'; g.setLineDash([6,14]);
+      g.beginPath(); g.moveTo(c.width/2,0); g.lineTo(c.width/2,c.height); g.stroke(); g.setLineDash([]);
+      g.font='700 46px "Space Grotesk",system-ui'; g.textAlign='center'; g.fillStyle='rgba(240,237,232,.06)';
+      g.fillText('HK23', c.width/2, c.height/2+16);
+      g.fillStyle='#00F0FF'; g.fillRect(12, my-PH/2, PW, PH);
+      g.fillStyle='#FF3A1F'; g.fillRect(c.width-12-PW, ai-PH/2, PW, PH);
+      // la bola es un átomo
+      g.strokeStyle='#FFD200'; g.lineWidth=1.2;
+      for(let k=0;k<3;k++){ g.save(); g.translate(bx,by); g.rotate(k*Math.PI/3+t*0.004);
+        g.beginPath(); g.ellipse(0,0,14,5,0,0,6.283); g.stroke(); g.restore(); }
+      g.fillStyle='#FFD200'; g.beginPath(); g.arc(bx,by,5,0,6.283); g.fill();
+      if(sMe>=5||sAi>=5){ g.fillStyle='rgba(2,2,3,.82)'; g.fillRect(0,0,c.width,c.height);
+        g.fillStyle=sMe>=5?'#AAFF00':'#FF3A1F'; g.font='700 30px "Space Grotesk",system-ui';
+        g.fillText(sMe>=5?'LE GANASTE A ATLAS':'ATLAS NO PERDONA', c.width/2, c.height/2-8);
+        g.fillStyle='#666'; g.font='11px "Space Mono",monospace';
+        g.fillText('clic para revancha', c.width/2, c.height/2+22);
+        c.onclick=()=>{ c.onclick=null; PG.on=false; setTimeout(()=>{ PG.on=true; pong(); },50); };
+        return; }
+      requestAnimationFrame(frame);
+    })(0);
+  }
+  document.getElementById('lb-pong').onclick=()=>{
+    document.getElementById('pong-ov').classList.add('open'); PG.on=true; pong(); log('lab','pong'); };
+  new MutationObserver(()=>{ if(!document.getElementById('pong-ov').classList.contains('open')) PG.on=false; })
+    .observe(document.getElementById('pong-ov'),{attributes:true});
+
+  // ── encendido del LAB ──
+  function setLab(v){ labOn=v; document.body.classList.toggle('lab-on',v);
+    if(v){ toast('🧪 ENTITY LAB — LAS ENTIDADES SON TUYAS'); log('lab','on'); } }
+  document.getElementById('lb-off').onclick=()=>setLab(false);
+  window.EntityLab={ on:()=>setLab(true), off:()=>setLab(false), toggle:()=>setLab(!labOn) };
+  // hotkey L + botón en el dock
+  addEventListener('keydown',e=>{
+    if(/INPUT|TEXTAREA|SELECT/.test((document.activeElement||{}).tagName||'')) return;
+    if(e.key==='l'||e.key==='L') setLab(!labOn);
+  });
+  const dock=document.getElementById('hk-dock');
+  if(dock){ const b=document.createElement('button'); b.className='dk'; b.textContent='🧪 LAB';
+    b.style.setProperty('--dc','#B84DFF'); b.style.color='#B84DFFCC';
+    b.onclick=()=>setLab(!labOn); dock.insertBefore(b, dock.children[1]||null); }
+})();
+</script>
 </body>
 </html>
