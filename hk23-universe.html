@@ -3172,8 +3172,9 @@ function startFractalAnimation(project) {
 
   // ── 2D orbital system — same visual language as main universe ──
   const EY = 0.60; // ellipse y-compression
-  const BASE_R     = [148, 192, 138, 200, 158, 182]; // alternating radii for visual depth
+  const BASE_R     = [148, 192, 138, 200, 158, 182]; // fallback radii
   const BASE_SPD   = [0.00038,-0.00030, 0.00046,-0.00027, 0.00042,-0.00034];
+  const MOON_OFF   = [64, 108, 86, 150, 128, 172]; // distancia de cada luna al borde del planeta
   const nodeOrbits = uni.nodes.map((n, i) => ({
     r: BASE_R[i % BASE_R.length],
     a: (i / uni.nodes.length) * Math.PI * 2,
@@ -3231,8 +3232,10 @@ function startFractalAnimation(project) {
       ctx.fill();
     });
 
-    // ── Update node positions ──
-    nodeOrbits.forEach(o => {
+    // ── Update node positions (lunas alrededor del planeta madre) ──
+    const planetR = Math.min(W, H) * 0.155;
+    nodeOrbits.forEach((o, oi) => {
+      o.r = planetR + MOON_OFF[oi % MOON_OFF.length];
       o.a += o.spd;
       o.px = cx + Math.cos(o.a) * o.r;
       o.py = cy + Math.sin(o.a) * o.r * EY;
@@ -3266,37 +3269,70 @@ function startFractalAnimation(project) {
       ctx.stroke();
     });
 
-    // ── Center sun ──
-    const sunR = 28 + Math.sin(fractalT * 0.7) * 2;
-    // Outer corona
-    [sunR * 5.2, sunR * 3.4, sunR * 2.1].forEach((gr, gi) => {
-      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, gr);
-      g.addColorStop(0, color + ['32','22','14'][gi]);
+    // ── PLANETA MADRE — grande, con superficie, anillo y atmósfera ──
+    const pR = planetR;
+    // atmósfera
+    [pR * 1.9, pR * 1.35].forEach((gr, gi) => {
+      const g = ctx.createRadialGradient(cx, cy, pR * 0.8, cx, cy, gr);
+      g.addColorStop(0, color + ['26','40'][gi]);
       g.addColorStop(1, 'transparent');
       ctx.beginPath(); ctx.arc(cx, cy, gr, 0, Math.PI * 2);
       ctx.fillStyle = g; ctx.fill();
     });
-    // Tilted orbit rings around sun
-    [sunR+9, sunR+16, sunR+24].forEach((or, i) => {
-      ctx.save(); ctx.translate(cx, cy);
-      ctx.rotate(fractalT * (i % 2 ? -0.22 : 0.17) * (1 + i * 0.35));
-      ctx.beginPath();
-      ctx.ellipse(0, 0, or, or * (0.22 + i * 0.06), 0, 0, Math.PI * 2);
-      ctx.strokeStyle = color + ['28','1A','0E'][i];
-      ctx.lineWidth = 0.8 - i * 0.2; ctx.stroke();
-      ctx.restore();
-    });
-    // Sun core sphere
-    const sg = ctx.createRadialGradient(cx - sunR*0.3, cy - sunR*0.3, sunR*0.05, cx, cy, sunR);
-    sg.addColorStop(0, 'rgba(255,255,255,0.50)');
-    sg.addColorStop(0.35, color + 'EE');
-    sg.addColorStop(1, color + '55');
-    ctx.beginPath(); ctx.arc(cx, cy, sunR, 0, Math.PI * 2);
+    // anillo (mitad trasera, detrás del cuerpo)
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(-0.18);
+    ctx.beginPath(); ctx.ellipse(0, 0, pR * 1.65, pR * 0.34, 0, Math.PI, Math.PI * 2);
+    ctx.strokeStyle = color + '55'; ctx.lineWidth = pR * 0.10; ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(0, 0, pR * 1.65, pR * 0.34, 0, Math.PI, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(240,237,232,0.10)'; ctx.lineWidth = pR * 0.035; ctx.stroke();
+    ctx.restore();
+    // cuerpo base
+    const sg = ctx.createRadialGradient(cx - pR*0.35, cy - pR*0.35, pR*0.1, cx, cy, pR);
+    sg.addColorStop(0, 'rgba(255,255,255,0.34)');
+    sg.addColorStop(0.35, color + 'D8');
+    sg.addColorStop(0.8, color + '66');
+    sg.addColorStop(1, color + '30');
+    ctx.beginPath(); ctx.arc(cx, cy, pR, 0, Math.PI * 2);
     ctx.fillStyle = sg; ctx.fill();
-    ctx.strokeStyle = color + 'BB'; ctx.lineWidth = 1.2; ctx.stroke();
-    ctx.font = `800 11px 'Space Grotesk',system-ui`;
-    ctx.fillStyle = '#080808'; ctx.textAlign = 'center';
-    ctx.fillText(project.label, cx, cy + 4);
+    // bandas de superficie que derivan lento (clip al disco)
+    ctx.save();
+    ctx.beginPath(); ctx.arc(cx, cy, pR, 0, Math.PI * 2); ctx.clip();
+    for (let bi = 0; bi < 6; bi++) {
+      const by = cy - pR + (bi + 0.5) * (pR * 2 / 6);
+      const drift = Math.sin(fractalT * 0.25 + bi * 1.7) * pR * 0.16;
+      ctx.beginPath();
+      ctx.ellipse(cx + drift, by, pR * 1.15, pR * 0.14, 0, 0, Math.PI * 2);
+      ctx.fillStyle = bi % 2 ? 'rgba(0,0,0,0.16)' : 'rgba(255,255,255,0.07)';
+      ctx.fill();
+    }
+    // tormenta (gran mancha)
+    const stx = cx + Math.cos(fractalT * 0.18) * pR * 0.4, sty = cy + pR * 0.28;
+    ctx.beginPath(); ctx.ellipse(stx, sty, pR * 0.20, pR * 0.11, 0.3, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.14)'; ctx.fill();
+    // terminador (sombra de noche)
+    const tg = ctx.createLinearGradient(cx - pR, cy, cx + pR, cy);
+    tg.addColorStop(0, 'rgba(0,0,0,0)'); tg.addColorStop(0.62, 'rgba(0,0,0,0)'); tg.addColorStop(1, 'rgba(0,0,0,0.55)');
+    ctx.fillStyle = tg; ctx.fillRect(cx - pR, cy - pR, pR * 2, pR * 2);
+    ctx.restore();
+    // borde atmosférico
+    ctx.beginPath(); ctx.arc(cx, cy, pR, 0, Math.PI * 2);
+    ctx.strokeStyle = color + '88'; ctx.lineWidth = 1.4; ctx.stroke();
+    // anillo (mitad delantera, sobre el cuerpo)
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(-0.18);
+    ctx.beginPath(); ctx.ellipse(0, 0, pR * 1.65, pR * 0.34, 0, 0, Math.PI);
+    ctx.strokeStyle = color + '77'; ctx.lineWidth = pR * 0.10; ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(0, 0, pR * 1.65, pR * 0.34, 0, 0, Math.PI);
+    ctx.strokeStyle = 'rgba(240,237,232,0.14)'; ctx.lineWidth = pR * 0.035; ctx.stroke();
+    ctx.restore();
+    // nombre del planeta
+    ctx.font = `800 ${Math.max(13, pR * 0.16)}px 'Space Grotesk',system-ui`;
+    ctx.fillStyle = '#F0EDE8'; ctx.textAlign = 'center';
+    ctx.shadowColor = color; ctx.shadowBlur = 18;
+    ctx.fillText(project.label, cx, cy + pR + 34);
+    ctx.shadowBlur = 0;
+    ctx.font = `9px 'Space Mono',monospace`;
+    ctx.fillStyle = color + 'AA';
+    ctx.fillText('PLANETA MADRE — SUS MÓDULOS ORBITAN COMO LUNAS', cx, cy + pR + 52);
 
     // ── Nodes (orbiting planets) ──
     nodeOrbits.forEach((o, i) => {
@@ -6274,12 +6310,18 @@ var qrcode = function() {
   // ── persistent state ─────────────────────────────────────
   const KEY='hk23_universe_state';
   const DEFAULT_IDEAS=[
-    {id:'owlvision', name:'OWL VISION FILTER', pieces:4, collected:0},
-    {id:'goldfunnel',name:'GOLDMINE FUNNEL',   pieces:5, collected:0},
-    {id:'agent8',    name:'VICE OS · AGENT #8', pieces:3, collected:0},
-    {id:'heyokard',  name:'HEYOKA RADIO',       pieces:4, collected:0},
-    {id:'pixelrit',  name:'PIXEL RITUAL',       pieces:3, collected:0},
-    {id:'drop23',    name:'23 DROP CALENDAR',   pieces:5, collected:0},
+    {id:'owlvision', name:'OWL VISION FILTER', pieces:4, collected:0,
+      brief:'# OWL VISION FILTER\n\n**Qué es:** filtro AR de cámara (TikTok/IG Effect House) que superpone la visión del búho HK23: contraste nocturno, ojos dorados que siguen el rostro, ruido de película.\n\n## Cómo se construye\n- Meta Spark / Effect House: face-mesh + LUT nocturno + partículas doradas (2-3 días de trabajo).\n- El logo HK23 aparece 1 segundo al abrir — branding viral gratis.\n\n## Monetización\n- Gratis como imán de marca; versión "pro" con 5 looks en Gumroad USD 5.\n- Cada uso publica el hashtag — funnel directo al universo.\n\n## Primer paso HOY\nCrear cuenta Effect House + clonar un filtro nocturno open-source y cambiarle el LUT.'},
+    {id:'goldfunnel',name:'GOLDMINE FUNNEL',   pieces:5, collected:0,
+      brief:'# GOLDMINE FUNNEL\n\n**Qué es:** funnel que convierte la colección de mapas de la mina La Iglesia en leads de inversión.\n\n## Cómo se construye\n- Landing con 3 mapas de muestra (alta resolución, marca de agua) + formulario "quiero el dossier".\n- Email automático con el dossier PDF + link a llamada (Calendly).\n- Todo estático + un endpoint de forms (Formspree/Supabase).\n\n## Monetización\n- Cada lead calificado vale una reunión de inversión; el dossier premium puede venderse a USD 47 como filtro de seriedad.\n\n## Primer paso HOY\nExportar 3 mapas con marca de agua y montar la landing en una página del universo.'},
+    {id:'agent8',    name:'VICE OS · AGENT #8', pieces:3, collected:0,
+      brief:'# VICE OS · AGENT #8 — "SCOUT"\n\n**Qué es:** el octavo agente del ecosistema: scout de tendencias que lee 5 fuentes (Reddit, HN, TikTok trends, Google Trends, X) y entrega 3 oportunidades diarias con su porqué.\n\n## Cómo se construye\n- GitHub Action cron diaria + script Node que consulta APIs/RSS públicos.\n- Salida: scout.json + markdown al repo (mismo patrón que ORACLE).\n- Cada oportunidad: qué es, por qué ahora, cómo lo capitaliza HK23 en 48h.\n\n## Monetización\n- El reporte diario es contenido premium del tier OBSESIONADO.\n\n## Primer paso HOY\nCopiar scripts/oracle-report.mjs → scout-report.mjs y conectar 2 RSS.'},
+    {id:'heyokard',  name:'HEYOKA RADIO',       pieces:4, collected:0,
+      brief:'# HEYOKA RADIO\n\n**Qué es:** radio 24/7 del universo — un stream continuo de mixes + drops de voz del lore HK23 entre tracks.\n\n## Cómo se construye\n- Playlist en loop vía el MEDIA ENGINE (capa SoundCloud/Spotify en modo GHOST de fondo del universo).\n- Drops de voz: 10 frases del lore grabadas con TTS o voz propia, insertadas como jingles.\n- V2: stream real por Icecast o radio en Twitch.\n\n## Monetización\n- Sponsors por bloque + "dedicatorias" pagas de la comunidad.\n\n## Primer paso HOY\nCrear la playlist de 2 horas y fijarla como capa de audio por defecto del universo.'},
+    {id:'pixelrit',  name:'PIXEL RITUAL',       pieces:3, collected:0,
+      brief:'# PIXEL RITUAL\n\n**Qué es:** ritual diario coleccionable — cada día el universo revela 1 pixel-art (23x23) del gran mural HK23; los miembros lo reclaman y a los 231 días el mural completo se subasta entre quienes tengan piezas.\n\n## Cómo se construye\n- Un JSON con el mural cortado en 231 tiles; cron diario que "libera" el del día.\n- Reclamo con código de miembro; registro en localStorage/Supabase.\n\n## Monetización\n- Membresía para reclamar + subasta final del mural firmado.\n\n## Primer paso HOY\nDibujar el mural 23x23 tiles (o generarlo del logo) y escribir el JSON de tiles.'},
+    {id:'drop23',    name:'23 DROP CALENDAR',   pieces:5, collected:0,
+      brief:'# 23 DROP CALENDAR\n\n**Qué es:** calendario público de drops — cada día 23 del mes cae UN producto (print, guía, filtro, template) en edición limitada de 23 unidades.\n\n## Cómo se construye\n- Página con countdown al próximo 23 + archivo de drops pasados (agotados = prueba social).\n- El producto del mes sale de este mismo campo de ideas: la idea VIVA más votada.\n\n## Monetización\n- 23 unidades x precio fijo; escasez real, cero inventario (todo digital).\n\n## Primer paso HOY\nMontar la página de countdown y anunciar el primer drop: el template del universo.'},
   ];
   let state;
   try{ state=JSON.parse(localStorage.getItem(KEY))||{}; }catch(e){ state={}; }
@@ -6411,7 +6453,10 @@ var qrcode = function() {
       if(dx*dx+dy*dy < 22*22){
         const idea=state.ideas.find(o=>o.id===e.idea);
         if(idea){ idea.collected=Math.min(idea.pieces, idea.collected+1); save();
-          ideaEnts.splice(i,1); bumpCollectibles();
+          ideaEnts.splice(i,1);
+          const t=document.getElementById('collect-toast'), rest=idea.pieces-idea.collected;
+          if(t) t.textContent='✦ PIEZA DE '+idea.name+' ('+idea.collected+'/'+idea.pieces+')'+(rest?' — FALTAN '+rest:'');
+          bumpCollectibles();
           if(idea.collected>=idea.pieces) igniteIdea(idea); renderIdeas(); }
         return true;
       }
@@ -6436,6 +6481,40 @@ var qrcode = function() {
   }
 
   cv.addEventListener('click', e=>{ if(collectMode && !qr.active) collectAt(e.clientX, e.clientY); });
+
+  // ── BLUEPRINT de la idea: se lee y se ejecuta, nada más ──
+  function openBrief(idea){
+    const gid=(x)=>document.getElementById(x);
+    const hlog=window.hkLog||function(){};
+    const md2html=window.hkMd||function(md){ return '<pre style="white-space:pre-wrap;font-size:12px;color:#999">'+md.replace(/</g,'&lt;')+'</pre>'; };
+    let ov=gid('ov-brief');
+    if(!ov){
+      ov=document.createElement('div'); ov.id='ov-brief'; ov.className='hkov';
+      ov.innerHTML='<div class="hkov-card">'+
+        '<button class="hkov-x" onclick="document.getElementById(\'ov-brief\').classList.remove(\'open\')">✕</button>'+
+        '<div class="hkov-eyebrow">IDEA VIVA · BLUEPRINT LISTO PARA EJECUTAR</div>'+
+        '<div class="hkov-title" id="brief-title">—</div>'+
+        '<div id="brief-body" style="font-size:13px;line-height:1.8;color:#999"></div>'+
+        '<div style="display:flex;gap:8px;margin-top:20px;flex-wrap:wrap">'+
+          '<button class="gate-cta" id="brief-dl" style="background:#AAFF00;color:#000">↓ DESCARGAR BLUEPRINT (.md)</button>'+
+          '<button class="gate-cta" id="brief-oracle" style="background:transparent;border:1px solid #2A2A2A;color:#888">ENVIAR A ORACLE →</button>'+
+        '</div></div>';
+      document.body.appendChild(ov);
+    }
+    const md=idea.brief||('# '+idea.name+'\n\nBlueprint pendiente de escribir — sembrala de nuevo con su plan.');
+    gid('brief-title').textContent='◉ '+idea.name;
+    gid('brief-body').innerHTML=md2html(md);
+    gid('brief-dl').onclick=()=>{ const a=document.createElement('a');
+      a.href=URL.createObjectURL(new Blob([md],{type:'text/markdown'}));
+      a.download=idea.name.toLowerCase().replace(/[^a-z0-9]+/g,'-')+'-blueprint.md'; a.click();
+      hlog('idea','blueprint descargado: '+idea.name); };
+    gid('brief-oracle').onclick=()=>{ ov.classList.remove('open');
+      const tab=document.querySelector('.ag-tab[data-pane="oracle"]');
+      panel.classList.add('open'); if(tab) tab.click();
+      const gen=gid('or-gen'); if(gen) gen.click();
+      agentSay('◉ '+idea.name+' en las acciones ejecutables del reporte.'); };
+    ov.classList.add('open');
+  }
 
   // ── unified field loop ───────────────────────────────────
   function loop(t){
@@ -6474,12 +6553,29 @@ var qrcode = function() {
     wrap.innerHTML='';
     state.ideas.forEach(idea=>{
       const live=idea.collected>=idea.pieces, pct=Math.round(idea.collected/idea.pieces*100);
+      const faltan=idea.pieces-idea.collected;
       const d=document.createElement('div'); d.className='ag-idea'+(live?' live':'');
       d.innerHTML='<div class="r"><span class="nm">'+(live?'◉ ':'')+idea.name+'</span>'+
         '<span class="st">'+(live?'VIVA':idea.collected+'/'+idea.pieces)+'</span></div>'+
         '<div class="ag-bar"><i style="width:'+pct+'%"></i></div>'+
-        '<div style="text-align:right;margin-top:4px"><button class="del" data-id="'+idea.id+'">✕ quitar</button></div>';
+        (live
+          ? '<div style="display:flex;gap:8px;margin-top:9px;align-items:center">'+
+            '<button class="ag-btn" data-act="impl" style="padding:6px 12px;font-size:8px;background:#AAFF00;color:#000">▶ IMPLEMENTAR — VER BLUEPRINT</button>'+
+            '<button class="del" style="margin-left:auto" data-id="'+idea.id+'">✕</button></div>'
+          : '<div style="font-family:\'Space Mono\',monospace;font-size:8px;letter-spacing:1px;color:#555;margin-top:8px;line-height:1.6">'+
+            'FALTAN <b style="color:#B84DFF">'+faltan+'</b> PIEZAS ✦ — VUELAN POR EL MAPA</div>'+
+            '<div style="display:flex;gap:8px;margin-top:8px;align-items:center">'+
+            '<button class="ag-btn" data-act="hunt" style="padding:6px 12px;font-size:8px;background:#B84DFF;color:#000">◉ CAZAR PIEZAS →</button>'+
+            '<button class="del" style="margin-left:auto" data-id="'+idea.id+'">✕ quitar</button></div>');
       d.querySelector('.del').onclick=()=>{ state.ideas=state.ideas.filter(o=>o.id!==idea.id); save(); rebuildIdeaEnts(); renderIdeas(); };
+      const hunt=d.querySelector('[data-act=hunt]');
+      if(hunt) hunt.onclick=()=>{
+        if(!collectMode) document.getElementById('idea-collect').click();
+        if(collectMode){ if(typeof goTo==='function') goTo('map'); panel.classList.remove('open');
+          agentSay('Cazando piezas de '+idea.name+' — clic en las entidades ✦ del mapa.'); }
+      };
+      const impl=d.querySelector('[data-act=impl]');
+      if(impl) impl.onclick=()=>{ (window.hkLog||function(){})('idea','IMPLEMENTAR: '+idea.name); openBrief(idea); };
       wrap.appendChild(d);
     });
   }
@@ -6529,8 +6625,14 @@ var qrcode = function() {
   // ── boot ─────────────────────────────────────────────────
   resize(); rebuildIdeaEnts(); renderIdeas();
   const total=state.ideas.reduce((s,i)=>s+i.collected,0);
-  if(total>0){ const box=document.getElementById('collectibles-counter'); const el=document.getElementById('collect-num');
-    if(box) box.style.display='flex'; if(el) el.textContent=total; }
+  const ccBox=document.getElementById('collectibles-counter');
+  if(ccBox){ // el contador es la puerta al detalle: qué juntaste, qué falta, a dónde lleva
+    ccBox.style.display='flex'; ccBox.style.cursor='pointer'; ccBox.style.pointerEvents='auto';
+    ccBox.title='Ver mis coleccionables e ideas';
+    ccBox.onclick=()=>{ panel.classList.add('open');
+      const tab=document.querySelector('.ag-tab[data-pane="ideas"]'); if(tab) tab.click(); };
+  }
+  if(total>0){ const el=document.getElementById('collect-num'); if(el) el.textContent=total; }
   requestAnimationFrame(loop);
 })();
 </script>
@@ -6549,7 +6651,7 @@ var qrcode = function() {
   .hkov-x:hover{ color:#fff; }
 
   /* ── GATE badge ── */
-  #gate-badge{ position:fixed; top:20px; right:20px; z-index:525;
+  #gate-badge{ position:fixed; top:68px; right:24px; z-index:525;
     font-family:'Space Mono',monospace; font-size:8px; letter-spacing:3px; text-transform:uppercase;
     padding:7px 12px; border-radius:2px; border:1px solid #222; color:#555; background:rgba(6,6,8,.85);
     cursor:pointer; backdrop-filter:blur(6px); }
@@ -6622,6 +6724,21 @@ var qrcode = function() {
   #br-terminal input{ width:100%; background:#000; border:1px solid #1E3A00; color:#AAFF00;
     font-family:'Space Mono',monospace; font-size:11px; padding:9px 11px; outline:none; }
   #br-terminal .er{ font-size:9px; color:#C0392B; letter-spacing:2px; margin-top:8px; min-height:12px; }
+  #br-vignette{ position:absolute; inset:0; z-index:4; pointer-events:none;
+    background:radial-gradient(ellipse at 50% 55%, transparent 34%, rgba(24,18,0,.62) 100%); }
+  .br-graffiti{ position:absolute; z-index:3; font-family:'Space Mono',monospace; color:rgba(58,48,4,.85);
+    font-size:15px; letter-spacing:2px; text-shadow:0 1px 0 rgba(255,255,200,.18); pointer-events:none; }
+  .br-shadow{ position:absolute; bottom:18vh; width:64px; height:240px; z-index:3; pointer-events:none;
+    background:radial-gradient(ellipse at 50% 18%, rgba(0,0,0,.85), transparent 72%);
+    filter:blur(7px); animation:brwalk 8.5s linear forwards; }
+  @keyframes brwalk{ from{ transform:translateX(-12vw); } to{ transform:translateX(112vw); } }
+  #br-exit{ position:absolute; bottom:18vh; left:50%; transform:translateX(-50%); width:120px; height:280px;
+    z-index:6; cursor:pointer; background:#060606; border:3px solid #AAFF00; display:none;
+    box-shadow:0 0 70px rgba(170,255,0,.75), inset 0 0 46px rgba(170,255,0,.28);
+    animation:pulse 1.6s infinite; }
+  #br-exit::after{ content:'S A L I D A'; position:absolute; top:-36px; left:50%; transform:translateX(-50%);
+    font-family:'Space Mono',monospace; color:#AAFF00; font-size:12px; letter-spacing:6px; text-shadow:0 0 14px #AAFF00; white-space:nowrap; }
+  #br-blackout{ position:absolute; inset:0; background:#000; z-index:8; opacity:0; pointer-events:none; transition:opacity .16s; }
   #br-noise{ position:absolute; inset:0; pointer-events:none; opacity:.5; mix-blend-mode:overlay; z-index:4;
     background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E"); }
 
@@ -6682,6 +6799,9 @@ var qrcode = function() {
   <div id="br-ceiling"></div>
   <div id="br-floor"></div>
   <div id="br-noise"></div>
+  <div id="br-vignette"></div>
+  <div id="br-exit" title="..."></div>
+  <div id="br-blackout"></div>
   <div id="br-hud">NIVEL <span id="br-level">0</span><br>SECTOR <span id="br-sector">A-1</span><br><span id="br-time">00:00</span></div>
   <div id="br-live"><span class="lv">● LIVE 24/7</span><div class="vw"><span id="br-viewers">1.2K</span> MIRANDO CÓMO INTENTÁS SALIR</div></div>
   <div id="br-feed"></div>
@@ -6695,7 +6815,7 @@ var qrcode = function() {
 
 <div id="def-caption">
   <div class="t1">MEGA-HEYOKA</div>
-  <div class="t2">PROTOCOLO DE DEFENSA FINAL — ATLAS + ORACLE + CURATOR + MEDIA UNIDOS</div>
+  <div class="t2">AUTOBOT-CLASS · PROTOCOLO DE DEFENSA FINAL — ATLAS + ORACLE + CURATOR + MEDIA UNIDOS</div>
 </div>
 
 <script>
@@ -7064,14 +7184,34 @@ var qrcode = function() {
       push(); this.feedTimer=setInterval(push, 2600);
     },
     buildRoom(){
-      // limpiar puertas/luces previas
-      document.querySelectorAll('.br-door,.br-light').forEach(n=>n.remove());
-      $('br-terminal').style.display='none';
+      // limpiar elementos de la sala anterior
+      document.querySelectorAll('.br-door,.br-light,.br-graffiti,.br-shadow').forEach(n=>n.remove());
+      $('br-terminal').style.display='none'; $('br-exit').style.display='none';
       const room=$('backrooms');
       const nDoors=2+Math.floor(Math.random()*3);
       const nLights=3+Math.floor(Math.random()*3);
       for(let i=0;i<nLights;i++){ const l=document.createElement('div'); l.className='br-light';
         l.style.left=(8+Math.random()*84)+'vw'; l.style.animationDelay=(Math.random()*6)+'s'; room.appendChild(l); }
+      // grafitis: las pistas de la salida están escritas en las paredes
+      const CLUES=['NO SE PIDE','NADIE TE LO VA A DAR','LO QUE VALE SE ______','EL BÚHO NO PREGUNTA. AGARRA.','NOT GIVEN.','23 LO SABE','LA TERMINAL ESCUCHA UNA SOLA PALABRA'];
+      if(Math.random()<0.45){
+        const g=document.createElement('div'); g.className='br-graffiti';
+        g.textContent=CLUES[Math.floor(Math.random()*CLUES.length)];
+        g.style.left=(8+Math.random()*66)+'vw'; g.style.top=(24+Math.random()*28)+'vh';
+        g.style.transform='rotate('+(Math.random()*10-5).toFixed(1)+'deg)';
+        room.appendChild(g);
+      }
+      // ...algo camina por acá abajo
+      if(Math.random()<0.25){
+        const s=document.createElement('div'); s.className='br-shadow'; room.appendChild(s);
+        setTimeout(()=>s.remove(), 9000);
+        $('br-msg').style.opacity='1'; $('br-msg').textContent='...no estás solo acá abajo.';
+      }
+      // apagón
+      if(Math.random()<0.18){
+        const bo=$('br-blackout'); bo.style.opacity='0.94';
+        setTimeout(()=>bo.style.opacity='0', 700+Math.random()*1100);
+      }
       const hasTerminal=Math.random()<0.22 || this.level>=6; // la salida existe, escondida
       for(let i=0;i<nDoors;i++){
         const d=document.createElement('div'); d.className='br-door';
@@ -7090,7 +7230,18 @@ var qrcode = function() {
         inp.onkeydown=(e)=>{
           if(e.key!=='Enter') return;
           const a=inp.value.toLowerCase();
-          if(a.includes('toma')||a.includes('taken')){ this.exit(true); }
+          if(a.includes('toma')||a.includes('taken')){
+            // respuesta correcta: la terminal se apaga y LA PUERTA aparece
+            term.style.display='none';
+            logEvent('backrooms','respondió bien en nivel '+this.level);
+            const ex=$('br-exit'); ex.style.display='block';
+            $('br-msg').style.opacity='1';
+            $('br-msg').textContent='La puerta estuvo siempre. CRUZALA ANTES DE QUE CAMBIE DE OPINIÓN.';
+            ex.onclick=()=>this.exit(true);
+            setTimeout(()=>{ if(ex.style.display==='block' && $('backrooms').classList.contains('open')){
+              ex.style.display='none'; this.level+=1; $('br-level').textContent=this.level;
+              $('br-msg').textContent='Dudaste. La puerta se fue.'; this.buildRoom(); } }, 6500);
+          }
           else { $('br-error').textContent='RESPUESTA RECHAZADA. LA TERMINAL SE APAGA.';
             logEvent('backrooms','falló la pregunta en nivel '+this.level);
             setTimeout(()=>{ this.level+=2; $('br-level').textContent=this.level; this.buildRoom(); },1200); }
@@ -7105,32 +7256,39 @@ var qrcode = function() {
     if(e.key==='Escape' && $('backrooms').classList.contains('open') && GATE.tier==='socio') Backrooms.exit(false);
   });
 
-  // ═══════ DEFENSA FINAL — MEGA-HEYOKA ═══════
-  // bitmap del gigante (17 cols) — 1 = celda
+  // ═══════ DEFENSA FINAL — MEGA-HEYOKA (autobot-class, estilo Optimus) ═══════
+  // bitmap 19 cols · letras = color: B azul, R rojo, S plata, Y oro, C cian, . vacío
   const MECHA=[
-    '00000011111000000',
-    '00000111111100000',
-    '00000110101100000',
-    '00000111111100000',
-    '00000011111000000',
-    '00000001110000000',
-    '00111111111111100',
-    '01111111111111110',
-    '11101111111101111',
-    '11101111111101111',
-    '11101111111101111',
-    '01101111111101100',
-    '00001111111100000',
-    '00001111111100000',
-    '00001111111100000',
-    '00000111111000000',
-    '00000110011000000',
-    '00000110011000000',
-    '00000110011000000',
-    '00000110011000000',
-    '00001110011100000',
-    '00011110011110000'
+    '....Y.........Y....',
+    '....B.........B....',
+    '...BBBBBBBBBBBBB...',
+    '...B..CC...CC..B...',
+    '...BB.SSSSSSS.BB...',
+    '....BSSSSSSSSSB....',
+    '.....BBBBBBBBB.....',
+    'S.RRRRRRRRRRRRRRR.S',
+    'SRRRR.RRRRRRR.RRRRS',
+    'SRRR...RRRRR...RRRS',
+    '.RRR...CCCCC...RRR.',
+    '.RRR...CCCCC...RRR.',
+    '.SRR...RRRRR...RRS.',
+    '.SRR.RRRRRRRRR.RRS.',
+    '.S.R.RRRRRRRRR.R.S.',
+    '.....RRYYYYYRR.....',
+    '.....SSYYYYYSS.....',
+    '.....BBB...BBB.....',
+    '....BBBB...BBBB....',
+    '....BBB.....BBB....',
+    '....BBB.....BBB....',
+    '....BBB.....BBB....',
+    '...SBBB.....BBBS...',
+    '...SBBB.....BBBS...',
+    '....BBB.....BBB....',
+    '...BBBB.....BBBB...',
+    '..BBBBB.....BBBBB..',
+    '..SSSSS.....SSSSS..'
   ];
+  const MECHA_COLORS={ B:'#2E6BFF', R:'#FF2A1F', S:'#C9CDD6', Y:'#FFD200', C:'#00F0FF' };
   let defensa={ active:false, ents:[], cell:0 };
   function activarDefensa(){
     if(defensa.active) return;
@@ -7139,8 +7297,8 @@ var qrcode = function() {
     const S=Math.min(W/cols, (H*0.78)/rows);
     const x0=(W-cols*S)/2, y0=(H-rows*S)/2 - H*0.02;
     const targets=[];
-    for(let r=0;r<rows;r++) for(let c=0;c<cols;c++) if(MECHA[r][c]==='1')
-      targets.push({tx:x0+c*S+S/2, ty:y0+r*S+S/2});
+    for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){ const ch=MECHA[r][c];
+      if(ch!=='.') targets.push({tx:x0+c*S+S/2, ty:y0+r*S+S/2, col:MECHA_COLORS[ch]||'#FF2A1F', glow:ch==='C'}); }
     defensa.ents=targets.map(t=>({ x:Math.random()*W, y:Math.random()<0.5?-30:H+30, ...t }));
     defensa.cell=S; defensa.active=true;
     $('def-caption').style.display='block';
@@ -7164,24 +7322,25 @@ var qrcode = function() {
       dctx.clearRect(0,0,W,H);
       dctx.fillStyle='rgba(3,3,4,0.55)'; dctx.fillRect(0,0,W,H);
       const flicker=0.82+0.18*Math.sin(frame*0.15);
-      defensa.ents.forEach((e,i)=>{
+      defensa.ents.forEach((e)=>{
         e.x+=(e.tx-e.x)*0.075; e.y+=(e.ty-e.y)*0.075;
         const settled=Math.abs(e.tx-e.x)+Math.abs(e.ty-e.y)<defensa.cell*0.5;
         if(settled){
-          dctx.fillStyle= (i%23===0)? '#FFD200' : '#FF3A1F';
-          dctx.globalAlpha=flicker;
-          dctx.fillRect(e.x-defensa.cell/2+1, e.y-defensa.cell/2+1, defensa.cell-2, defensa.cell-2);
+          if(e.glow){ // ojos y ventanas de pecho: cian encendido con halo
+            dctx.shadowColor='#00F0FF'; dctx.shadowBlur=14;
+            dctx.fillStyle='#00F0FF'; dctx.globalAlpha=1;
+            dctx.fillRect(e.x-defensa.cell/2+1, e.y-defensa.cell/2+1, defensa.cell-2, defensa.cell-2);
+            dctx.shadowBlur=0;
+          } else {
+            dctx.fillStyle=e.col; dctx.globalAlpha=flicker;
+            dctx.fillRect(e.x-defensa.cell/2+1, e.y-defensa.cell/2+1, defensa.cell-2, defensa.cell-2);
+          }
         } else {
-          dctx.fillStyle='#00F0FF'; dctx.globalAlpha=.9;
+          dctx.fillStyle=e.col; dctx.globalAlpha=.9;
           dctx.beginPath(); dctx.arc(e.x,e.y,2.4,0,6.283); dctx.fill();
         }
       });
       dctx.globalAlpha=1;
-      // ojos
-      dctx.fillStyle='#AAFF00';
-      const eyeY=defensa.ents[0]? (defensa.ents[0].ty+defensa.cell*1.9):H*0.2;
-      dctx.fillRect(W/2-defensa.cell*1.6, eyeY, defensa.cell*0.9, defensa.cell*0.5);
-      dctx.fillRect(W/2+defensa.cell*0.7, eyeY, defensa.cell*0.9, defensa.cell*0.5);
       // nombres de agentes orbitando
       dctx.font='9px "Space Mono", monospace'; dctx.textAlign='center';
       AGENTS_N.forEach((n,i)=>{
@@ -7391,6 +7550,8 @@ var qrcode = function() {
     }, true);
   }
 
+  // helpers compartidos para otros módulos del universo
+  window.hkLog=logEvent; window.hkMd=mdToHtml;
   logEvent('sistema','core agents en línea: GATE/ORACLE/CURATOR/BACKROOMS/DEFENSA');
 })();
 </script>
@@ -7540,6 +7701,143 @@ var qrcode = function() {
     log('router', t+' → portafolio#'+(hit?hit[1]:'top'));
     window.open('./portfolio.html#'+(hit?hit[1]:''), '_blank');
   };
+})();
+</script>
+<!-- ═══════════ NEBULA SKY + ALIEN AGENT BASE ═══════════ -->
+<style id="nebula-style">
+  #nebula-canvas{ position:fixed; inset:0; z-index:-1; pointer-events:none; }
+  /* la zona AGENTS se vuelve base alienígena */
+  #screen-agents{ position:relative; }
+  #alien-base-canvas{ position:absolute; inset:0; z-index:0; pointer-events:none; }
+  #screen-agents .zone-body{ position:relative; z-index:1; }
+  #screen-agents .zone-header{ border-bottom-color:rgba(170,255,0,.25); }
+  #screen-agents .agent-card{
+    background:rgba(4,12,6,.72); border-color:rgba(170,255,0,.22); backdrop-filter:blur(3px);
+    box-shadow:0 0 22px rgba(170,255,0,.06), inset 0 0 18px rgba(0,240,255,.04);
+    transition:border-color .2s, box-shadow .2s;
+  }
+  #screen-agents .agent-card:hover{ border-color:#AAFF00; box-shadow:0 0 30px rgba(170,255,0,.25); }
+  #screen-agents .mega-text{ text-shadow:0 0 34px rgba(170,255,0,.35); }
+</style>
+
+<canvas id="nebula-canvas"></canvas>
+
+<script>
+// ═══ NEBULA SKY — el universo respira detrás de todo ═══
+(function(){
+  const cv=document.getElementById('nebula-canvas'), x=cv.getContext('2d');
+  let W,H,blobs=[],stars=[];
+  const HUES=[ [184,77,255], [0,240,255], [255,58,31], [46,107,255], [255,210,0] ];
+  function build(){
+    W=cv.width=innerWidth; H=cv.height=innerHeight;
+    blobs=Array.from({length:7},(_,i)=>{ const h=HUES[i%HUES.length];
+      return { x:Math.random()*W, y:Math.random()*H, r:(0.25+Math.random()*0.3)*Math.min(W,H),
+        dx:(Math.random()-0.5)*0.08, dy:(Math.random()-0.5)*0.05, h, a:0.05+Math.random()*0.06, ph:Math.random()*6.28 }; });
+    stars=Array.from({length:260},()=>({ x:Math.random()*W, y:Math.random()*H,
+      r:Math.random()*1.1+0.2, tw:Math.random()*6.28, sp:0.001+Math.random()*0.004 }));
+  }
+  build(); addEventListener('resize',build);
+  (function loop(t){
+    x.clearRect(0,0,W,H);
+    // fondo profundo
+    x.fillStyle='#050508'; x.fillRect(0,0,W,H);
+    // nubes de nebulosa
+    blobs.forEach(b=>{
+      b.x+=b.dx; b.y+=b.dy;
+      if(b.x<-b.r) b.x=W+b.r; if(b.x>W+b.r) b.x=-b.r;
+      if(b.y<-b.r) b.y=H+b.r; if(b.y>H+b.r) b.y=-b.r;
+      const pulse=b.a*(0.75+0.25*Math.sin(t*0.0003+b.ph));
+      const g=x.createRadialGradient(b.x,b.y,0,b.x,b.y,b.r);
+      g.addColorStop(0,`rgba(${b.h[0]},${b.h[1]},${b.h[2]},${pulse})`);
+      g.addColorStop(0.55,`rgba(${b.h[0]},${b.h[1]},${b.h[2]},${pulse*0.4})`);
+      g.addColorStop(1,'rgba(0,0,0,0)');
+      x.fillStyle=g; x.beginPath(); x.arc(b.x,b.y,b.r,0,6.283); x.fill();
+    });
+    // polvo de estrellas titilando
+    stars.forEach(s=>{ s.tw+=s.sp*16;
+      const a=0.25+0.55*Math.abs(Math.sin(s.tw));
+      x.fillStyle=`rgba(240,237,232,${a})`;
+      x.beginPath(); x.arc(s.x,s.y,s.r,0,6.283); x.fill(); });
+    requestAnimationFrame(loop);
+  })(0);
+})();
+
+// ═══ ALIEN AGENT BASE — la sede psy-fi de los agentes ═══
+(function(){
+  const screen=document.getElementById('screen-agents');
+  if(!screen) return;
+  const cv=document.createElement('canvas'); cv.id='alien-base-canvas';
+  screen.insertBefore(cv, screen.firstChild);
+  const x=cv.getContext('2d');
+  let W,H;
+  const GLYPHS='⏃⏄⏅⌬⌖⍟⌭⍜⎔⌇⋉⋇☌⏣';
+  let drops=[];
+  function size(){ W=cv.width=screen.clientWidth||innerWidth; H=cv.height=screen.clientHeight||innerHeight;
+    drops=Array.from({length:26},()=>({ x:Math.random()*W, y:Math.random()*H,
+      v:0.3+Math.random()*0.8, g:GLYPHS[Math.floor(Math.random()*GLYPHS.length)], a:0.1+Math.random()*0.25 })); }
+  size(); addEventListener('resize',size);
+  function hex(cx,cy,r){ x.beginPath();
+    for(let i=0;i<6;i++){ const a=Math.PI/3*i+Math.PI/6;
+      const px=cx+Math.cos(a)*r, py=cy+Math.sin(a)*r;
+      i?x.lineTo(px,py):x.moveTo(px,py); }
+    x.closePath(); }
+  (function loop(t){
+    if(screen.classList.contains('active')){
+      if(cv.width!==(screen.clientWidth||innerWidth)) size();
+      x.clearRect(0,0,W,H);
+      // suelo hexagonal que late
+      const hr=34;
+      for(let ry=0; ry<H+hr; ry+=hr*1.5){
+        for(let rx=0; rx<W+hr; rx+=hr*1.74){
+          const ox=(Math.floor(ry/(hr*1.5))%2)?hr*0.87:0;
+          const d=Math.hypot(rx+ox-W/2, ry-H*0.62);
+          const pulse=0.5+0.5*Math.sin(t*0.0016 - d*0.012);
+          x.strokeStyle=`rgba(170,255,0,${0.04+0.09*pulse})`;
+          x.lineWidth=1; hex(rx+ox, ry, hr*0.55); x.stroke();
+        }
+      }
+      // anillo-portal con runas girando
+      const pcx=W*0.78, pcy=H*0.30, pr=Math.min(W,H)*0.16;
+      x.save(); x.translate(pcx,pcy);
+      for(let ring=0; ring<2; ring++){
+        x.rotate((ring?-1:1)*t*0.00035);
+        x.strokeStyle=`rgba(0,240,255,${0.30-ring*0.12})`; x.lineWidth=1.5;
+        x.beginPath(); x.arc(0,0,pr+ring*16,0,6.283); x.stroke();
+        x.font='11px monospace'; x.fillStyle=`rgba(0,240,255,${0.5-ring*0.18})`;
+        for(let i=0;i<10;i++){ const a=i/10*6.283;
+          x.fillText(GLYPHS[(i+ring*3)%GLYPHS.length], Math.cos(a)*(pr+ring*16)-4, Math.sin(a)*(pr+ring*16)+4); }
+      }
+      x.restore();
+      // ojo del portal
+      const eg=x.createRadialGradient(pcx,pcy,0,pcx,pcy,pr*0.7);
+      eg.addColorStop(0,'rgba(170,255,0,0.25)'); eg.addColorStop(0.6,'rgba(0,240,255,0.10)'); eg.addColorStop(1,'transparent');
+      x.fillStyle=eg; x.beginPath(); x.arc(pcx,pcy,pr*0.7,0,6.283); x.fill();
+      // nave nodriza patrullando
+      const mx=W*0.5+Math.sin(t*0.00022)*W*0.34, my=H*0.14+Math.sin(t*0.0005)*10;
+      x.fillStyle='rgba(184,77,255,0.85)';
+      x.beginPath(); x.ellipse(mx,my,34,9,0,0,6.283); x.fill();
+      x.fillStyle='rgba(230,200,255,0.9)';
+      x.beginPath(); x.arc(mx,my-7,12,Math.PI,0); x.fill();
+      for(let i=-2;i<=2;i++){ x.fillStyle=`rgba(170,255,0,${0.5+0.5*Math.sin(t*0.01+i)})`;
+        x.beginPath(); x.arc(mx+i*12,my+3,1.8,0,6.283); x.fill(); }
+      // rayo tractor
+      const beam=x.createLinearGradient(mx,my,mx,my+H*0.4);
+      beam.addColorStop(0,'rgba(170,255,0,0.16)'); beam.addColorStop(1,'transparent');
+      x.fillStyle=beam;
+      x.beginPath(); x.moveTo(mx-8,my+8); x.lineTo(mx+8,my+8);
+      x.lineTo(mx+42,my+H*0.4); x.lineTo(mx-42,my+H*0.4); x.closePath(); x.fill();
+      // glifos cayendo
+      x.font='13px monospace';
+      drops.forEach(d=>{ d.y+=d.v; if(d.y>H+20){ d.y=-20; d.x=Math.random()*W; }
+        x.fillStyle=`rgba(170,255,0,${d.a})`; x.fillText(d.g, d.x, d.y); });
+      // barrido de escáner
+      const sy=(t*0.05)%(H*1.4);
+      const sg=x.createLinearGradient(0,sy-40,0,sy+40);
+      sg.addColorStop(0,'transparent'); sg.addColorStop(0.5,'rgba(0,240,255,0.07)'); sg.addColorStop(1,'transparent');
+      x.fillStyle=sg; x.fillRect(0,sy-40,W,80);
+    }
+    requestAnimationFrame(loop);
+  })(0);
 })();
 </script>
 </body>
