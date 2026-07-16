@@ -3713,6 +3713,13 @@ animateBg();
       card.innerHTML = '<div class="eq"><span></span><span></span><span></span><span></span><span></span><span></span></div><div class="lbl">'+(m.label||'AUDIO')+'</div>';
       const a = document.createElement('audio'); a.src = m.src; a.autoplay = true; a.loop = true; a.muted = layer.muted;
       a.play&&a.play().catch(()=>{}); layer.el = a; card.appendChild(a); inner.appendChild(card);
+    } else if (window.HK_PREVIEW) {
+      // sandbox del preview: los embeds externos no cargan (CSP) — tarjeta honesta, nunca blanco
+      const card = document.createElement('div'); card.className = 'ml-audiocard';
+      card.innerHTML = '<div class="eq"><span></span><span></span><span></span><span></span><span></span><span></span></div>'+
+        '<div class="lbl">'+(m.label||'EMBED')+' · CAPA ACTIVA</div>'+
+        '<div style="font-family:\'Space Mono\',monospace;font-size:8px;letter-spacing:2px;color:#333;margin-top:6px;text-align:center">EL PREVIEW BLOQUEA EMBEDS EXTERNOS<br>EN TU VERCEL SE VE EL VIDEO REAL</div>';
+      inner.appendChild(card);
     } else { // iframe
       const f = document.createElement('iframe');
       f.src = embedSrc(m, layer.muted);
@@ -3720,6 +3727,12 @@ animateBg();
       f.setAttribute('allowfullscreen',''); f.setAttribute('scrolling','no');
       f.referrerPolicy = 'no-referrer-when-downgrade'; f.loading = 'eager';
       layer.el = f; inner.appendChild(f);
+      // red de seguridad: si el embed nunca carga, tapamos la página de error blanca
+      let ok = false; f.addEventListener('load', () => { ok = true; const fb = inner.querySelector('.ml-fail'); if (fb) fb.remove(); });
+      setTimeout(() => { if (!ok) { const fb = document.createElement('div'); fb.className = 'ml-audiocard ml-fail';
+        fb.innerHTML = '<div class="lbl">'+(m.label||'EMBED')+' NO CARGÓ</div>'+
+          '<div style="font-family:\'Space Mono\',monospace;font-size:8px;letter-spacing:2px;color:#333;margin-top:6px">REVISÁ EL LINK O PROBÁ OTRO — LA CAPA SIGUE VIVA</div>';
+        inner.appendChild(fb); } }, 7000);
     }
     const mesh = document.createElement('div'); mesh.className = 'px-mesh'; inner.appendChild(mesh);
     return inner;
@@ -6456,7 +6469,7 @@ var qrcode = function() {
           ideaEnts.splice(i,1);
           const t=document.getElementById('collect-toast'), rest=idea.pieces-idea.collected;
           if(t) t.textContent='✦ PIEZA DE '+idea.name+' ('+idea.collected+'/'+idea.pieces+')'+(rest?' — FALTAN '+rest:'');
-          bumpCollectibles();
+          bumpCollectibles(); showPiecePop(idea);
           if(idea.collected>=idea.pieces) igniteIdea(idea); renderIdeas(); }
         return true;
       }
@@ -6481,6 +6494,37 @@ var qrcode = function() {
   }
 
   cv.addEventListener('click', e=>{ if(collectMode && !qr.active) collectAt(e.clientX, e.clientY); });
+
+  // ── cada pieza agarrada abre su destino: la tarjeta de la idea ──
+  function showPiecePop(idea){
+    let pop=document.getElementById('piece-pop');
+    if(!pop){
+      pop=document.createElement('div'); pop.id='piece-pop';
+      pop.style.cssText='position:fixed;bottom:120px;left:50%;transform:translateX(-50%);z-index:540;'+
+        'background:rgba(6,6,8,.97);border:1px solid #B84DFF;border-radius:3px;padding:14px 16px;'+
+        'width:min(340px,90vw);backdrop-filter:blur(8px);transition:opacity .3s;';
+      document.body.appendChild(pop);
+    }
+    const live=idea.collected>=idea.pieces, pct=Math.round(idea.collected/idea.pieces*100);
+    pop.innerHTML='<div style="font-size:13px;font-weight:700;margin-bottom:6px">'+(live?'◉ ':'✦ ')+idea.name+'</div>'+
+      '<div style="height:4px;background:#141414;border-radius:2px;overflow:hidden;margin-bottom:8px">'+
+      '<i style="display:block;height:100%;width:'+pct+'%;background:'+(live?'#AAFF00':'#B84DFF')+'"></i></div>'+
+      '<div style="font-family:\'Space Mono\',monospace;font-size:8px;letter-spacing:1px;color:#666;margin-bottom:10px">'+
+      (live?'COMPLETA — BLUEPRINT DESBLOQUEADO, LISTO PARA EJECUTAR':'FALTAN '+(idea.pieces-idea.collected)+' PIEZAS — SIGUEN VOLANDO CERCA')+'</div>'+
+      '<div style="display:flex;gap:6px">'+
+      (live?'<button id="pp-open" class="ag-btn" style="padding:7px 12px;font-size:8px;background:#AAFF00;color:#000">▶ VER BLUEPRINT</button>'
+           :'<button id="pp-idea" class="ag-btn" style="padding:7px 12px;font-size:8px;background:#B84DFF;color:#000">VER LA IDEA →</button>')+
+      '<button id="pp-x" class="ag-btn" style="padding:7px 12px;font-size:8px;background:transparent;border:1px solid #2A2A2A;color:#777">SEGUIR CAZANDO</button></div>';
+    pop.style.display='block'; pop.style.opacity='1';
+    const hide=()=>{ pop.style.opacity='0'; setTimeout(()=>pop.style.display='none',300); };
+    const bOpen=document.getElementById('pp-open');
+    if(bOpen) bOpen.onclick=()=>{ hide(); openBrief(idea); };
+    const bIdea=document.getElementById('pp-idea');
+    if(bIdea) bIdea.onclick=()=>{ hide(); panel.classList.add('open');
+      const t=document.querySelector('.ag-tab[data-pane="ideas"]'); if(t) t.click(); };
+    document.getElementById('pp-x').onclick=hide;
+    clearTimeout(showPiecePop._t); showPiecePop._t=setTimeout(hide, 5000);
+  }
 
   // ── BLUEPRINT de la idea: se lee y se ejecuta, nada más ──
   function openBrief(idea){
@@ -7132,6 +7176,104 @@ var qrcode = function() {
       else { toast('✦ '+f.kind.toUpperCase()+' AMISTOSO — SIGUE VOLANDO'); } }
   });
 
+  // ═══════ ENTRAR A LAS GALAXIAS HERMANAS — espacio limpio para crear ═══════
+  const GAL_TEMPLATES={
+    'EN BLANCO': [],
+    'VICE OS':  [['PERFORMANCE','#AAFF00'],['COMMUNITY','#00F0FF'],['SEÑALES','#FFD200'],['STORE','#B84DFF']],
+    'TIENDA':   [['CATÁLOGO','#FFD200'],['DROPS','#FF3A1F'],['CHECKOUT','#AAFF00'],['CLIENTES','#00F0FF']],
+    'ARTE':     [['OBRAS','#FF3A1F'],['PRINTS','#FFD200'],['EXPO','#B84DFF'],['COMISIONES','#00F0FF']],
+  };
+  let galOpen=null, galAnim=null;
+  function openGalaxy(g){
+    galOpen=g;
+    let ov=$('ov-galaxy');
+    if(!ov){
+      ov=document.createElement('div'); ov.id='ov-galaxy'; ov.className='hkov';
+      ov.innerHTML='<div class="hkov-card" style="width:min(720px,95vw)">'+
+        '<button class="hkov-x" id="gal-x">✕</button>'+
+        '<div class="hkov-eyebrow">GALAXIA HERMANA · TU ESPACIO PARA CREAR</div>'+
+        '<div class="hkov-title" id="gal-title">—</div>'+
+        '<canvas id="gal-canvas" style="width:100%;height:280px;border:1px solid #141414;border-radius:2px;background:#040406;margin-bottom:14px"></canvas>'+
+        '<div id="gal-tpl-row" style="margin-bottom:12px">'+
+          '<div style="font-family:\'Space Mono\',monospace;font-size:8px;letter-spacing:3px;color:#333;margin-bottom:8px">ARRANCÁ CON UN TEMPLATE DE EJEMPLO</div>'+
+          '<div id="gal-tpls" style="display:flex;gap:6px;flex-wrap:wrap"></div></div>'+
+        '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
+          '<button class="gate-cta" id="gal-add" style="background:#B84DFF;color:#000">+ AÑADIR MUNDO</button>'+
+          '<button class="gate-cta" id="gal-clear" style="background:transparent;border:1px solid #2A2A2A;color:#888">VACIAR</button>'+
+        '</div></div>';
+      document.body.appendChild(ov);
+      $('gal-x').onclick=()=>{ ov.classList.remove('open'); galOpen=null; if(galAnim) cancelAnimationFrame(galAnim); };
+      $('gal-add').onclick=()=>{ if(!galOpen) return;
+        hkPrompt('Nuevo mundo en '+galOpen.name,'ej. RADIO / STORE / LAB', n=>{
+          galOpen.nodes=galOpen.nodes||[];
+          const cols=['#FF3A1F','#FFD200','#AAFF00','#00F0FF','#B84DFF'];
+          galOpen.nodes.push({name:n.toUpperCase().slice(0,18), color:cols[galOpen.nodes.length%cols.length]});
+          store.set('hk23_galaxias',galaxias); renderGalTpls();
+          logEvent('galaxia', galOpen.name+' + mundo: '+n); }); };
+      $('gal-clear').onclick=()=>{ if(!galOpen) return; galOpen.nodes=[]; store.set('hk23_galaxias',galaxias); renderGalTpls(); };
+    }
+    $('gal-title').textContent='✧ '+g.name;
+    renderGalTpls();
+    ov.classList.add('open');
+    runGalCanvas();
+    logEvent('galaxia','entró a '+g.name);
+  }
+  function renderGalTpls(){
+    const row=$('gal-tpls'); if(!row||!galOpen) return; row.innerHTML='';
+    Object.keys(GAL_TEMPLATES).forEach(k=>{
+      const b=document.createElement('button');
+      b.className='ag-btn'; b.style.cssText='padding:6px 12px;font-size:8px;background:transparent;border:1px solid #2A2A2A;color:#888';
+      b.textContent=k; row.appendChild(b);
+      b.onclick=()=>{ galOpen.nodes=GAL_TEMPLATES[k].map(([name,color])=>({name,color}));
+        galOpen.template=k; store.set('hk23_galaxias',galaxias);
+        logEvent('galaxia',galOpen.name+' → template '+k); renderGalTpls(); };
+    });
+    $('gal-tpl-row').style.display = (galOpen.nodes&&galOpen.nodes.length) ? 'none' : 'block';
+  }
+  function runGalCanvas(){
+    if(galAnim) cancelAnimationFrame(galAnim);
+    const cvg=$('gal-canvas'); if(!cvg) return;
+    const gx=cvg.getContext('2d');
+    cvg.width=cvg.clientWidth*(devicePixelRatio||1); cvg.height=280*(devicePixelRatio||1);
+    function frame(t){
+      if(!galOpen || !$('ov-galaxy').classList.contains('open')) return;
+      const W=cvg.width, H=cvg.height, cx=W/2, cy=H/2;
+      gx.clearRect(0,0,W,H);
+      // polvo
+      for(let i=0;i<40;i++){ const a=i*2.399+t*0.00008, r=20+i*(Math.min(W,H)/90);
+        gx.beginPath(); gx.arc(cx+Math.cos(a)*r, cy+Math.sin(a)*r*0.55, 1, 0, 6.283);
+        gx.fillStyle=galOpen.color+'44'; gx.fill(); }
+      // núcleo
+      const ng=gx.createRadialGradient(cx,cy,0,cx,cy,34);
+      ng.addColorStop(0,'#fff'); ng.addColorStop(0.3,galOpen.color); ng.addColorStop(1,'transparent');
+      gx.fillStyle=ng; gx.beginPath(); gx.arc(cx,cy,34,0,6.283); gx.fill();
+      // mundos
+      const nodes=galOpen.nodes||[];
+      nodes.forEach((n,i)=>{
+        const a=t*0.0003*(i%2?1:-1)+i*(6.283/Math.max(nodes.length,1));
+        const r=70+ (i%3)*34;
+        const x=cx+Math.cos(a)*r, y=cy+Math.sin(a)*r*0.55;
+        gx.beginPath(); gx.arc(x,y,9,0,6.283); gx.fillStyle=n.color; gx.fill();
+        gx.font='700 10px "Space Mono",monospace'; gx.textAlign='center';
+        gx.fillStyle='#F0EDE8'; gx.fillText(n.name, x, y-15);
+      });
+      if(!nodes.length){
+        gx.font='10px "Space Mono",monospace'; gx.textAlign='center'; gx.fillStyle='#333';
+        gx.fillText('GALAXIA LIMPIA — ELEGÍ UN TEMPLATE O AÑADÍ TU PRIMER MUNDO', cx, cy+70);
+      }
+      galAnim=requestAnimationFrame(frame);
+    }
+    galAnim=requestAnimationFrame(frame);
+  }
+  // click en el mapa sobre una galaxia → entrás
+  document.addEventListener('click', e=>{
+    if(e.target && e.target.id==='map-canvas' && galaxias.length){
+      const W=innerWidth, H=innerHeight, hitR=Math.min(W,H)*0.075;
+      const g=galaxias.find(g=>Math.hypot(g.x*W-e.clientX, g.y*H-e.clientY)<hitR);
+      if(g) openGalaxy(g);
+    }
+  });
+
   // pintar galaxias + flyers sobre el loop existente sin tocarlo: segundo canvas? no — piggyback rAF propio
   const overlayCv=document.createElement('canvas');
   overlayCv.style.cssText='position:fixed;inset:0;z-index:6;pointer-events:none;';
@@ -7679,7 +7821,31 @@ var qrcode = function() {
     }
   }
 
-  const CS={ open(){ render(); $('ov-crypto').classList.add('open'); log('crypto','abrió señales ('+tier()+')'); } };
+  // los agentes salen a buscar — se ve el rastreo antes de las señales
+  function scanThenRender(){
+    const list=$('cs-list');
+    const STEPS=[
+      ['◈ SCOUT','rastreando 5 fuentes — reddit · hn · trends · dex · x','#B84DFF'],
+      ['◈ ATLAS','leyendo flujo on-chain y estructura de mercado','#00F0FF'],
+      ['◈ ORACLE','armando el PORQUÉ de cada oportunidad','#FFD200'],
+      ['◈ CURATOR','descartando lo que no puede explicarse','#FF3A1F'],
+    ];
+    list.innerHTML='';
+    STEPS.forEach(([who,what,col],i)=>{
+      setTimeout(()=>{
+        const d=document.createElement('div');
+        d.style.cssText="font-family:'Space Mono',monospace;font-size:9px;letter-spacing:1px;color:#555;padding:7px 4px;border-bottom:1px solid #101010";
+        d.innerHTML='<span style="color:'+col+'">'+who+'</span> '+what+' <span style="color:#2A2A2A">…</span>';
+        list.appendChild(d);
+      }, i*420);
+    });
+    setTimeout(()=>{ CS._scanned=true; render(); }, STEPS.length*420+500);
+  }
+  const CS={ open(){
+    $('ov-crypto').classList.add('open');
+    if(CS._scanned) render(); else scanThenRender();
+    log('crypto','abrió señales ('+tier()+')');
+  } };
   window.CryptoSignals=CS;
 
   $('cs-buy-btn').onclick=()=>{ log('crypto','click comprar (gumroad)'); window.open('https://hk23hub.gumroad.com','_blank'); };
