@@ -8088,7 +8088,7 @@ var qrcode = function() {
   const savedOp=parseFloat(localStorage.getItem('hk23_sc_opacity')||'0.75');
   const savedMin=localStorage.getItem('hk23_sc_min')==='1';
   const corner=document.createElement('div'); corner.id='sc-corner';
-  corner.style.cssText='position:fixed;right:16px;bottom:88px;z-index:512;width:196px;'+
+  corner.style.cssText='position:fixed;left:16px;bottom:110px;z-index:512;width:196px;'+
     'background:rgba(6,6,8,.92);border:1px solid #1C1C1C;border-radius:3px;padding:10px 12px;'+
     "font-family:'Space Mono',monospace;backdrop-filter:blur(8px);transition:opacity .2s;";
   const rows=KEYS.map(([k,l])=>'<div style="display:flex;gap:8px;align-items:center;margin-bottom:3px">'+
