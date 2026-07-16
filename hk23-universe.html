@@ -6652,7 +6652,7 @@ var qrcode = function() {
     const s=(raw||'').trim(); if(!s) return; const low=s.toLowerCase();
     let m;
     if((m=s.match(/^(qr|código|codigo)\s+(.+)/i))) return formQR(m[2].trim(), document.getElementById('qr-ecl').value, document.getElementById('qr-style').value);
-    if((m=s.match(/^(bg|fondo|media)\s+(.+)/i))){ if(window.MediaEngine){ window.MediaEngine.add(m[2].trim()); agentSay('Fondo añadido.'); } return; }
+    if((m=s.match(/^(bg|fondo|media|yt|youtube|video)\s+(.+)/i))){ if(window.MediaEngine){ window.MediaEngine.add(m[2].trim()); agentSay('Fondo añadido → '+m[2].trim().slice(0,40)); } return; }
     if((m=s.match(/^idea\s+(.+?)(?:\s*x\s*(\d+))?$/i))){ const nm=m[1].trim(), p=parseInt(m[2]||'4',10);
       state.ideas.push({id:'i'+Date.now(), name:nm.toUpperCase().slice(0,32), pieces:p||4, collected:0}); save(); rebuildIdeaEnts(); renderIdeas(); return agentSay('Idea sembrada: '+nm); }
     if(/^(dispersar|disperse|off)$/i.test(low)) return disperseQR();
@@ -8083,6 +8083,45 @@ var qrcode = function() {
     const hit=KEYS.find(([k])=>k.toLowerCase()===e.key.toLowerCase());
     if(hit) hit[2]();
   });
+
+  // ═══ LEYENDA FIJA DE ESQUINA — siempre visible, con barrita de opacidad ═══
+  const savedOp=parseFloat(localStorage.getItem('hk23_sc_opacity')||'0.75');
+  const savedMin=localStorage.getItem('hk23_sc_min')==='1';
+  const corner=document.createElement('div'); corner.id='sc-corner';
+  corner.style.cssText='position:fixed;right:16px;bottom:88px;z-index:512;width:196px;'+
+    'background:rgba(6,6,8,.92);border:1px solid #1C1C1C;border-radius:3px;padding:10px 12px;'+
+    "font-family:'Space Mono',monospace;backdrop-filter:blur(8px);transition:opacity .2s;";
+  const rows=KEYS.map(([k,l])=>'<div style="display:flex;gap:8px;align-items:center;margin-bottom:3px">'+
+    '<span style="border:1px solid #262626;border-radius:2px;padding:1px 5px;font-size:8px;color:#F0EDE8;min-width:14px;text-align:center">'+k+'</span>'+
+    '<span style="font-size:7px;letter-spacing:1px;color:#666;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">'+l+'</span></div>').join('');
+  corner.innerHTML=
+    '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;cursor:pointer" id="sc-head">'+
+      '<span style="font-size:8px;letter-spacing:3px;color:#555">⌨ SHORTCUTS</span>'+
+      '<span id="sc-toggle" style="margin-left:auto;color:#444;font-size:10px">'+(savedMin?'▸':'▾')+'</span></div>'+
+    '<div id="sc-body" style="display:'+(savedMin?'none':'block')+'">'+rows+
+      '<div style="display:flex;gap:8px;align-items:center;margin-bottom:3px">'+
+        '<span style="border:1px solid #262626;border-radius:2px;padding:1px 5px;font-size:8px;color:#F0EDE8">1-7</span>'+
+        '<span style="font-size:7px;letter-spacing:1px;color:#666">Zonas del universo</span></div>'+
+      '<div style="font-size:7px;letter-spacing:1px;color:#3A3A3A;margin:7px 0 3px;border-top:1px solid #141414;padding-top:7px">COMANDOS ATLAS:</div>'+
+      '<div style="font-size:7px;letter-spacing:.5px;color:#555;line-height:1.8">yt &lt;link&gt; · bg &lt;link&gt; · qr &lt;url&gt;<br>idea &lt;n&gt; xN · galaxia &lt;n&gt; · defensa</div>'+
+    '</div>'+
+    '<div style="display:flex;gap:7px;align-items:center;margin-top:8px;border-top:1px solid #141414;padding-top:8px">'+
+      '<span style="font-size:7px;letter-spacing:1px;color:#3A3A3A">OPAC</span>'+
+      '<input id="sc-op" type="range" min="15" max="100" value="'+Math.round(savedOp*100)+'" style="flex:1;accent-color:#FF3A1F;height:3px">'+
+    '</div>';
+  document.body.appendChild(corner);
+  corner.style.opacity=savedOp;
+  const op=document.getElementById('sc-op');
+  op.oninput=()=>{ const v=op.value/100; corner.style.opacity=v; localStorage.setItem('hk23_sc_opacity',v); };
+  // que el slider se pueda usar aunque esté casi transparente
+  corner.onmouseenter=()=>{ corner.style.opacity=1; };
+  corner.onmouseleave=()=>{ corner.style.opacity=parseFloat(localStorage.getItem('hk23_sc_opacity')||'0.75'); };
+  document.getElementById('sc-head').onclick=()=>{
+    const b=document.getElementById('sc-body'), t=document.getElementById('sc-toggle');
+    const min=b.style.display!=='none';
+    b.style.display=min?'none':'block'; t.textContent=min?'▸':'▾';
+    localStorage.setItem('hk23_sc_min', min?'1':'0');
+  };
 })();
 </script>
 
