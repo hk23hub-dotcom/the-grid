@@ -1016,7 +1016,7 @@
     <div id="fractal-title"></div>
     <div id="fractal-status"></div>
   </div>
-  <div id="fractal-hint">CLICK ANY NODE TO EXPAND — ESC TO SALIR</div>
+  <div id="fractal-hint">CLICK ANY NODE TO EXPAND — ESC / X PARA SALIR</div>
   <div id="fractal-node-panel">
     <div class="fnp-eyebrow" id="fnp-eyebrow">MÓDULO</div>
     <div class="fnp-header">
@@ -7838,6 +7838,19 @@ var qrcode = function() {
     }
     requestAnimationFrame(loop);
   })(0);
+})();
+</script>
+<script>
+// ═══ SHORTCUTS UNIVERSALES ═══
+// X = ESC en todo el universo (los visores embebidos suelen capturar ESC antes
+// de que llegue a la página; X nunca). El evento se re-emite en document y
+// burbujea a window, así alcanza a todos los handlers de Escape existentes.
+(function(){
+  addEventListener('keydown', e=>{
+    if((e.key==='x'||e.key==='X') && !/INPUT|TEXTAREA|SELECT/.test((document.activeElement||{}).tagName||'')){
+      document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
+    }
+  });
 })();
 </script>
 </body>
