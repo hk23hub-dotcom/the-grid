@@ -8084,20 +8084,21 @@ var qrcode = function() {
     if(hit) hit[2]();
   });
 
-  // ═══ LEYENDA FIJA DE ESQUINA — siempre visible, con barrita de opacidad ═══
-  const savedOp=parseFloat(localStorage.getItem('hk23_sc_opacity')||'0.75');
-  const savedMin=localStorage.getItem('hk23_sc_min')==='1';
+  // ═══ LEYENDA DE ESQUINA — fantasma: un ⌨ que ni se nota hasta que lo tocás ═══
+  const savedOp=parseFloat(localStorage.getItem('hk23_sc_opacity')||'0.22');
+  const savedMin=true; // siempre nace plegada
   const corner=document.createElement('div'); corner.id='sc-corner';
-  corner.style.cssText='position:fixed;left:16px;bottom:110px;z-index:512;width:196px;'+
-    'background:rgba(6,6,8,.92);border:1px solid #1C1C1C;border-radius:3px;padding:10px 12px;'+
-    "font-family:'Space Mono',monospace;backdrop-filter:blur(8px);transition:opacity .2s;";
+  corner.style.cssText='position:fixed;left:16px;bottom:110px;z-index:512;width:auto;'+
+    'background:transparent;border:1px solid transparent;border-radius:3px;padding:4px 6px;'+
+    "font-family:'Space Mono',monospace;transition:opacity .25s, background .25s;";
   const rows=KEYS.map(([k,l])=>'<div style="display:flex;gap:8px;align-items:center;margin-bottom:3px">'+
     '<span style="border:1px solid #262626;border-radius:2px;padding:1px 5px;font-size:8px;color:#F0EDE8;min-width:14px;text-align:center">'+k+'</span>'+
     '<span style="font-size:7px;letter-spacing:1px;color:#666;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">'+l+'</span></div>').join('');
   corner.innerHTML=
-    '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;cursor:pointer" id="sc-head">'+
-      '<span style="font-size:8px;letter-spacing:3px;color:#555">⌨ SHORTCUTS</span>'+
-      '<span id="sc-toggle" style="margin-left:auto;color:#444;font-size:10px">'+(savedMin?'▸':'▾')+'</span></div>'+
+    '<div style="display:flex;align-items:center;gap:6px;cursor:pointer" id="sc-head">'+
+      '<span id="sc-ghost" style="font-size:11px;color:#555">⌨</span>'+
+      '<span id="sc-title" style="font-size:8px;letter-spacing:3px;color:#555;display:none">SHORTCUTS</span>'+
+      '<span id="sc-toggle" style="margin-left:auto;color:#444;font-size:10px;display:none">▾</span></div>'+
     '<div id="sc-body" style="display:'+(savedMin?'none':'block')+'">'+rows+
       '<div style="display:flex;gap:8px;align-items:center;margin-bottom:3px">'+
         '<span style="border:1px solid #262626;border-radius:2px;padding:1px 5px;font-size:8px;color:#F0EDE8">1-7</span>'+
@@ -8114,14 +8115,24 @@ var qrcode = function() {
   const op=document.getElementById('sc-op');
   op.oninput=()=>{ const v=op.value/100; corner.style.opacity=v; localStorage.setItem('hk23_sc_opacity',v); };
   // que el slider se pueda usar aunque esté casi transparente
-  corner.onmouseenter=()=>{ corner.style.opacity=1; };
-  corner.onmouseleave=()=>{ corner.style.opacity=parseFloat(localStorage.getItem('hk23_sc_opacity')||'0.75'); };
-  document.getElementById('sc-head').onclick=()=>{
-    const b=document.getElementById('sc-body'), t=document.getElementById('sc-toggle');
-    const min=b.style.display!=='none';
-    b.style.display=min?'none':'block'; t.textContent=min?'▸':'▾';
-    localStorage.setItem('hk23_sc_min', min?'1':'0');
-  };
+  // fantasma → panel completo solo con hover
+  function expandSC(v){
+    corner.style.opacity = v ? 1 : parseFloat(localStorage.getItem('hk23_sc_opacity')||'0.22');
+    corner.style.background = v ? 'rgba(6,6,8,.94)' : 'transparent';
+    corner.style.borderColor = v ? '#1C1C1C' : 'transparent';
+    corner.style.width = v ? '196px' : 'auto';
+    corner.style.padding = v ? '10px 12px' : '4px 6px';
+    corner.style.backdropFilter = v ? 'blur(8px)' : 'none';
+    document.getElementById('sc-body').style.display = v ? 'block' : 'none';
+    document.getElementById('sc-title').style.display = v ? 'inline' : 'none';
+    document.getElementById('sc-ghost').style.display = v ? 'none' : 'inline';
+    const opRow=document.getElementById('sc-op').parentElement;
+    opRow.style.display = v ? 'flex' : 'none';
+  }
+  corner.onmouseenter=()=>expandSC(true);
+  corner.onmouseleave=()=>expandSC(false);
+  document.getElementById('sc-head').onclick=()=>expandSC(true);
+  expandSC(false);
 })();
 </script>
 
