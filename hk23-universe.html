@@ -7840,6 +7840,53 @@ var qrcode = function() {
   })(0);
 })();
 </script>
+<!-- ═══════════ DOCK DE SHORTCUTS — acceso directo desde cualquier pantalla ═══════════ -->
+<style id="dock-style">
+  #hk-dock{ position:fixed; bottom:18px; left:50%; transform:translateX(-50%); z-index:515;
+    display:flex; gap:5px; flex-wrap:wrap; justify-content:center; max-width:92vw;
+    background:rgba(6,6,8,.88); border:1px solid #1C1C1C; border-radius:3px;
+    padding:7px 9px; backdrop-filter:blur(8px); }
+  .dk{ font-family:'Space Mono',monospace; font-size:8px; letter-spacing:2px; text-transform:uppercase;
+    background:transparent; border:1px solid #222; border-radius:2px; color:#666;
+    padding:6px 9px; cursor:pointer; transition:all .15s; white-space:nowrap; }
+  .dk:hover{ color:#000; background:var(--dc,#F0EDE8); border-color:var(--dc,#F0EDE8); }
+  @media(max-width:768px){ #hk-dock{ bottom:64px; } .dk{ font-size:7px; padding:5px 7px; } }
+</style>
+<div id="hk-dock"></div>
+<script>
+// ═══ DOCK — los shortcuts del universo, siempre a un toque ═══
+(function(){
+  const SHORTCUTS=[
+    ['🗺 MAPA','#F0EDE8',()=>goTo('map')],
+    ['ARTE','#FF3A1F',()=>goTo('arte')],
+    ['LORE','#FFD200',()=>goTo('lore')],
+    ['VICE OS','#AAFF00',()=>goTo('viceos')],
+    ['SYSTEMS','#B84DFF',()=>goTo('systems')],
+    ['$ FLOW','#FFD200',()=>goTo('flow')],
+    ['👽 AGENTS','#00F0FF',()=>goTo('agents')],
+    ['₿ CRYPTO','#FFD200',()=>{ if(window.CryptoSignals) window.CryptoSignals.open(); }],
+    ['▶ MEDIA','#FF3A1F',()=>{ const p=document.getElementById('me-panel'); if(p) p.classList.add('open'); }],
+    ['◈ QR','#00F0FF',()=>{ const p=document.getElementById('ag-panel'); if(p) p.classList.add('open');
+        const t=document.querySelector('.ag-tab[data-pane="qr"]'); if(t) t.click(); }],
+  ];
+  const dock=document.getElementById('hk-dock');
+  SHORTCUTS.forEach(([label,color,fn])=>{
+    const b=document.createElement('button'); b.className='dk'; b.textContent=label;
+    b.style.setProperty('--dc',color); b.style.color=color+'CC';
+    b.onclick=fn; dock.appendChild(b);
+  });
+  // teclas 1-7 = mapa y zonas
+  const KEYMAP={ '1':'map','2':'arte','3':'lore','4':'viceos','5':'systems','6':'flow','7':'agents' };
+  addEventListener('keydown',e=>{
+    if(/INPUT|TEXTAREA|SELECT/.test((document.activeElement||{}).tagName||'')) return;
+    if(KEYMAP[e.key]) goTo(KEYMAP[e.key]);
+    else if(e.key==='c'||e.key==='C'){ if(window.CryptoSignals) window.CryptoSignals.open(); }
+    else if(e.key==='m'||e.key==='M'){ const p=document.getElementById('me-panel'); if(p) p.classList.toggle('open'); }
+    else if(e.key==='a'||e.key==='A'){ const p=document.getElementById('ag-panel'); if(p) p.classList.toggle('open'); }
+  });
+})();
+</script>
+
 <script>
 // ═══ SHORTCUTS UNIVERSALES ═══
 // X = ESC en todo el universo (los visores embebidos suelen capturar ESC antes
