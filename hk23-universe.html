@@ -3912,7 +3912,16 @@ animateBg();
   };
 
   // expose for other UI hooks if needed
-  window.MediaEngine = { add:addLayer, clear:()=>layers.slice().forEach(l=>removeLayer(l.id)), layers };
+  // construye un elemento de fondo (iframe/video/img) para CUALQUIER contenedor — ej. una galaxia
+  function bgElement(url){
+    const media = parseMedia(url);
+    if(!media) return null;
+    const layer = { media, muted:true };
+    const inner = buildInner(layer);        // reusa parseo, embeds, fallback de preview
+    inner.style.position='absolute'; inner.style.inset='0';
+    return inner;
+  }
+  window.MediaEngine = { add:addLayer, clear:()=>layers.slice().forEach(l=>removeLayer(l.id)), layers, bgElement };
 
   // ── seed: the short you dropped in, running as a live bg ──
   addLayer('https://www.youtube.com/shorts/k0cVxCm5B8k');
@@ -7296,7 +7305,15 @@ var qrcode = function() {
         '<button class="hkov-x" id="gal-x">✕</button>'+
         '<div class="hkov-eyebrow">GALAXIA HERMANA · TU ESPACIO PARA CREAR</div>'+
         '<div class="hkov-title" id="gal-title">—</div>'+
-        '<canvas id="gal-canvas" style="width:100%;height:280px;border:1px solid #141414;border-radius:2px;background:#040406;margin-bottom:14px"></canvas>'+
+        '<div id="gal-stage" style="position:relative;width:100%;height:280px;border:1px solid #141414;border-radius:2px;overflow:hidden;margin-bottom:10px;background:#040406">'+
+          '<div id="gal-bg" style="position:absolute;inset:0"></div>'+
+          '<canvas id="gal-canvas" style="position:absolute;inset:0;width:100%;height:100%"></canvas>'+
+        '</div>'+
+        '<div style="display:flex;gap:6px;margin-bottom:12px">'+
+          '<input id="gal-bg-url" class="ag-input" style="flex:1;margin:0" placeholder="pegá un link de fondo para ESTA galaxia — yt, tiktok, mp4, spotify…">'+
+          '<button class="gate-cta" id="gal-bg-set" style="background:#FF3A1F;color:#000">FONDO →</button>'+
+          '<button class="gate-cta" id="gal-bg-clr" style="background:transparent;border:1px solid #2A2A2A;color:#888">✕</button>'+
+        '</div>'+
         '<div style="margin-bottom:12px">'+
           '<div style="font-family:\'Space Mono\',monospace;font-size:8px;letter-spacing:3px;color:#333;margin-bottom:8px">BIOMA DEL MUNDO — no todos son iguales</div>'+
           '<div id="gal-biomes" style="display:flex;gap:6px;flex-wrap:wrap"></div></div>'+
@@ -7319,15 +7336,21 @@ var qrcode = function() {
           store.set('hk23_galaxias',galaxias); renderGalTpls();
           logEvent('galaxia', galOpen.name+' + mundo: '+n); }); };
       $('gal-clear').onclick=()=>{ if(!galOpen) return; galOpen.nodes=[]; store.set('hk23_galaxias',galaxias); renderGalTpls(); };
+      // FONDO por galaxia: el link que pegás es el fondo de ESE mundo
+      $('gal-bg-set').onclick=()=>{ if(!galOpen) return; const u=$('gal-bg-url').value.trim(); if(!u) return;
+        galOpen.bg=u; store.set('hk23_galaxias',galaxias); applyGalBg();
+        logEvent('galaxia',galOpen.name+' fondo: '+u.slice(0,40)); toast('▶ FONDO DE '+galOpen.name); };
+      $('gal-bg-url').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); $('gal-bg-set').click(); } });
+      $('gal-bg-clr').onclick=()=>{ if(!galOpen) return; galOpen.bg=null; store.set('hk23_galaxias',galaxias); applyGalBg(); };
       // 🚀 ENTRAR: la galaxia toma la pantalla completa — estás adentro
       $('gal-enter').onclick=()=>{ if(!galOpen) return;
         const card=ov.querySelector('.hkov-card');
         const full=card.dataset.full==='1';
-        if(full){ card.dataset.full='0'; card.style.cssText=''; $('gal-canvas').style.height='280px';
+        if(full){ card.dataset.full='0'; card.style.cssText=''; $('gal-stage').style.height='280px';
           $('gal-enter').textContent='🚀 ENTRAR — PANTALLA COMPLETA'; }
         else { card.dataset.full='1';
           card.style.cssText='width:100vw;max-width:100vw;height:100vh;max-height:100vh;border-radius:0;border:none;padding:26px 28px;';
-          $('gal-canvas').style.height=(innerHeight-260)+'px';
+          $('gal-stage').style.height=(innerHeight-260)+'px';
           $('gal-enter').textContent='◂ VOLVER AL UNIVERSO MADRE';
           document.documentElement.style.setProperty('--red', galOpen.color);
           toast('🚀 ESTÁS EN '+galOpen.name+' — CONSTRUÍ TRANQUILO'); }
@@ -7347,9 +7370,27 @@ var qrcode = function() {
     }
     $('gal-title').textContent='✧ '+g.name;
     renderGalTpls();
+    applyGalBg();
     ov.classList.add('open');
     runGalCanvas();
     logEvent('galaxia','entró a '+g.name);
+  }
+  function applyGalBg(){
+    const holder=$('gal-bg'), stage=$('gal-stage'), cvg=$('gal-canvas'), inp=$('gal-bg-url');
+    if(!holder) return; holder.innerHTML='';
+    if(galOpen && galOpen.bg){
+      if(inp) inp.value=galOpen.bg;
+      const el = window.MediaEngine && window.MediaEngine.bgElement
+        ? window.MediaEngine.bgElement(galOpen.bg) : null;
+      if(el){ holder.appendChild(el); }
+      if(stage) stage.style.background='#000';
+      // el canvas de biomas flota semitransparente sobre el video
+      if(cvg) cvg.style.opacity='0.55';
+    } else {
+      if(inp) inp.value='';
+      if(stage) stage.style.background='#040406';
+      if(cvg) cvg.style.opacity='1';
+    }
   }
   const BIOMES=[['entidades','✦ ENTIDADES'],['arboles','🌳 ÁRBOLES'],['avatar','🌌 AVATAR'],['pixel','▦ PIXEL']];
   function renderGalTpls(){
