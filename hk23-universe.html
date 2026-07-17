@@ -7046,18 +7046,52 @@ var qrcode = function() {
     function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
     function inline(s){ return esc(s).replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>').replace(/`([^`]+)`/g,'<b>$1</b>'); }
   }
+  let bibSection='libros';
   function renderBib(){
     const list=$('bib-list'); list.innerHTML='';
     $('bib-reader').style.display='none'; $('bib-locked').style.display='none'; $('bib-back').style.display='none';
     list.style.display='';
-    $('bib-title').textContent='LIBROS & GUÍAS';
-    BIB.forEach(book=>{
-      const d=document.createElement('div'); d.className='bib-book';
-      d.innerHTML='<div class="bt">'+book.title+'</div><div class="bd">'+book.desc+'</div>'+
-        '<div class="bl">'+(canRead(book)?'◈ LEER AQUÍ MISMO →':'🔒 '+(book.tier||'referido').toUpperCase()+' — TEASER DISPONIBLE')+'</div>';
-      d.onclick=()=>openBook(book);
-      list.appendChild(d);
+    $('bib-title').textContent='LA GRAN BIBLIOTECA';
+    // secciones: una biblioteca de verdad — libros, plugins, agentes, productos
+    const chips=document.createElement('div');
+    chips.style.cssText='display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px';
+    [['libros','📚 LIBROS'],['plugins','🔌 PLUGINS'],['agentes','◈ AGENTES'],['productos','💰 PRODUCTOS']].forEach(([k,l])=>{
+      const b=document.createElement('button');
+      b.style.cssText='font-family:"Space Mono",monospace;font-size:8px;letter-spacing:2px;padding:6px 12px;border-radius:2px;cursor:pointer;'+
+        (bibSection===k?'background:#FFD200;color:#000;border:none;font-weight:700':'background:transparent;border:1px solid #2A2A2A;color:#888');
+      b.textContent=l; b.onclick=()=>{ bibSection=k; renderBib(); };
+      chips.appendChild(b);
     });
+    list.appendChild(chips);
+    const card=(t,d,badge,badgeCol,fn,cta)=>{
+      const el=document.createElement('div'); el.className='bib-book';
+      el.innerHTML='<div style="display:flex;align-items:center;gap:8px"><div class="bt" style="flex:1">'+t+'</div>'+
+        (badge?'<span style="font-family:\'Space Mono\',monospace;font-size:7px;letter-spacing:2px;color:'+badgeCol+';border:1px solid '+badgeCol+'44;padding:2px 7px;border-radius:2px">'+badge+'</span>':'')+'</div>'+
+        '<div class="bd">'+d+'</div><div class="bl">'+cta+'</div>';
+      el.onclick=fn; list.appendChild(el); };
+    if(bibSection==='libros'){
+      BIB.forEach(book=>card(book.title, book.desc, (book.tier||'referido').toUpperCase(), '#FFD200',
+        ()=>openBook(book), canRead(book)?'◈ LEER AQUÍ MISMO →':'🔒 TEASER — ENTRÁ CON CÓDIGO'));
+      card('COLECCIÓN REWIRED', 'El estante está reservado y encendido. Los tomos REWIRED viven fuera de este repo — pasame los textos (o los títulos y dónde están) y los publico acá, legibles página por página.', 'ESTANTE VIVO', '#FF3A1F',
+        ()=>window.open('https://hk23hub.gumroad.com','_blank'), '⚡ MIENTRAS TANTO: VER EN GUMROAD →');
+    } else if(bibSection==='plugins'){
+      card('MEDIA ENGINE','Fondos vivos desde cualquier link: shorts, TikTok, Spotify, mp4. Multi-capa, PiP, mirror, pixels.','LIVE','#AAFF00',()=>{ $('ov-bib').classList.remove('open'); const p=document.getElementById('me-panel'); if(p)p.classList.add('open'); },'▶ ABRIR →');
+      card('QR VIVO','Las entidades forman un QR escaneable con destino editable. Export PNG.','LIVE','#AAFF00',()=>{ $('ov-bib').classList.remove('open'); const p=document.getElementById('ag-panel'); if(p)p.classList.add('open'); const t=document.querySelector('.ag-tab[data-pane="qr"]'); if(t)t.click(); },'◈ ABRIR →');
+      card('ENTITY LAB','Agarrá, fusioná y jugá con las entidades. Tetris, Pong, foto-mapping.','LIVE','#AAFF00',()=>{ $('ov-bib').classList.remove('open'); if(window.EntityLab) window.EntityLab.on(); },'🧪 ACTIVAR →');
+      card('MUNDO CRYPTO','Biblioteca educativa, blockchain visual y market gigante.','LIVE','#AAFF00',()=>{ $('ov-bib').classList.remove('open'); if(window.CryptoWorld) window.CryptoWorld.open('biblioteca'); },'₿ ENTRAR →');
+    } else if(bibSection==='agentes'){
+      card('ATLAS','Control central del universo: QR, ideas, fondos, galaxias, comandos.','24/7','#00F0FF',()=>{ $('ov-bib').classList.remove('open'); const p=document.getElementById('ag-panel'); if(p)p.classList.add('open'); },'◈ HABLAR CON ATLAS →');
+      card('ORACLE','El reporter: estado del universo + acciones ejecutables, export MD/JSON diario.','24/7','#00F0FF',()=>{ $('ov-bib').classList.remove('open'); if(window.hkOracle) window.hkOracle(); },'📡 PEDIR REPORTE →');
+      card('CURATOR','Nada existe sin misión: cura lo inerte y lo transforma en acción.','24/7','#00F0FF',()=>{ $('ov-bib').classList.remove('open'); const p=document.getElementById('ag-panel'); if(p)p.classList.add('open'); const t=document.querySelector('.ag-tab[data-pane="curator"]'); if(t)t.click(); },'🦉 VER ARTEFACTOS →');
+      card('MEGA-HEYOKA','El protocolo de defensa final: todos los agentes en un autobot.','DEFENSA','#FF3A1F',()=>{ $('ov-bib').classList.remove('open'); if(window.hkDefensa) window.hkDefensa(); },'🛡 ACTIVAR →');
+      card('ARIA','La capa reflexiva del grafo (vive en vice-os-artifact/hk23-brain).','EXTERNA','#B84DFF',()=>openBook(BIB.find(b=>b.id==='hk23-brain-aria')||BIB[0]),'📖 LEER SU MANUAL →');
+    } else {
+      const P=[['AGENT OS','agentos'],['HK23 PREMIUM','hk23premium'],['HK23 FULL','hk23full'],['HK23 TEMPLATE','hk23template'],['HK23 GENESIS','hk23genesis'],['ATLAS X','ljkokj']];
+      P.forEach(([n,slug])=>card(n,'Producto real en tu Gumroad — un clic y está en el checkout.','EN VENTA','#FF3A1F',
+        ()=>window.open('https://hk23hub.gumroad.com/l/'+slug,'_blank'),'💰 COMPRAR →'));
+      card('GALAXIAS EXPORTABLES','Cada galaxia que creás se exporta como archivo .hk23.json — vendible, prestable.','ÚNICO','#B84DFF',
+        ()=>{ $('ov-bib').classList.remove('open'); if(typeof goTo==='function') goTo('map'); },'✧ IR A MIS GALAXIAS →');
+    }
   }
   function openBook(book){
     $('bib-list').style.display='none'; $('bib-back').style.display='';
