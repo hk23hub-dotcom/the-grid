@@ -8501,7 +8501,7 @@ var qrcode = function() {
   // que el slider se pueda usar aunque esté casi transparente
   // fantasma → panel completo solo con hover
   function expandSC(v){
-    corner.style.opacity = v ? 1 : parseFloat(localStorage.getItem('hk23_sc_opacity')||'0.22');
+    corner.style.opacity = v ? 1 : parseFloat(localStorage.getItem('hk23_sc_opacity')||'0.35');
     corner.style.background = v ? 'rgba(6,6,8,.94)' : 'transparent';
     corner.style.borderColor = v ? '#1C1C1C' : 'transparent';
     corner.style.width = v ? '196px' : 'auto';
