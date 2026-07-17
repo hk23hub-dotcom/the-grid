@@ -7570,7 +7570,8 @@ var qrcode = function() {
   sizeOverlay(); addEventListener('resize',sizeOverlay);
   (function oloop(t){ octx.clearRect(0,0,overlayCv.width,overlayCv.height);
     const scr=(typeof currentScreen!=='undefined')?currentScreen:'map';
-    if(scr==='map'||scr==='portal'){
+    // SOLO en el mapa: el portal queda limpio, puro HK23
+    if(scr==='map'){
       drawGalaxias(octx,overlayCv.width,overlayCv.height,t||0);
       drawFlyers(octx,overlayCv.width,overlayCv.height,t||0);
     }
@@ -8284,12 +8285,29 @@ var qrcode = function() {
       if(!windows) seedWindows();
       x.clearRect(0,0,W,H);
 
-      // ── cielo profundo + polvo estelar ──
+      // ── nebulosa verde de Knowhere (como en la película) ──
       const sky=x.createLinearGradient(0,0,0,H);
-      sky.addColorStop(0,'#0a0612'); sky.addColorStop(0.6,'#050409'); sky.addColorStop(1,'#02040a');
+      sky.addColorStop(0,'#03100c'); sky.addColorStop(0.55,'#041a12'); sky.addColorStop(1,'#020a08');
       x.fillStyle=sky; x.fillRect(0,0,W,H);
+      // bancos de gas que derivan
+      [[0.2,0.3,0.30,'#1d5c3f'],[0.75,0.2,0.26,'#0f4d4a'],[0.5,0.75,0.34,'#274d1d'],[0.9,0.65,0.22,'#8a5a22']].forEach(([fx,fy,fr,col],i)=>{
+        const dx=Math.sin(t*0.00007+i*2)*W*0.04;
+        const ng=x.createRadialGradient(fx*W+dx,fy*H,0,fx*W+dx,fy*H,fr*Math.min(W,H)*1.6);
+        ng.addColorStop(0,col+'55'); ng.addColorStop(0.6,col+'22'); ng.addColorStop(1,'transparent');
+        x.fillStyle=ng; x.fillRect(0,0,W,H); });
       for(let i=0;i<70;i++){ x.globalAlpha=0.3+0.5*Math.abs(Math.sin(t*0.001+i));
-        x.fillStyle='#cdd'; x.fillRect((i*97)%W,(i*57)%H,1,1); } x.globalAlpha=1;
+        x.fillStyle='#cde5d5'; x.fillRect((i*97)%W,(i*57)%H,1,1); } x.globalAlpha=1;
+      // escombros de roca flotando alrededor de la cabeza
+      for(let i=0;i<14;i++){ const a=i*2.4+t*0.00005*(i%2?1:-1);
+        const dx=W*0.44+Math.cos(a)*Math.min(W,H)*(0.36+ (i%4)*0.05);
+        const dy=H*0.60+Math.sin(a)*Math.min(W,H)*(0.24+(i%3)*0.04);
+        x.save(); x.translate(dx,dy); x.rotate(i+t*0.0002);
+        x.fillStyle=i%3?'#152018':'#1e2a20';
+        const rr=3+(i%5)*2.4;
+        x.beginPath(); x.moveTo(rr,0);
+        for(let v=1;v<6;v++){ const va=v/6*6.283; const vr=rr*(0.65+((i*v)%3)*0.25);
+          x.lineTo(Math.cos(va)*vr, Math.sin(va)*vr); }
+        x.closePath(); x.fill(); x.restore(); }
 
       // ── NAVE-MADRE (Independence Day): arco oscuro que tapa el cielo ──
       const mW=W*1.15, mcy=-H*0.34, mrx=mW/2, mry=H*0.52;
@@ -8327,13 +8345,23 @@ var qrcode = function() {
       x.bezierCurveTo(-0.46*hs,-0.30*hs, -0.44*hs,-0.52*hs, -0.30*hs,-0.62*hs);
       x.closePath();
       const stone=x.createLinearGradient(-0.4*hs,-0.6*hs,0.4*hs,0.6*hs);
-      stone.addColorStop(0,'#2a2438'); stone.addColorStop(0.5,'#1a1626'); stone.addColorStop(1,'#0e0b16');
+      stone.addColorStop(0,'#2b3328'); stone.addColorStop(0.45,'#1a221a'); stone.addColorStop(1,'#0b120d');
       x.fillStyle=stone; x.fill();
-      x.strokeStyle='rgba(120,150,90,0.25)'; x.lineWidth=2; x.stroke();
-      // grietas
-      x.strokeStyle='rgba(0,0,0,0.5)'; x.lineWidth=1;
-      [[-0.2,-0.4,0.1,0.1],[0.1,-0.2,-0.15,0.3],[-0.3,0.1,0.2,0.2]].forEach(([a,b,c,d])=>{
-        x.beginPath(); x.moveTo(a*hs,b*hs); x.lineTo((a+c)*hs,(b+d)*hs); x.stroke(); });
+      x.strokeStyle='rgba(140,190,140,0.22)'; x.lineWidth=2; x.stroke();
+      // riscos: crestas rocosas irregulares sobre el contorno (silueta craggy de Celestial)
+      x.fillStyle='#121a12';
+      [[-0.36,-0.50],[-0.16,-0.72],[0.10,-0.70],[0.30,-0.52],[0.46,-0.16],[-0.46,-0.10],[-0.42,0.30]].forEach(([px,py],i)=>{
+        x.save(); x.translate(px*hs,py*hs); x.rotate(Math.atan2(py,px)+Math.PI/2);
+        x.beginPath(); x.moveTo(-0.06*hs,0);
+        x.lineTo(-0.02*hs,-(0.06+(i%3)*0.03)*hs); x.lineTo(0.01*hs,-(0.03+(i%2)*0.02)*hs);
+        x.lineTo(0.04*hs,-(0.07+(i%4)*0.02)*hs); x.lineTo(0.07*hs,0);
+        x.closePath(); x.fill(); x.restore(); });
+      // grietas con brillo verde de la colonia filtrándose
+      [[-0.2,-0.4,0.1,0.1],[0.1,-0.2,-0.15,0.3],[-0.3,0.1,0.2,0.2],[0.02,0.05,0.12,-0.18]].forEach(([a,b,c,d])=>{
+        x.strokeStyle='rgba(0,0,0,0.55)'; x.lineWidth=2;
+        x.beginPath(); x.moveTo(a*hs,b*hs); x.lineTo((a+c)*hs,(b+d)*hs); x.stroke();
+        x.strokeStyle='rgba(170,255,0,0.14)'; x.lineWidth=0.8;
+        x.beginPath(); x.moveTo(a*hs+1,b*hs+1); x.lineTo((a+c)*hs+1,(b+d)*hs+1); x.stroke(); });
       // OJO = gran domo iluminado (el centro de la colonia)
       const eyeX=0.14*hs, eyeY=-0.16*hs, eyeR=0.14*hs;
       const eg=x.createRadialGradient(eyeX,eyeY,0,eyeX,eyeY,eyeR);
@@ -9040,6 +9068,26 @@ var qrcode = function() {
   .cw-coin-b{ font-family:'Space Mono',monospace; font-size:9px; letter-spacing:2px; padding:6px 12px;
     border-radius:2px; border:1px solid #223; background:transparent; color:#9aa; cursor:pointer; }
 
+  /* ── MARKET v2: grilla exchange pro ── */
+  #cw-mkt{ position:absolute; inset:64px 0 0 0; z-index:4; overflow-y:auto; display:none;
+    padding:24px clamp(16px,4vw,60px) 90px; scrollbar-width:thin; scrollbar-color:#1a2438 #04060c; }
+  #cw-mkt.show{ display:block; }
+  .mkt-head{ display:flex; align-items:baseline; gap:14px; margin-bottom:18px; }
+  .mkt-title{ font-family:'Space Mono',monospace; font-size:10px; letter-spacing:5px; color:#c9d2e8; }
+  .mkt-sub{ font-family:'Space Mono',monospace; font-size:8px; letter-spacing:2px; color:#3a4661; }
+  .mkt-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(185px,1fr)); gap:10px; }
+  .mkt-card{ border:1px solid #141c2e; border-radius:10px; padding:14px 15px; cursor:pointer;
+    transition:transform .15s, border-color .15s; }
+  .mkt-card:hover{ transform:translateY(-2px); border-color:#2a3a5c; }
+  .mkt-top{ display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+  .mkt-logo{ width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-family:'Space Grotesk',system-ui; font-weight:700; font-size:14px; color:#000; flex-shrink:0; }
+  .mkt-sym{ font-family:'Space Grotesk',system-ui; font-weight:700; font-size:13px; color:#F0EDE8; letter-spacing:.5px; }
+  .mkt-chg{ font-family:'Space Mono',monospace; font-size:9px; font-weight:700; margin-left:auto; }
+  .mkt-price{ font-family:'Space Grotesk',system-ui; font-weight:700; font-size:19px; color:#F0EDE8; letter-spacing:-.3px; margin-bottom:8px; font-variant-numeric:tabular-nums; }
+  .mkt-meta{ font-family:'Space Mono',monospace; font-size:7.5px; letter-spacing:.5px; color:#4a566e; line-height:1.9; }
+  .mkt-meta b{ color:#F7931A; }
+
   /* ── BIBLIOTECA v2: orden editorial, tipografías con jerarquía ── */
   #cw-lib{ position:absolute; inset:64px 0 0 0; z-index:4; overflow-y:auto; display:none;
     padding:30px clamp(20px,6vw,90px) 80px; scrollbar-width:thin; scrollbar-color:#1a2438 #04060c; }
@@ -9095,6 +9143,7 @@ var qrcode = function() {
   </div>
   <div id="cw-hint">TODO ESTO ES GRATIS · COMANDOS: blockchain · market · market btc</div>
   <div id="cw-lib"></div>
+  <div id="cw-mkt"></div>
 </div>
 
 <script>
@@ -9184,11 +9233,43 @@ var qrcode = function() {
   }
 
   // ── MARKET GIGANTE ──
-  const MK={ BTC:{sym:'₿',name:'BITCOIN',price:67420,chg:6.2,color:'#F7931A'},
-    ETH:{sym:'Ξ',name:'ETHEREUM',price:3280,chg:4.1,color:'#627EEA'},
-    SOL:{sym:'◎',name:'SOLANA',price:172,chg:9.4,color:'#14F195'},
-    DOGE:{sym:'Ð',name:'DOGECOIN',price:0.16,chg:-2.3,color:'#C2A633'},
-    ADA:{sym:'₳',name:'CARDANO',price:0.61,chg:1.2,color:'#2A6AFF'} };
+  const MK={ BTC:{sym:'₿',name:'BITCOIN',price:67420,chg:6.2,color:'#F7931A',vol:'$99.4M'},
+    ETH:{sym:'Ξ',name:'ETHEREUM',price:3280,chg:4.1,color:'#627EEA',vol:'$370M'},
+    SOL:{sym:'◎',name:'SOLANA',price:172,chg:9.4,color:'#14F195',vol:'$34.8M'},
+    DOGE:{sym:'Ð',name:'DOGECOIN',price:0.16,chg:-2.3,color:'#C2A633',vol:'$184K'},
+    ADA:{sym:'₳',name:'CARDANO',price:0.61,chg:1.2,color:'#2A6AFF',vol:'$40.4K'},
+    XRP:{sym:'✕',name:'RIPPLE',price:1.08,chg:-2.4,color:'#25A8C4',vol:'$111M'},
+    LINK:{sym:'⬡',name:'CHAINLINK',price:8.35,chg:-2.2,color:'#2A5ADA',vol:'$1.5M'},
+    DOT:{sym:'●',name:'POLKADOT',price:0.85,chg:0.8,color:'#E6007A',vol:'$85K'},
+    AVAX:{sym:'▲',name:'AVALANCHE',price:6.53,chg:-2.5,color:'#E84142',vol:'$163K'},
+    LTC:{sym:'Ł',name:'LITECOIN',price:44.97,chg:-0.3,color:'#7d93ad',vol:'$1.4M'},
+    BNB:{sym:'◆',name:'BNB',price:573,chg:-1.4,color:'#F0B90B',vol:'$604K'},
+    TRX:{sym:'▼',name:'TRON',price:0.32,chg:-0.4,color:'#FF3A1F',vol:'$241K'} };
+  let mktBuilt=false;
+  function buildMkt(){
+    if(mktBuilt) return; mktBuilt=true;
+    const m=document.getElementById('cw-mkt');
+    let h='<div class="mkt-head"><span class="mkt-title">⛁ CRYPTO FUTURES — EL MARKET GIGANTE</span>'+
+      '<span class="mkt-sub">MODO DEMO · TOCÁ UNA MONEDA PARA VERLA GIGANTE</span></div><div class="mkt-grid">';
+    Object.entries(MK).forEach(([k,c])=>{
+      const up=c.chg>0;
+      h+='<div class="mkt-card" data-coin="'+k+'" style="background:linear-gradient(135deg,'+c.color+'26 0%, #090d18 55%)">'+
+        '<div class="mkt-top"><span class="mkt-logo" style="background:'+c.color+'">'+c.sym+'</span>'+
+        '<span class="mkt-sym">'+k+'</span>'+
+        '<span class="mkt-chg" style="color:'+(up?'#14F195':'#FF5B4A')+'">'+(up?'+':'')+c.chg+'%</span></div>'+
+        '<div class="mkt-price">'+(c.price<1?c.price.toFixed(4):c.price.toLocaleString())+'</div>'+
+        '<div class="mkt-meta">24H VOL: '+c.vol+'<br>LEVERAGE: <b>1000x</b></div></div>';
+    });
+    h+='</div><div class="mkt-sub" style="display:block;margin-top:16px">PRECIOS DEMO — EL FORMATO ES EL PRODUCTO; CONECTÁ TU FEED CUANDO QUIERAS</div>';
+    m.innerHTML=h;
+    m.querySelectorAll('.mkt-card').forEach(card=>card.onclick=()=>{ coin=card.dataset.coin; syncMkt(); });
+  }
+  function syncMkt(){
+    const grid=document.getElementById('cw-mkt');
+    const showGrid = mode==='market' && coin==='ALL';
+    if(showGrid) buildMkt();
+    grid.classList.toggle('show', showGrid);
+  }
   function candleChart(cx,cy,w,h,up,color){
     x.strokeStyle=color+'44'; x.lineWidth=1;
     const n=22, cw=w/n;
@@ -9219,18 +9300,9 @@ var qrcode = function() {
       x.fillText((c.chg>0?'▲ +':'▼ ')+c.chg+'%', cx, cy+100);
       x.fillStyle=c.color; x.font='12px "Space Mono",monospace'; x.fillText(c.name+' · 24H', cx, cy-250);
     } else {
-      // todas: fila de tickers gigantes
-      const items=Object.values(MK); const rowH=H/items.length;
-      items.forEach((c,i)=>{ const y=i*rowH+rowH/2;
-        x.fillStyle=c.color; x.font='800 '+Math.min(54,rowH*.5)+'px "Space Grotesk",system-ui'; x.textAlign='left';
-        x.fillText(c.sym+' '+c.name, 40, y+12);
-        x.fillStyle='#F0EDE8'; x.textAlign='right';
-        x.fillText('$'+c.price.toLocaleString(), W-260, y+12);
-        x.fillStyle=c.chg>0?'#14F195':'#FF3A1F';
-        x.fillText((c.chg>0?'+':'')+c.chg+'%', W-40, y+12);
-        candleChart(W/2+40, y, 240, rowH*.6, c.chg>0, c.color);
-        x.strokeStyle='#111a2b'; x.beginPath(); x.moveTo(30,y+rowH/2-2); x.lineTo(W-30,y+rowH/2-2); x.stroke();
-      });
+      // TODAS: la grilla vive en el DOM (#cw-mkt); acá solo el backdrop
+      for(let i=0;i<60;i++){ x.globalAlpha=0.2+0.4*Math.abs(Math.sin(t*0.001+i));
+        x.fillStyle='#8899bb'; x.fillRect((i*173)%W,(i*97)%H,1,1); } x.globalAlpha=1;
     }
   }
 
@@ -9377,6 +9449,7 @@ var qrcode = function() {
     document.getElementById('cw-coinsel').classList.toggle('show', m==='market');
     if(m==='biblioteca'){ buildLib(); }
     document.getElementById('cw-lib').classList.toggle('show', m==='biblioteca');
+    syncMkt();
     if(m==='blockchain'&&!blocks.length) initBlocks();
     log('crypto','mundo → '+m);
   }
