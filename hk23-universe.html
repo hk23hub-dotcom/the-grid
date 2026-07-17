@@ -7256,6 +7256,11 @@ var qrcode = function() {
   for(let i=0;i<7;i++){ const k=FLYER_KINDS[i%FLYER_KINDS.length];
     flyers.push({ ...k, x:Math.random()*innerWidth, y:Math.random()*innerHeight,
       vx:(Math.random()-0.5)*0.5, vy:(Math.random()-0.5)*0.3, ph:Math.random()*6.28 }); }
+  // ESTACIONES COLOSALES — lejos del centro, en rincones distintos; se entra con clic
+  [[0.09,0.85],[0.91,0.12]].forEach(([fx,fy],i)=>{
+    flyers.push({ kind:'base', station:true, portal:false,
+      x:fx*innerWidth, y:fy*innerHeight,
+      vx:(Math.random()-0.5)*0.08, vy:(Math.random()-0.5)*0.06, ph:i*3 }); });
   function drawFlyers(ctx,W,H,t){
     flyers.forEach(f=>{
       f.x+=f.vx; f.y+=f.vy;
@@ -7270,6 +7275,17 @@ var qrcode = function() {
         ctx.beginPath(); ctx.moveTo(12,0); ctx.lineTo(-9,-6); ctx.lineTo(-5,0); ctx.lineTo(-9,6); ctx.closePath(); ctx.fill(); }
       else if(f.kind==='diamante'){ ctx.fillStyle='#FFD200'; ctx.globalAlpha=.9;
         ctx.beginPath(); ctx.moveTo(0,-8); ctx.lineTo(6,0); ctx.lineTo(0,8); ctx.lineTo(-6,0); ctx.closePath(); ctx.fill(); }
+      else if(f.kind==='base'){ // estación colosal: cabeza-dome con luces (Knowhere a lo lejos)
+        ctx.globalAlpha=.95;
+        ctx.fillStyle='#1a1626'; ctx.beginPath(); ctx.arc(0,0,15,Math.PI,0); ctx.fill();
+        ctx.fillRect(-15,0,30,7);
+        ctx.strokeStyle='rgba(170,255,0,.6)'; ctx.lineWidth=1.2;
+        ctx.beginPath(); ctx.arc(0,0,15,Math.PI,0); ctx.stroke();
+        ctx.fillStyle='#AAFF00'; ctx.beginPath(); ctx.arc(4,-4,3,0,6.283); ctx.fill(); // ojo
+        for(let k=-2;k<=2;k++){ ctx.fillStyle=(Math.sin(t*0.006+k)>0)?'#00F0FF':'#333';
+          ctx.fillRect(k*5-1,3,2,2); }
+        ctx.font='7px "Space Mono",monospace'; ctx.textAlign='center';
+        ctx.fillStyle='rgba(170,255,0,.7)'; ctx.fillText('KNOWHERE', 0, -20); }
       else { ctx.fillStyle='#FF3A1F'; ctx.globalAlpha=.75;
         ctx.beginPath(); ctx.arc(0,0,3.4,0,6.283); ctx.fill();
         ctx.strokeStyle='rgba(255,58,31,.35)'; ctx.lineWidth=2;
@@ -7499,10 +7515,15 @@ var qrcode = function() {
   }
   // click en el mapa sobre una galaxia → entrás
   document.addEventListener('click', e=>{
-    if(e.target && e.target.id==='map-canvas' && galaxias.length){
-      const W=innerWidth, H=innerHeight, hitR=Math.min(W,H)*0.075;
-      const g=galaxias.find(g=>Math.hypot((g._cx??g.x*W)-e.clientX, (g._cy??g.y*H)-e.clientY)<hitR);
-      if(g) (window.WarpJump||((cb)=>cb()))(()=>openGalaxy(g), g.color);
+    if(e.target && e.target.id==='map-canvas'){
+      // estaciones: siempre enterables desde el mapa
+      const st=flyers.find(f=>f.station && Math.hypot(f.x-e.clientX, f.y-e.clientY)<34);
+      if(st && window.StationWorld){ (window.WarpJump||((cb)=>cb()))(()=>window.StationWorld.open(), '#AAFF00'); return; }
+      if(galaxias.length){
+        const W=innerWidth, H=innerHeight, hitR=Math.min(W,H)*0.075;
+        const g=galaxias.find(g=>Math.hypot((g._cx??g.x*W)-e.clientX, (g._cy??g.y*H)-e.clientY)<hitR);
+        if(g) (window.WarpJump||((cb)=>cb()))(()=>openGalaxy(g), g.color);
+      }
     }
   });
 
@@ -8166,79 +8187,172 @@ var qrcode = function() {
   })(0);
 })();
 
-// ═══ ALIEN AGENT BASE — la sede psy-fi de los agentes ═══
+// ═══ KNOWHERE STATION — estación colosal enterable + EL COLECCIONISTA (marketplace) ═══
 (function(){
-  const screen=document.getElementById('screen-agents');
-  if(!screen) return;
-  const cv=document.createElement('canvas'); cv.id='alien-base-canvas';
-  screen.insertBefore(cv, screen.firstChild);
+  // overlay propio: NO pisa el universo — se entra desde las estaciones del mapa
+  const ov=document.createElement('div'); ov.id='station-world';
+  ov.style.cssText='position:fixed;inset:0;z-index:760;display:none;background:#04030a;overflow:hidden;';
+  ov.innerHTML='<canvas id="st-cv" style="position:absolute;inset:0"></canvas>'+
+    '<div style="position:absolute;top:18px;left:22px;z-index:5;font-family:\'Space Mono\',monospace;font-size:11px;letter-spacing:4px;color:#AAFF00">◈ KNOWHERE STATION <span style="color:#444">· EL COLECCIONISTA</span></div>'+
+    '<button id="st-x" style="position:absolute;top:14px;right:20px;z-index:6;font-family:\'Space Mono\',monospace;font-size:9px;letter-spacing:3px;color:#000;background:#FF3A1F;border:none;border-radius:2px;padding:8px 14px;cursor:pointer">✕ SALIR (X)</button>'+
+    '<div id="st-market" style="position:absolute;right:18px;top:60px;bottom:18px;width:min(340px,90vw);z-index:5;background:rgba(5,7,4,.9);border:1px solid rgba(170,255,0,.25);border-radius:3px;padding:16px;overflow-y:auto;backdrop-filter:blur(8px)">'+
+      '<div style="font-family:\'Space Mono\',monospace;font-size:9px;letter-spacing:3px;color:#AAFF00;margin-bottom:4px">🗿 EL COLECCIONISTA</div>'+
+      '<div style="font-size:11px;color:#666;line-height:1.6;margin-bottom:14px">Marketplace de cosas raras del universo. Lo que está acá, existe una vez.</div>'+
+      '<div id="st-items"></div></div>';
+  document.body.appendChild(ov);
+  document.getElementById('st-x').onclick=()=>ov.style.display='none';
+  addEventListener('keydown',e=>{ if((e.key==='x'||e.key==='X'||e.key==='Escape')&&ov.style.display==='block') ov.style.display='none'; });
+  const cv=document.getElementById('st-cv');
   const x=cv.getContext('2d');
   let W,H;
-  const GLYPHS='⏃⏄⏅⌬⌖⍟⌭⍜⎔⌇⋉⋇☌⏣';
-  let drops=[];
-  function size(){ W=cv.width=screen.clientWidth||innerWidth; H=cv.height=screen.clientHeight||innerHeight;
-    drops=Array.from({length:26},()=>({ x:Math.random()*W, y:Math.random()*H,
-      v:0.3+Math.random()*0.8, g:GLYPHS[Math.floor(Math.random()*GLYPHS.length)], a:0.1+Math.random()*0.25 })); }
+  function size(){ W=cv.width=innerWidth; H=cv.height=innerHeight; }
   size(); addEventListener('resize',size);
-  function hex(cx,cy,r){ x.beginPath();
-    for(let i=0;i<6;i++){ const a=Math.PI/3*i+Math.PI/6;
-      const px=cx+Math.cos(a)*r, py=cy+Math.sin(a)*r;
-      i?x.lineTo(px,py):x.moveTo(px,py); }
-    x.closePath(); }
+  // marketplace: tus rarezas reales
+  function renderMarket(){
+    const wrap=document.getElementById('st-items'); wrap.innerHTML='';
+    const items=[];
+    try{ const st=JSON.parse(localStorage.getItem('hk23_universe_state'))||{};
+      (st.ideas||[]).filter(i=>i.collected>=i.pieces).forEach(i=>items.push(
+        { n:'BLUEPRINT · '+i.name, r:'RARO', c:'#AAFF00', d:'Idea completada, lista para ejecutar. Una sola copia viva.', act:'VER', fn:()=>{ ov.style.display='none'; const b=document.querySelector('[data-act=impl]'); if(b) b.click(); } }));
+    }catch(e){}
+    try{ (JSON.parse(localStorage.getItem('hk23_galaxias'))||[]).forEach(g=>items.push(
+        { n:'GALAXIA · '+g.name, r:'ÚNICO', c:'#B84DFF', d:'Mundo '+(g.form||'espiral')+' exportable. Se vende con todo adentro.', act:'ABRIR', fn:()=>{ ov.style.display='none'; } }));
+    }catch(e){}
+    items.push(
+      { n:'EL GATSBY · CHAPA ORIGINAL', r:'MÍTICO', c:'#FFD200', d:'Reliquia del auto legendario con libre albedrío. (Vive en la versión madre — llega con la fusión.)', act:'—' },
+      { n:'CONSTITUCIÓN HK23 · 1ª ED.', r:'LEGENDARIO', c:'#00F0FF', d:'El libro de leyes del universo, legible en la Biblioteca.', act:'LEER', fn:()=>{ ov.style.display='none'; if(window.hkBiblioteca) window.hkBiblioteca(); } },
+      { n:'TEMPLATE DEL UNIVERSO', r:'EN VENTA', c:'#FF3A1F', d:'El producto: todo este universo, un solo HTML.', act:'COMPRAR', fn:()=>window.open('https://hk23hub.gumroad.com','_blank') });
+    items.forEach(it=>{ const d=document.createElement('div');
+      d.style.cssText='border:1px solid #1a2410;border-radius:2px;padding:11px 12px;margin-bottom:8px;background:rgba(8,12,5,.7)';
+      d.innerHTML='<div style="display:flex;gap:8px;align-items:center;margin-bottom:5px">'+
+        '<span style="font-size:11px;font-weight:700;color:#F0EDE8;flex:1">'+it.n+'</span>'+
+        '<span style="font-family:\'Space Mono\',monospace;font-size:7px;letter-spacing:2px;color:'+it.c+';border:1px solid '+it.c+'44;padding:2px 6px;border-radius:2px">'+it.r+'</span></div>'+
+        '<div style="font-size:10px;color:#667;line-height:1.55;margin-bottom:7px">'+it.d+'</div>'+
+        (it.fn? '<button style="font-family:\'Space Mono\',monospace;font-size:8px;letter-spacing:2px;background:'+it.c+';color:#000;border:none;border-radius:2px;padding:5px 12px;cursor:pointer;font-weight:700">'+it.act+' →</button>':'');
+      if(it.fn) d.querySelector('button').onclick=it.fn;
+      wrap.appendChild(d); });
+  }
+  window.StationWorld={ open(){ ov.style.display='block'; size(); renderMarket();
+    (window.hkLog||function(){})('estacion','entró a Knowhere'); } };
+  // luces "ciudad dentro de la cabeza" (Knowhere) — sembradas una vez
+  let windows=null;
+  function seedWindows(){ windows=Array.from({length:150},()=>({
+    u:0.30+Math.random()*0.42, v:0.30+Math.random()*0.34,
+    c:['#AAFF00','#00F0FF','#FFD200','#FF7A3B'][Math.floor(Math.random()*4)],
+    ph:Math.random()*6.28, sz:Math.random()<0.15?2:1 })); }
+  // naves entrando al ojo/boca
+  let ships=Array.from({length:9},(_,i)=>({ a:Math.random()*6.28, r:0.5+Math.random()*0.5, sp:0.0005+Math.random()*0.0009, i }));
+
   (function loop(t){
-    if(screen.classList.contains('active')){
-      if(cv.width!==(screen.clientWidth||innerWidth)) size();
+    if(ov.style.display==='block'){
+      if(cv.width!==innerWidth) { size(); windows=null; }
+      if(!windows) seedWindows();
       x.clearRect(0,0,W,H);
-      // suelo hexagonal que late
-      const hr=34;
-      for(let ry=0; ry<H+hr; ry+=hr*1.5){
-        for(let rx=0; rx<W+hr; rx+=hr*1.74){
-          const ox=(Math.floor(ry/(hr*1.5))%2)?hr*0.87:0;
-          const d=Math.hypot(rx+ox-W/2, ry-H*0.62);
-          const pulse=0.5+0.5*Math.sin(t*0.0016 - d*0.012);
-          x.strokeStyle=`rgba(170,255,0,${0.04+0.09*pulse})`;
-          x.lineWidth=1; hex(rx+ox, ry, hr*0.55); x.stroke();
-        }
-      }
-      // anillo-portal con runas girando
-      const pcx=W*0.78, pcy=H*0.30, pr=Math.min(W,H)*0.16;
-      x.save(); x.translate(pcx,pcy);
-      for(let ring=0; ring<2; ring++){
-        x.rotate((ring?-1:1)*t*0.00035);
-        x.strokeStyle=`rgba(0,240,255,${0.30-ring*0.12})`; x.lineWidth=1.5;
-        x.beginPath(); x.arc(0,0,pr+ring*16,0,6.283); x.stroke();
-        x.font='11px monospace'; x.fillStyle=`rgba(0,240,255,${0.5-ring*0.18})`;
-        for(let i=0;i<10;i++){ const a=i/10*6.283;
-          x.fillText(GLYPHS[(i+ring*3)%GLYPHS.length], Math.cos(a)*(pr+ring*16)-4, Math.sin(a)*(pr+ring*16)+4); }
+
+      // ── cielo profundo + polvo estelar ──
+      const sky=x.createLinearGradient(0,0,0,H);
+      sky.addColorStop(0,'#0a0612'); sky.addColorStop(0.6,'#050409'); sky.addColorStop(1,'#02040a');
+      x.fillStyle=sky; x.fillRect(0,0,W,H);
+      for(let i=0;i<70;i++){ x.globalAlpha=0.3+0.5*Math.abs(Math.sin(t*0.001+i));
+        x.fillStyle='#cdd'; x.fillRect((i*97)%W,(i*57)%H,1,1); } x.globalAlpha=1;
+
+      // ── NAVE-MADRE (Independence Day): arco oscuro que tapa el cielo ──
+      const mW=W*1.15, mcy=-H*0.34, mrx=mW/2, mry=H*0.52;
+      const grd=x.createRadialGradient(W/2, mcy, mry*0.3, W/2, mcy, mry);
+      grd.addColorStop(0,'#141020'); grd.addColorStop(0.82,'#0a0812'); grd.addColorStop(1,'#05060e');
+      x.fillStyle=grd; x.beginPath(); x.ellipse(W/2,mcy,mrx,mry,0,0,Math.PI*2); x.fill();
+      // borde inferior con luz
+      x.strokeStyle='rgba(120,90,200,0.35)'; x.lineWidth=2;
+      x.beginPath(); x.ellipse(W/2,mcy,mrx,mry,0,0.15,Math.PI-0.15); x.stroke();
+      // ciudad-luces en la panza de la nave
+      for(let i=0;i<80;i++){ const a=0.2+Math.random()*(Math.PI-0.4);
+        const rr=mry*(0.72+Math.random()*0.26);
+        const lx=W/2+Math.cos(a)*mrx*(rr/mry), ly=mcy+Math.sin(a)*rr;
+        if(ly>0&&ly<H*0.5){ x.globalAlpha=0.25+0.5*Math.abs(Math.sin(t*0.002+i));
+          x.fillStyle=i%7?'#6a5aa0':'#00F0FF'; x.fillRect(lx,ly,1.4,1.4); } } x.globalAlpha=1;
+      // rayo central de la nave-madre
+      const bx=W/2+Math.sin(t*0.0004)*W*0.05, bTop=mcy+mry*0.9;
+      const mb=x.createLinearGradient(bx,bTop,bx,H);
+      mb.addColorStop(0,'rgba(0,240,255,0.14)'); mb.addColorStop(1,'transparent');
+      x.fillStyle=mb; x.beginPath(); x.moveTo(bx-18,bTop); x.lineTo(bx+18,bTop);
+      x.lineTo(bx+70,H); x.lineTo(bx-70,H); x.closePath(); x.fill();
+
+      // ── KNOWHERE: la cabeza colosal ancestral como estación ──
+      const hx=W*0.44, hy=H*0.66, hs=Math.min(W,H)*0.52; // escala de la cabeza
+      x.save(); x.translate(hx,hy);
+      // silueta de piedra (perfil 3/4) — path de cráneo
+      x.beginPath();
+      x.moveTo(-0.30*hs,-0.62*hs);           // frente-corona
+      x.bezierCurveTo(-0.02*hs,-0.80*hs, 0.34*hs,-0.66*hs, 0.42*hs,-0.30*hs); // cráneo derecho
+      x.bezierCurveTo(0.50*hs,-0.05*hs, 0.44*hs,0.10*hs, 0.52*hs,0.16*hs);    // sien/pómulo
+      x.bezierCurveTo(0.44*hs,0.30*hs, 0.36*hs,0.30*hs, 0.34*hs,0.42*hs);     // nariz
+      x.bezierCurveTo(0.30*hs,0.52*hs, 0.20*hs,0.52*hs, 0.16*hs,0.60*hs);     // labio/mentón
+      x.bezierCurveTo(0.08*hs,0.72*hs, -0.10*hs,0.74*hs, -0.22*hs,0.66*hs);   // mandíbula
+      x.bezierCurveTo(-0.40*hs,0.54*hs, -0.46*hs,0.20*hs, -0.44*hs,0.02*hs);  // nuca
+      x.bezierCurveTo(-0.46*hs,-0.30*hs, -0.44*hs,-0.52*hs, -0.30*hs,-0.62*hs);
+      x.closePath();
+      const stone=x.createLinearGradient(-0.4*hs,-0.6*hs,0.4*hs,0.6*hs);
+      stone.addColorStop(0,'#2a2438'); stone.addColorStop(0.5,'#1a1626'); stone.addColorStop(1,'#0e0b16');
+      x.fillStyle=stone; x.fill();
+      x.strokeStyle='rgba(120,150,90,0.25)'; x.lineWidth=2; x.stroke();
+      // grietas
+      x.strokeStyle='rgba(0,0,0,0.5)'; x.lineWidth=1;
+      [[-0.2,-0.4,0.1,0.1],[0.1,-0.2,-0.15,0.3],[-0.3,0.1,0.2,0.2]].forEach(([a,b,c,d])=>{
+        x.beginPath(); x.moveTo(a*hs,b*hs); x.lineTo((a+c)*hs,(b+d)*hs); x.stroke(); });
+      // OJO = gran domo iluminado (el centro de la colonia)
+      const eyeX=0.14*hs, eyeY=-0.16*hs, eyeR=0.14*hs;
+      const eg=x.createRadialGradient(eyeX,eyeY,0,eyeX,eyeY,eyeR);
+      const eyePulse=0.7+0.3*Math.sin(t*0.002);
+      eg.addColorStop(0,`rgba(170,255,0,${eyePulse})`); eg.addColorStop(0.5,'rgba(0,240,255,0.5)'); eg.addColorStop(1,'transparent');
+      x.fillStyle=eg; x.beginPath(); x.arc(eyeX,eyeY,eyeR,0,6.283); x.fill();
+      x.strokeStyle='rgba(0,240,255,0.6)'; x.lineWidth=2; x.beginPath(); x.arc(eyeX,eyeY,eyeR*0.6,0,6.283); x.stroke();
+      // BOCA abierta = hangar iluminado
+      const mgX=0.16*hs, mgY=0.44*hs;
+      const mg=x.createRadialGradient(mgX,mgY,0,mgX,mgY,0.1*hs);
+      mg.addColorStop(0,'rgba(255,210,0,0.8)'); mg.addColorStop(1,'transparent');
+      x.fillStyle=mg; x.beginPath(); x.ellipse(mgX,mgY,0.11*hs,0.05*hs,0,0,6.283); x.fill();
+      // ventanas = ciudad dentro de la cabeza
+      windows.forEach(w=>{ const px=(-0.44+w.u*0.9)*hs, py=(-0.6+w.v*1.2)*hs;
+        x.fillStyle=w.c; x.globalAlpha=0.35+0.55*Math.abs(Math.sin(t*0.003+w.ph));
+        x.fillRect(px,py,w.sz,w.sz); }); x.globalAlpha=1;
+      // GRÚAS TRABAJANDO en la corona — brazos que giran, cables que suben carga
+      for(let k=0;k<5;k++){ const gx0=(-0.24+k*0.11)*hs, gy0=-0.6*hs-(k%2)*6;
+        x.strokeStyle='rgba(170,255,0,0.55)'; x.lineWidth=1.5;
+        x.beginPath(); x.moveTo(gx0,gy0); x.lineTo(gx0,gy0-0.13*hs); x.stroke();
+        // brazo giratorio
+        const arm=Math.sin(t*0.0009+k*1.7)*0.7;
+        const ax=gx0+Math.cos(arm)*0.09*hs, ay=(gy0-0.13*hs)+Math.sin(arm)*0.02*hs;
+        x.beginPath(); x.moveTo(gx0,gy0-0.13*hs); x.lineTo(ax,ay); x.stroke();
+        // cable + carga subiendo
+        const lift=(Math.sin(t*0.0013+k)+1)/2;
+        x.strokeStyle='rgba(170,255,0,0.3)';
+        x.beginPath(); x.moveTo(ax,ay); x.lineTo(ax, ay+0.10*hs*lift); x.stroke();
+        x.fillStyle='#FFD200'; x.fillRect(ax-2.5, ay+0.10*hs*lift, 5,5);
+        // agente operando (puntito que camina por la corona)
+        const wx=gx0+Math.sin(t*0.0011+k*2)*0.04*hs;
+        x.fillStyle='#00F0FF'; x.beginPath(); x.arc(wx, gy0-3, 2, 0, 6.283); x.fill();
       }
       x.restore();
-      // ojo del portal
-      const eg=x.createRadialGradient(pcx,pcy,0,pcx,pcy,pr*0.7);
-      eg.addColorStop(0,'rgba(170,255,0,0.25)'); eg.addColorStop(0.6,'rgba(0,240,255,0.10)'); eg.addColorStop(1,'transparent');
-      x.fillStyle=eg; x.beginPath(); x.arc(pcx,pcy,pr*0.7,0,6.283); x.fill();
-      // nave nodriza patrullando
-      const mx=W*0.5+Math.sin(t*0.00022)*W*0.34, my=H*0.14+Math.sin(t*0.0005)*10;
-      x.fillStyle='rgba(184,77,255,0.85)';
-      x.beginPath(); x.ellipse(mx,my,34,9,0,0,6.283); x.fill();
-      x.fillStyle='rgba(230,200,255,0.9)';
-      x.beginPath(); x.arc(mx,my-7,12,Math.PI,0); x.fill();
-      for(let i=-2;i<=2;i++){ x.fillStyle=`rgba(170,255,0,${0.5+0.5*Math.sin(t*0.01+i)})`;
-        x.beginPath(); x.arc(mx+i*12,my+3,1.8,0,6.283); x.fill(); }
-      // rayo tractor
-      const beam=x.createLinearGradient(mx,my,mx,my+H*0.4);
-      beam.addColorStop(0,'rgba(170,255,0,0.16)'); beam.addColorStop(1,'transparent');
-      x.fillStyle=beam;
-      x.beginPath(); x.moveTo(mx-8,my+8); x.lineTo(mx+8,my+8);
-      x.lineTo(mx+42,my+H*0.4); x.lineTo(mx-42,my+H*0.4); x.closePath(); x.fill();
-      // glifos cayendo
-      x.font='13px monospace';
-      drops.forEach(d=>{ d.y+=d.v; if(d.y>H+20){ d.y=-20; d.x=Math.random()*W; }
-        x.fillStyle=`rgba(170,255,0,${d.a})`; x.fillText(d.g, d.x, d.y); });
-      // barrido de escáner
-      const sy=(t*0.05)%(H*1.4);
-      const sg=x.createLinearGradient(0,sy-40,0,sy+40);
-      sg.addColorStop(0,'transparent'); sg.addColorStop(0.5,'rgba(0,240,255,0.07)'); sg.addColorStop(1,'transparent');
-      x.fillStyle=sg; x.fillRect(0,sy-40,W,80);
+
+      // ── naves entrando/saliendo del ojo ──
+      ships.forEach(s=>{ s.a+=s.sp;
+        const ex=hx+0.14*hs, ey=hy-0.16*hs;
+        const dist=(0.6+0.4*Math.sin(s.a*1.3))*Math.min(W,H)*0.45;
+        const sx=ex+Math.cos(s.a)*dist, sy=ey+Math.sin(s.a)*dist*0.7;
+        // estela hacia el ojo
+        x.strokeStyle='rgba(0,240,255,0.25)'; x.lineWidth=1;
+        x.beginPath(); x.moveTo(sx,sy); x.lineTo(sx+(ex-sx)*0.14, sy+(ey-sy)*0.14); x.stroke();
+        x.fillStyle=s.i%3?'#00F0FF':'#FFD200';
+        x.beginPath(); x.moveTo(sx,sy); x.lineTo(sx-6,sy-2.5); x.lineTo(sx-4,sy); x.lineTo(sx-6,sy+2.5); x.closePath(); x.fill(); });
+
+      // ── neblina / haz de escáner sutil ──
+      const sy2=(t*0.04)%(H*1.4);
+      const sg=x.createLinearGradient(0,sy2-50,0,sy2+50);
+      sg.addColorStop(0,'transparent'); sg.addColorStop(0.5,'rgba(0,240,255,0.05)'); sg.addColorStop(1,'transparent');
+      x.fillStyle=sg; x.fillRect(0,sy2-50,W,100);
+      // rótulo
+      x.font='10px "Space Mono", monospace'; x.fillStyle='rgba(170,255,0,0.4)'; x.textAlign='left';
+      x.fillText('◈ KNOWHERE STATION — SEDE DE LOS AGENTES · POBLACIÓN: 7 AGENTES · 24/7', 24, H-24);
     }
     requestAnimationFrame(loop);
   })(0);
