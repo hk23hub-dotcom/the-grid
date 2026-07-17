@@ -7986,6 +7986,7 @@ var qrcode = function() {
   window.hkBiblioteca=()=>{ renderBib(); document.getElementById('ov-bib').classList.add('open'); };
   window.hkOracle=openOracle;
   window.hkBackrooms=()=>Backrooms.enter('shortcut');
+  window.hkOpenGalaxy=(name)=>{ const g=galaxias.find(x=>x.name===name); if(g) openGalaxy(g); };
   logEvent('sistema','core agents en línea: GATE/ORACLE/CURATOR/BACKROOMS/DEFENSA');
 })();
 </script>
@@ -8442,6 +8443,8 @@ var qrcode = function() {
     ['D','Defensa · Optimus',  ()=>{ if(window.hkDefensa) window.hkDefensa(); }],
     ['A','Agent panel',        ()=>{ const p=document.getElementById('ag-panel'); if(p) p.classList.toggle('open'); }],
     ['K','Backrooms',          ()=>{ if(window.hkBackrooms) window.hkBackrooms(); }],
+    ['V','Cosmos · vista lejana', ()=>{}],
+    ['L','Entity Lab',            ()=>{}],
   ];
   const KEYMAP={ '1':'map','2':'arte','3':'lore','4':'viceos','5':'systems','6':'flow','7':'agents' };
   // leyenda estilo clásico — se abre con ?
@@ -8466,7 +8469,7 @@ var qrcode = function() {
   });
 
   // ═══ LEYENDA DE ESQUINA — fantasma: un ⌨ que ni se nota hasta que lo tocás ═══
-  const savedOp=parseFloat(localStorage.getItem('hk23_sc_opacity')||'0.22');
+  const savedOp=parseFloat(localStorage.getItem('hk23_sc_opacity')||'0.35');
   const savedMin=true; // siempre nace plegada
   const corner=document.createElement('div'); corner.id='sc-corner';
   corner.style.cssText='position:fixed;left:16px;bottom:110px;z-index:512;width:auto;'+
@@ -8514,6 +8517,12 @@ var qrcode = function() {
   corner.onmouseleave=()=>expandSC(false);
   document.getElementById('sc-head').onclick=()=>expandSC(true);
   expandSC(false);
+  // chip ⌨ en el dock: siempre encontrás los shortcuts aunque el fantasma esté invisible
+  const dockRef=document.getElementById('hk-dock');
+  if(dockRef){ const kb=document.createElement('button'); kb.className='dk'; kb.textContent='⌨';
+    kb.title='Shortcuts (?)'; kb.style.setProperty('--dc','#F0EDE8');
+    kb.onclick=()=>{ leg.style.display=leg.style.display==='none'?'block':'none'; };
+    dockRef.appendChild(kb); }
 })();
 </script>
 
@@ -9251,6 +9260,226 @@ var qrcode = function() {
     if(/^blockchain$/.test(s)){ e.stopImmediatePropagation(); e.preventDefault(); cmd.value=''; CW.blockchain(); }
     else if((m=s.match(/^market(?:\s+(\w+))?$/))){ e.stopImmediatePropagation(); e.preventDefault(); cmd.value=''; CW.market(m[1]); }
     else if(/^(mundo\s*crypto|crypto\s*mundo)$/.test(s)){ e.stopImmediatePropagation(); e.preventDefault(); cmd.value=''; CW.open('biblioteca'); }
+  }, true);
+})();
+</script>
+<!-- ═══════════ COSMOS VIEW — James Webb timelapse: galaxias reales, deep field, vista planeta ═══════════ -->
+<style id="cosmos-style">
+  #cosmos{ position:fixed; inset:0; z-index:900; display:none; background:#000; overflow:hidden; }
+  #cosmos.open{ display:block; }
+  #cos-cv{ position:absolute; inset:0; }
+  #cos-ui{ position:absolute; top:16px; left:20px; right:20px; z-index:5; display:flex; align-items:center; gap:8px; }
+  #cos-title{ font-family:'Space Mono',monospace; font-size:10px; letter-spacing:4px; color:#8899bb; }
+  .cos-btn{ font-family:'Space Mono',monospace; font-size:8px; letter-spacing:2px; text-transform:uppercase;
+    background:transparent; border:1px solid #1a2438; border-radius:2px; color:#66779a; padding:6px 11px; cursor:pointer; }
+  .cos-btn.on, .cos-btn:hover{ color:#000; background:#8899ff; border-color:#8899ff; }
+  #cos-x{ margin-left:auto; font-family:'Space Mono',monospace; font-size:9px; letter-spacing:3px;
+    color:#000; background:#FF3A1F; border:none; border-radius:2px; padding:8px 14px; cursor:pointer; }
+  #cos-hint{ position:absolute; bottom:20px; left:50%; transform:translateX(-50%); z-index:5; text-align:center;
+    font-family:'Space Mono',monospace; font-size:8px; letter-spacing:3px; color:#334; }
+</style>
+
+<div id="cosmos">
+  <canvas id="cos-cv"></canvas>
+  <div id="cos-ui">
+    <div id="cos-title">🔭 COSMOS · DEEP FIELD</div>
+    <button class="cos-btn on" data-v="galaxias">🌌 GALAXIAS</button>
+    <button class="cos-btn" data-v="planeta">🪐 PLANETA</button>
+    <button id="cos-x">✕ SALIR (X)</button>
+  </div>
+  <div id="cos-hint">CLIC EN TU GALAXIA PARA ENTRAR · LAS VECINAS TIENEN OTRAS COSAS · 1/2 CAMBIA LA VISTA</div>
+</div>
+
+<script>
+// ═══ COSMOS — la vía láctea girando como la grabaría el James Webb ═══
+(function(){
+  const ov=document.getElementById('cosmos'), cv=document.getElementById('cos-cv'), x=cv.getContext('2d');
+  let W,H,view='galaxias',raf=null;
+  const fit=()=>{ W=cv.width=innerWidth; H=cv.height=innerHeight; };
+  const log=(k,d)=>{ (window.hkLog||function(){})(k,d); };
+
+  // ── deep field: cientos de galaxias lejanísimas (más allá) ──
+  let deep=null;
+  function makeDeep(){ deep=Array.from({length:300},()=>({
+    x:Math.random()*W, y:Math.random()*H, r:0.6+Math.random()*2.6,
+    e:0.3+Math.random()*0.7, a:Math.random()*Math.PI,
+    hue:['#9db4ff','#ffd9a0','#ff9d9d','#c9a0ff','#a0ffd9'][Math.floor(Math.random()*5)],
+    al:0.05+Math.random()*0.22 })); }
+
+  // ── galaxia espiral realista: brazos logarítmicos + polvo + núcleo ──
+  function makeSpiral(cfg){
+    const stars=[], dust=[];
+    const arms=cfg.arms||2;
+    for(let i=0;i<cfg.n;i++){
+      const arm=i%arms;
+      const d=Math.pow(Math.random(),0.62);          // más denso hacia el núcleo
+      const wind=cfg.wind||5.8;                       // cuánto enrollan los brazos
+      const ang=d*wind + arm*(Math.PI*2/arms) + (Math.random()-0.5)*0.38*(1-d*0.5);
+      const r=d*cfg.size;
+      // color: núcleo cálido → brazos fríos, con estrellas jóvenes brillantes
+      const col = d<0.18 ? '#fff6dd' : (Math.random()<0.12 ? '#cfe0ff' : (Math.random()<0.5?cfg.armCol:'#aab8e8'));
+      stars.push({ ang, r, col, sz: d<0.2?1.4:(Math.random()<0.08?1.8:0.9), tw:Math.random()*6.28 });
+      if(Math.random()<0.30 && d>0.2) dust.push({ ang:ang+0.09, r:r*0.98, sz:2.4+Math.random()*3 });
+    }
+    return { ...cfg, stars, dust };
+  }
+  let gals=null;
+  function makeGalaxies(){
+    const mine=makeSpiral({ id:'hk23', name:'HK23 — TU GALAXIA', n:1500, size:Math.min(W,H)*0.30,
+      arms:2, wind:6.2, armCol:'#ffb199', coreCol:'#ffddb0', x:W*0.38, y:H*0.52, tilt:0.46, spd:0.000045, label:'#FF3A1F' });
+    const others=[];
+    try{ (JSON.parse(localStorage.getItem('hk23_galaxias'))||[]).slice(0,4).forEach((g,i)=>{
+      others.push(makeSpiral({ id:'sis'+i, sis:g, name:g.name, n:700, size:Math.min(W,H)*(0.10+((i*7)%3)*0.02),
+        arms:2+(i%3), wind:5+(i%2)*1.4, armCol:g.color||'#9db4ff', coreCol:'#fff2cc',
+        x:W*(0.72+((i*13)%20)/100), y:H*(0.18+((i*29)%55)/100), tilt:0.35+((i*11)%25)/100, spd:0.00006*(i%2?1:-1), label:g.color||'#9db4ff' })); });
+    }catch(e){}
+    // Andrómeda de fondo (no enterable, decorativa)
+    others.push(makeSpiral({ id:'andromeda', name:'ANDRÓMEDA · 2.5M AÑOS LUZ', n:900, size:Math.min(W,H)*0.16,
+      arms:2, wind:7, armCol:'#9db4ff', coreCol:'#ffeecc', x:W*0.16, y:H*0.16, tilt:0.30, spd:0.00003, label:'#556' }));
+    gals=[mine,...others];
+  }
+  function drawSpiral(g,t){
+    x.save(); x.translate(g.x,g.y);
+    const rot=t*g.spd;
+    // halo
+    const halo=x.createRadialGradient(0,0,0,0,0,g.size*1.15);
+    halo.addColorStop(0,'rgba(255,240,214,0.10)'); halo.addColorStop(1,'transparent');
+    x.fillStyle=halo; x.beginPath(); x.ellipse(0,0,g.size*1.15,g.size*1.15*g.tilt,0,0,6.283); x.fill();
+    x.globalCompositeOperation='lighter';
+    // estrellas de los brazos (giran = timelapse)
+    g.stars.forEach(s=>{
+      const a=s.ang+rot;
+      const px=Math.cos(a)*s.r, py=Math.sin(a)*s.r*g.tilt;
+      x.globalAlpha=0.5+0.5*Math.abs(Math.sin(t*0.001+s.tw));
+      x.fillStyle=s.col; x.fillRect(px,py,s.sz,s.sz);
+    });
+    x.globalAlpha=1; x.globalCompositeOperation='source-over';
+    // polvo oscuro sobre los brazos
+    g.dust.forEach(d=>{ const a=d.ang+rot;
+      x.fillStyle='rgba(10,6,4,0.32)';
+      x.beginPath(); x.arc(Math.cos(a)*d.r, Math.sin(a)*d.r*g.tilt, d.sz, 0, 6.283); x.fill(); });
+    // núcleo
+    const core=x.createRadialGradient(0,0,0,0,0,g.size*0.22);
+    core.addColorStop(0,'#fffdf5'); core.addColorStop(0.35,g.coreCol); core.addColorStop(1,'transparent');
+    x.fillStyle=core; x.beginPath(); x.ellipse(0,0,g.size*0.22,g.size*0.22*g.tilt*1.4,0,0,6.283); x.fill();
+    x.restore();
+    // etiqueta
+    x.font='700 10px "Space Mono",monospace'; x.textAlign='center';
+    x.fillStyle=g.label; x.globalAlpha=0.8;
+    x.fillText((g.id==='hk23'?'✦ ':'')+g.name, g.x, g.y+g.size*g.tilt+22); x.globalAlpha=1;
+  }
+
+  // ── vista planeta: planeta girando + estación + agentes alienígenas en tránsito ──
+  let shuttles=Array.from({length:8},(_,i)=>({ p:Math.random(), dir:i%2?1:-1, sp:0.0014+Math.random()*0.002, off:(i-4)*14 }));
+  function drawPlanetView(t){
+    // estrellas
+    for(let i=0;i<90;i++){ x.globalAlpha=0.3+0.5*Math.abs(Math.sin(t*0.001+i));
+      x.fillStyle='#cdd6ee'; x.fillRect((i*131)%W,(i*71)%H,1,1); } x.globalAlpha=1;
+    const pcx=W*0.36, pcy=H*0.54, pR=Math.min(W,H)*0.30;
+    // planeta con bandas que derivan (rotación real)
+    const pg=x.createRadialGradient(pcx-pR*0.35,pcy-pR*0.35,pR*0.1,pcx,pcy,pR);
+    pg.addColorStop(0,'rgba(255,255,255,0.30)'); pg.addColorStop(0.4,'#2E6BFFD8'); pg.addColorStop(0.85,'#12306688'); pg.addColorStop(1,'#0a1a3844');
+    x.fillStyle=pg; x.beginPath(); x.arc(pcx,pcy,pR,0,6.283); x.fill();
+    x.save(); x.beginPath(); x.arc(pcx,pcy,pR,0,6.283); x.clip();
+    for(let b=0;b<7;b++){ const by=pcy-pR+(b+0.5)*(pR*2/7);
+      const drift=((t*0.02+b*140)%(pR*3))-pR*1.5;
+      x.beginPath(); x.ellipse(pcx+drift,by,pR*1.2,pR*0.12,0,0,6.283);
+      x.fillStyle=b%2?'rgba(0,0,0,0.16)':'rgba(255,255,255,0.08)'; x.fill(); }
+    const tg=x.createLinearGradient(pcx-pR,pcy,pcx+pR,pcy);
+    tg.addColorStop(0,'rgba(0,0,0,0)'); tg.addColorStop(0.65,'rgba(0,0,0,0)'); tg.addColorStop(1,'rgba(0,0,0,0.6)');
+    x.fillStyle=tg; x.fillRect(pcx-pR,pcy-pR,pR*2,pR*2);
+    x.restore();
+    x.strokeStyle='rgba(120,160,255,0.5)'; x.lineWidth=1.5;
+    x.beginPath(); x.arc(pcx,pcy,pR,0,6.283); x.stroke();
+    // estación espacial orbitando
+    const sa=t*0.00035, sx=pcx+Math.cos(sa)*pR*1.75, sy=pcy+Math.sin(sa)*pR*0.85;
+    x.save(); x.translate(sx,sy); x.rotate(t*0.0008);
+    x.strokeStyle='#AAFF00'; x.lineWidth=2;
+    x.beginPath(); x.arc(0,0,20,0,6.283); x.stroke();
+    x.beginPath(); x.arc(0,0,9,0,6.283); x.stroke();
+    for(let k=0;k<4;k++){ const a=k*Math.PI/2;
+      x.beginPath(); x.moveTo(Math.cos(a)*9,Math.sin(a)*9); x.lineTo(Math.cos(a)*20,Math.sin(a)*20); x.stroke(); }
+    for(let k=0;k<8;k++){ const a=k/8*6.283;
+      x.fillStyle=Math.sin(t*0.008+k)>0?'#fff':'#AAFF00';
+      x.beginPath(); x.arc(Math.cos(a)*20,Math.sin(a)*20,1.6,0,6.283); x.fill(); }
+    x.restore();
+    x.font='9px "Space Mono",monospace'; x.fillStyle='rgba(170,255,0,0.7)'; x.textAlign='center';
+    x.fillText('ESTACIÓN KNOWHERE-2', sx, sy-30);
+    // agentes alienígenas: naves entrando y saliendo planeta ⇄ estación
+    shuttles.forEach(s=>{
+      s.p+=s.sp*s.dir;
+      if(s.p>1||s.p<0){ s.dir*=-1; s.p=Math.max(0,Math.min(1,s.p)); }
+      const px0=pcx+ (pR*0.7)*Math.cos(s.off), py0=pcy+(pR*0.7)*Math.sin(s.off)*0.6;
+      const mx=(px0+sx)/2+s.off*2, my=(py0+sy)/2-40; // curva
+      const u=s.p, iu=1-u;
+      const qx=iu*iu*px0+2*iu*u*mx+u*u*sx, qy=iu*iu*py0+2*iu*u*my+u*u*sy;
+      x.strokeStyle='rgba(0,240,255,0.18)'; x.lineWidth=1;
+      x.beginPath(); x.moveTo(px0,py0); x.quadraticCurveTo(mx,my,sx,sy); x.stroke();
+      x.fillStyle=s.dir>0?'#00F0FF':'#FFD200';
+      x.beginPath(); x.arc(qx,qy,2.6,0,6.283); x.fill();
+      x.globalAlpha=0.4; x.beginPath(); x.arc(qx,qy,5,0,6.283); x.fill(); x.globalAlpha=1;
+    });
+    x.font='10px "Space Mono",monospace'; x.fillStyle='rgba(140,160,200,0.5)'; x.textAlign='left';
+    x.fillText('◈ AGENTES ALIENÍGENAS EN TRÁNSITO — PLANETA ⇄ ESTACIÓN · TODO EN MOVIMIENTO', 24, H-46);
+  }
+
+  function loop(t){
+    if(!ov.classList.contains('open')){ raf=null; return; }
+    x.fillStyle='#000104'; x.fillRect(0,0,W,H);
+    // deep field siempre de fondo
+    deep.forEach(d=>{ x.save(); x.translate(d.x,d.y); x.rotate(d.a);
+      x.globalAlpha=d.al; x.fillStyle=d.hue;
+      x.beginPath(); x.ellipse(0,0,d.r,d.r*d.e,0,0,6.283); x.fill(); x.restore(); });
+    x.globalAlpha=1;
+    if(view==='galaxias') gals.forEach(g=>drawSpiral(g,t));
+    else drawPlanetView(t);
+    raf=requestAnimationFrame(loop);
+  }
+
+  function setView(v){ view=v;
+    document.querySelectorAll('.cos-btn').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+    document.getElementById('cos-title').textContent = v==='galaxias' ? '🔭 COSMOS · DEEP FIELD' : '🔭 COSMOS · ÓRBITA PLANETARIA';
+    document.getElementById('cos-hint').textContent = v==='galaxias'
+      ? 'CLIC EN TU GALAXIA PARA ENTRAR · LAS VECINAS TIENEN OTRAS COSAS · 1/2 CAMBIA LA VISTA'
+      : 'EL PLANETA GIRA · LA ESTACIÓN ORBITA · LOS AGENTES VAN Y VIENEN · 1/2 CAMBIA LA VISTA';
+  }
+  document.querySelectorAll('.cos-btn').forEach(b=>b.onclick=()=>setView(b.dataset.v));
+
+  const COS={ open(v){ ov.classList.add('open'); fit(); makeDeep(); makeGalaxies(); setView(v||'galaxias');
+      if(!raf) raf=requestAnimationFrame(loop); log('cosmos','vista desde lejos'); },
+    close(){ ov.classList.remove('open'); } };
+  window.CosmosView=COS;
+  document.getElementById('cos-x').onclick=()=>COS.close();
+  addEventListener('resize',()=>{ if(ov.classList.contains('open')){ fit(); makeDeep(); makeGalaxies(); } });
+  addEventListener('keydown',e=>{
+    if(!ov.classList.contains('open')) return;
+    if(e.key==='x'||e.key==='X'||e.key==='Escape') COS.close();
+    if(e.key==='1') setView('galaxias'); if(e.key==='2') setView('planeta');
+  }, true);
+  // clic: entrar a TU galaxia (→ mapa) o a una vecina (→ su mundo distinto)
+  cv.addEventListener('click',e=>{
+    if(view!=='galaxias') return;
+    const hit=gals.find(g=>Math.hypot(g.x-e.clientX,g.y-e.clientY)<g.size*0.9);
+    if(!hit||hit.id==='andromeda') return;
+    COS.close();
+    if(hit.id==='hk23'){ (window.WarpJump||((cb)=>cb()))(()=>{ if(typeof goTo==='function') goTo('map'); }, '#FF3A1F'); }
+    else if(hit.sis && window.hkOpenGalaxy){ (window.WarpJump||((cb)=>cb()))(()=>window.hkOpenGalaxy(hit.sis.name), hit.sis.color); }
+  });
+
+  // ── accesos: tecla V, dock 🔭, comando cosmos/vista ──
+  addEventListener('keydown',e=>{
+    if(/INPUT|TEXTAREA|SELECT/.test((document.activeElement||{}).tagName||'')) return;
+    if((e.key==='v'||e.key==='V') && !ov.classList.contains('open')) COS.open();
+  });
+  const dock=document.getElementById('hk-dock');
+  if(dock){ const b=document.createElement('button'); b.className='dk'; b.textContent='🔭 COSMOS';
+    b.style.setProperty('--dc','#8899ff'); b.style.color='#8899ffCC';
+    b.onclick=()=>COS.open(); dock.insertBefore(b, dock.firstChild); }
+  const cmd=document.getElementById('ag-cmd');
+  if(cmd) cmd.addEventListener('keydown',e=>{
+    if(e.key!=='Enter') return; const s=(cmd.value||'').trim().toLowerCase();
+    if(/^(cosmos|vista|lejos|deep ?field)$/.test(s)){ e.stopImmediatePropagation(); e.preventDefault(); cmd.value=''; COS.open(); }
+    else if(/^(planeta|orbita|órbita)$/.test(s)){ e.stopImmediatePropagation(); e.preventDefault(); cmd.value=''; COS.open('planeta'); }
   }, true);
 })();
 </script>
