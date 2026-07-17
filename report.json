@@ -1,6 +1,6 @@
 {
-  "generated": "2026-07-16T11:03:46.925Z",
-  "date": "2026-07-16",
+  "generated": "2026-07-17T10:50:46.220Z",
+  "date": "2026-07-17",
   "worlds": [
     {
       "id": "hk23-universe",
@@ -61,8 +61,11 @@
     "local": 9
   },
   "featured": "chile-goldmine",
-  "commits24h": [],
-  "weekCommitCount": 6,
+  "commits24h": [
+    "27bcef5 Nebula, planet+moons, Optimus, backrooms v2, blueprints, hotkeys, galaxies (#4)",
+    "bb3a66b oracle: reporte diario 2026-07-16"
+  ],
+  "weekCommitCount": 8,
   "actions": [
     "Reactivar 2 mundo(s) sin push en 30d: HK23 VICE OS ECOSYSTEM, HOW TO USE CLAUDE",
     "Ningún mundo está LIVE — conectar VERCEL_TOKEN o desplegar uno",
@@ -70,6 +73,7 @@
     "Repartir links ?ref= de la semana a los referidos"
   ],
   "reports": [
+    "2026-07-17.md",
     "2026-07-16.md",
     "2026-07-15.md",
     "2026-07-14.md",
