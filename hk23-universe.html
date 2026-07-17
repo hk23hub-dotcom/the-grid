@@ -9039,6 +9039,41 @@ var qrcode = function() {
   #cw-coinsel.show{ display:flex; }
   .cw-coin-b{ font-family:'Space Mono',monospace; font-size:9px; letter-spacing:2px; padding:6px 12px;
     border-radius:2px; border:1px solid #223; background:transparent; color:#9aa; cursor:pointer; }
+
+  /* ── BIBLIOTECA v2: orden editorial, tipografías con jerarquía ── */
+  #cw-lib{ position:absolute; inset:64px 0 0 0; z-index:4; overflow-y:auto; display:none;
+    padding:30px clamp(20px,6vw,90px) 80px; scrollbar-width:thin; scrollbar-color:#1a2438 #04060c; }
+  #cw-lib.show{ display:block; }
+  .cwl-hero{ display:flex; align-items:center; gap:40px; flex-wrap:wrap; margin-bottom:20px;
+    border-bottom:1px solid rgba(247,147,26,.18); padding-bottom:26px; }
+  .cwl-hero-txt{ flex:1; min-width:260px; }
+  .cwl-kicker{ font-family:'Space Mono',monospace; font-size:9px; letter-spacing:6px; color:#F7931A; margin-bottom:10px; }
+  .cwl-display{ font-family:'Space Grotesk',system-ui; font-weight:700; font-size:clamp(34px,5vw,58px);
+    letter-spacing:-1.5px; line-height:.95; color:#F0EDE8; }
+  .cwl-display em{ font-style:italic; font-family:Georgia,'Times New Roman',serif; font-weight:400; color:#F7931A; }
+  .cwl-lede{ font-family:Georgia,'Times New Roman',serif; font-size:15px; line-height:1.7; color:#8a93a8;
+    max-width:520px; margin-top:14px; font-style:italic; }
+  #cw-coin{ width:220px; height:220px; flex-shrink:0; }
+  .cwl-sec{ margin-top:38px; }
+  .cwl-sec-head{ display:flex; align-items:baseline; gap:14px; margin-bottom:18px; }
+  .cwl-num{ font-family:Georgia,serif; font-size:34px; color:rgba(247,147,26,.5); font-style:italic; }
+  .cwl-sec-title{ font-family:'Space Mono',monospace; font-size:10px; letter-spacing:5px; color:#c9d2e8; }
+  .cwl-sec-head::after{ content:''; flex:1; height:1px; background:rgba(247,147,26,.14); }
+  .cwl-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:1px; background:rgba(247,147,26,.12); border:1px solid rgba(247,147,26,.12); }
+  .cwl-card{ background:#060910; padding:20px 22px; transition:background .2s; }
+  .cwl-card:hover{ background:#0a0f1c; }
+  .cwl-term{ font-family:'Space Grotesk',system-ui; font-weight:700; font-size:16px; letter-spacing:.3px; color:#F0EDE8; margin-bottom:6px; }
+  .cwl-def{ font-family:Georgia,'Times New Roman',serif; font-size:13px; line-height:1.65; color:#7d879c; }
+  .cwl-tag{ font-family:'Space Mono',monospace; font-size:7px; letter-spacing:3px; color:#F7931A; margin-bottom:8px; }
+  /* estante de guías con prompt */
+  .cwl-guide{ background:#060910; padding:22px; display:flex; flex-direction:column; gap:10px; }
+  .cwl-gtitle{ font-family:Georgia,'Times New Roman',serif; font-style:italic; font-size:19px; color:#F0EDE8; line-height:1.2; }
+  .cwl-gsub{ font-family:'Space Grotesk',system-ui; font-size:12px; color:#7d879c; line-height:1.6; }
+  .cwl-prompt{ font-family:'Space Mono',monospace; font-size:9px; line-height:1.7; color:#5d84a8;
+    background:#030509; border-left:2px solid #F7931A; padding:10px 12px; }
+  .cwl-actions{ display:flex; gap:8px; }
+  .cwl-btn{ font-family:'Space Mono',monospace; font-size:8px; letter-spacing:2px; font-weight:700;
+    border:none; border-radius:2px; padding:8px 13px; cursor:pointer; }
 </style>
 
 <div id="cw">
@@ -9058,7 +9093,8 @@ var qrcode = function() {
     <button class="cw-coin-b" data-c="SOL">◎ SOL</button>
     <button class="cw-coin-b" data-c="ALL">🌐 TODAS</button>
   </div>
-  <div id="cw-hint">ARRASTRÁ PARA MIRAR · TODO ESTO ES GRATIS · COMANDOS: blockchain · market · market btc</div>
+  <div id="cw-hint">TODO ESTO ES GRATIS · COMANDOS: blockchain · market · market btc</div>
+  <div id="cw-lib"></div>
 </div>
 
 <script>
@@ -9203,32 +9239,144 @@ var qrcode = function() {
     if(!cw.classList.contains('open')){ raf=null; return; }
     x.clearRect(0,0,W,H);
     if(mode==='biblioteca'){
-      // fondo estelar
+      // backdrop sobrio: espacio + grilla blueprint sutil (el contenido vive en el DOM ordenado)
       x.fillStyle='#04060c'; x.fillRect(0,0,W,H);
-      // moneda bitcoin central (en vez de planeta)
-      const cx=W/2, cy=H/2, spin=Math.sin(t*0.0016), rw=90*Math.abs(spin)+12;
-      const cg=x.createRadialGradient(cx-24,cy-24,0,cx,cy,110);
-      cg.addColorStop(0,'#FFE29A'); cg.addColorStop(.45,'#F7931A'); cg.addColorStop(1,'#7a4a08');
-      x.fillStyle=cg; x.globalAlpha=.9; x.beginPath(); x.ellipse(cx,cy,rw,104,0,0,6.283); x.fill(); x.globalAlpha=1;
-      x.fillStyle='#3a2606'; x.font='700 '+(rw*1.1)+'px "Space Grotesk",system-ui'; x.textAlign='center'; x.textBaseline='middle';
-      if(rw>26) x.fillText('₿', cx, cy); x.textBaseline='alphabetic';
-      cards.forEach(c=>{ if(c!==dragging){ c.x+=c.vx; c.y+=c.vy;
-        if(c.x<c.w/2||c.x>W-c.w/2) c.vx*=-1; if(c.y<c.h/2||c.y>H-c.h/2) c.vy*=-1; } drawCard(c,t); });
+      x.strokeStyle='rgba(247,147,26,0.04)';
+      for(let gx=0;gx<W;gx+=48){ x.beginPath(); x.moveTo(gx,0); x.lineTo(gx,H); x.stroke(); }
+      for(let gy=0;gy<H;gy+=48){ x.beginPath(); x.moveTo(0,gy); x.lineTo(W,gy); x.stroke(); }
+      for(let i=0;i<50;i++){ x.globalAlpha=0.2+0.4*Math.abs(Math.sin(t*0.001+i));
+        x.fillStyle='#8899bb'; x.fillRect((i*173)%W,(i*97)%H,1,1); } x.globalAlpha=1;
+      drawProCoin(t);
     } else if(mode==='blockchain') drawBlockchain(t);
     else drawMarket(t);
     raf=requestAnimationFrame(loop);
   }
 
-  // arrastrar cards
-  let dragging=null;
-  cv.addEventListener('pointerdown',e=>{ if(mode!=='biblioteca') return;
-    dragging=cards.slice().reverse().find(c=>Math.abs(c.x-e.clientX)<c.w/2&&Math.abs(c.y-e.clientY)<c.h/2); });
-  cv.addEventListener('pointermove',e=>{ if(dragging){ dragging.x=e.clientX; dragging.y=e.clientY; } });
-  cv.addEventListener('pointerup',()=>dragging=null);
+  // ── MONEDA BITCOIN PRO: canto perlado, campo cepillado, ₿ en relieve, brillo que barre ──
+  function drawProCoin(t){
+    const cc=document.getElementById('cw-coin'); if(!cc) return;
+    if(cc.width!==440){ cc.width=440; cc.height=440; }
+    const g=cc.getContext('2d'); g.clearRect(0,0,440,440);
+    const cx=220, cy=220, R=170;
+    const wob=Math.sin(t*0.0011)*0.08;             // leve balanceo 3D, nunca deja de ser moneda
+    g.save(); g.translate(cx,cy); g.scale(1-Math.abs(wob)*0.5, 1); g.rotate(wob*0.3);
+    // sombra al piso
+    g.save(); g.translate(0, R*1.06); g.scale(1,0.18);
+    const sh=g.createRadialGradient(0,0,0,0,0,R*0.9);
+    sh.addColorStop(0,'rgba(247,147,26,0.25)'); sh.addColorStop(1,'transparent');
+    g.fillStyle=sh; g.beginPath(); g.arc(0,0,R*0.9,0,6.283); g.fill(); g.restore();
+    // canto exterior metálico
+    const rim=g.createLinearGradient(-R,-R,R,R);
+    rim.addColorStop(0,'#8a5a10'); rim.addColorStop(0.3,'#ffd98a'); rim.addColorStop(0.55,'#b97812'); rim.addColorStop(0.8,'#ffe9b0'); rim.addColorStop(1,'#6f4a0c');
+    g.fillStyle=rim; g.beginPath(); g.arc(0,0,R,0,6.283); g.fill();
+    // perlado del canto (moneda acuñada)
+    for(let i=0;i<64;i++){ const a=i/64*6.283;
+      g.fillStyle=i%2?'rgba(60,38,6,0.55)':'rgba(255,236,180,0.5)';
+      g.beginPath(); g.arc(Math.cos(a)*R*0.955, Math.sin(a)*R*0.955, 2.6, 0, 6.283); g.fill(); }
+    // campo interior
+    const field=g.createRadialGradient(-R*0.3,-R*0.3,R*0.05,0,0,R*0.88);
+    field.addColorStop(0,'#ffcf72'); field.addColorStop(0.5,'#f7931a'); field.addColorStop(1,'#9c6008');
+    g.fillStyle=field; g.beginPath(); g.arc(0,0,R*0.88,0,6.283); g.fill();
+    // anillo de acuñación con leyenda
+    g.strokeStyle='rgba(90,56,8,0.55)'; g.lineWidth=2;
+    g.beginPath(); g.arc(0,0,R*0.74,0,6.283); g.stroke();
+    g.font='700 11px "Space Mono",monospace'; g.fillStyle='rgba(70,44,6,0.85)'; g.textAlign='center';
+    ['HK23','·','VICE','·','CRYPTO','·','2140','·'].forEach((w,i)=>{
+      const a=-Math.PI/2+i/8*6.283;
+      g.save(); g.translate(Math.cos(a)*R*0.81, Math.sin(a)*R*0.81); g.rotate(a+Math.PI/2);
+      g.fillText(w,0,0); g.restore(); });
+    // ₿ en relieve: sombra grabada + cara iluminada
+    g.font='900 '+R*1.05+'px "Space Grotesk",system-ui'; g.textAlign='center'; g.textBaseline='middle';
+    g.fillStyle='rgba(90,55,6,0.9)'; g.fillText('₿', 4, 10);
+    const bfill=g.createLinearGradient(0,-R*0.5,0,R*0.5);
+    bfill.addColorStop(0,'#fff2cf'); bfill.addColorStop(0.5,'#ffd067'); bfill.addColorStop(1,'#e8960f');
+    g.fillStyle=bfill; g.fillText('₿', 0, 4);
+    g.textBaseline='alphabetic';
+    // barrido especular
+    const sweep=((t*0.06)%600)/600*2.6-1.3;
+    const sp=g.createLinearGradient((sweep-0.35)*R*2,-R,(sweep+0.35)*R*2,R);
+    sp.addColorStop(0,'rgba(255,255,255,0)'); sp.addColorStop(0.5,'rgba(255,255,255,0.28)'); sp.addColorStop(1,'rgba(255,255,255,0)');
+    g.save(); g.beginPath(); g.arc(0,0,R,0,6.283); g.clip();
+    g.fillStyle=sp; g.fillRect(-R,-R,R*2,R*2); g.restore();
+    g.restore();
+  }
+
+  // ── LA BIBLIOTECA: currículo ordenado + estante de guías con prompts ──
+  const CURRI=[
+    ['I','FUNDAMENTOS — QUÉ ES ESTO', [
+      ['BLOCKCHAIN','Un cuaderno público que nadie puede borrar. Cada bloque guarda transacciones y apunta al anterior — por eso es inmutable.'],
+      ['WALLET & SEED','Tu billetera. La frase semilla (12 palabras) ES tu dinero: quien la tiene, tiene todo. No se comparte jamás.'],
+      ['MARKET CAP','Precio × monedas en circulación. Mide el tamaño de una cripto, no si está "cara" o "barata".'],
+      ['GAS FEE','La comisión por usar la red. Sube cuando hay multitud operando al mismo tiempo.']]],
+    ['II','LEER EL MERCADO — EL IDIOMA DE LAS VELAS', [
+      ['VELA JAPONESA','Cada vela es un rango de tiempo. Cuerpo verde: cerró arriba. Rojo: cerró abajo. El cuerpo cuenta la historia.'],
+      ['MECHA / WICK','La línea fina en las puntas: hasta dónde llegó el precio antes de que lo rechazaran. Mecha larga = hubo pelea.'],
+      ['SOPORTE & RESISTENCIA','El piso donde rebota y el techo donde frena. Romper una resistencia con volumen es la señal que todos esperan.'],
+      ['BULL vs BEAR','Toro embiste hacia arriba: mercado subiendo. Oso da el zarpazo hacia abajo: mercado cayendo.']]],
+    ['III','OPERAR — SIN QUE TE COMAN', [
+      ['HODL','Comprar y sostener sin vender en pánico. Nació de un typo de "hold". La paciencia como estrategia.'],
+      ['DEFI & STAKING','Finanzas sin banco: prestá, intercambiá o bloqueá monedas para asegurar la red y cobrar recompensa.'],
+      ['LIQUIDEZ','Qué tan fácil entrás y salís sin mover el precio. Poca liquidez = saltos violentos.'],
+      ['FOMO / FUD','Los dos enemigos: el miedo a quedarte afuera te hace comprar caro; el miedo sembrado te hace vender barato.']]],
+  ];
+  const GUIDES=[
+    ['Crypto desde cero en 7 días','El camino completo para el que nunca tocó una wallet: un capítulo por día, de qué es Bitcoin a tu primera operación.',
+     'Escribí "CRYPTO DESDE CERO EN 7 DÍAS", guía de 7 capítulos (uno por día) para principiante absoluto en el tono HK23 (directo, sin humo): día 1 qué es bitcoin y por qué importa; día 2 wallets y seed phrase con checklist de seguridad; día 3 exchanges y cómo comprar; día 4 leer velas y volumen; día 5 soporte/resistencia con 3 ejemplos; día 6 errores mortales del novato; día 7 tu primer plan de inversión con gestión de riesgo. Cada capítulo: 500 palabras + 3 bullets accionables + 1 ejercicio.'],
+    ['Tu primera wallet sin miedo','Paso a paso con capturas: crear, respaldar y blindar tu primera billetera en 20 minutos.',
+     'Escribí "TU PRIMERA WALLET SIN MIEDO": tutorial paso a paso para crear una wallet no-custodial, explicando custodial vs no-custodial, cómo respaldar la seed en metal/papel (nunca digital), qué es una dirección pública, cómo hacer la primera transacción de prueba con poco dinero, y checklist final de 10 puntos de seguridad. Tono HK23: claro, sin tecnicismos innecesarios, con advertencias honestas.'],
+    ['Leer velas como operador','Del gráfico en japonés al español: los 12 patrones de velas que mueven la aguja de verdad.',
+     'Escribí "LEER VELAS COMO OPERADOR": guía de los 12 patrones de velas japonesas más útiles (martillo, envolvente, doji, estrella fugaz, etc.), cada uno con: cómo se ve (descripción visual), qué psicología del mercado revela, en qué contexto es confiable y cuándo es trampa. Cierre: cómo combinar velas con soporte/resistencia y volumen. Formato: 1 página por patrón.'],
+    ['DeFi para humanos','Prestar, staker y farmear sin doctorado: los protocolos explicados como negocios de barrio.',
+     'Escribí "DEFI PARA HUMANOS": explicá lending, staking, liquidity pools y yield farming usando SOLO analogías de negocios de barrio (almacén, plazo fijo, sociedad de kiosco). Por cada concepto: la analogía, el número real de retorno típico, el riesgo real (impermanent loss, rug pulls, contratos), y una regla de oro. Cierre: portfolio DeFi conservador de ejemplo con porcentajes.'],
+    ['Seguridad: que no te roben','Los 10 ataques más comunes (phishing, fake apps, SIM swap) y el escudo contra cada uno.',
+     'Escribí "SEGURIDAD: QUE NO TE ROBEN": los 10 vectores de ataque más comunes en crypto (phishing, apps falsas, SIM swap, approvals maliciosos, ingeniería social, malware clipboard, etc.) con: cómo funciona el ataque contado como historia real, la señal de alerta y la defensa concreta. Cierre: rutina de higiene de seguridad mensual de 15 minutos.']];
+  let libBuilt=false;
+  function buildLib(){
+    if(libBuilt) return; libBuilt=true;
+    const lib=document.getElementById('cw-lib');
+    let h='<div class="cwl-hero"><div class="cwl-hero-txt">'+
+      '<div class="cwl-kicker">CRYPTO VICE · BIBLIOTECA ABIERTA</div>'+
+      '<div class="cwl-display">EL CONOCIMIENTO<br>ES <em>gratis.</em><br>EL MIEDO ES CARO.</div>'+
+      '<div class="cwl-lede">Todo lo que necesitás para entrar a crypto sin que te coman, ordenado del cero absoluto a operar con criterio. Flotando acá, sin paywall.</div>'+
+      '</div><canvas id="cw-coin"></canvas></div>';
+    CURRI.forEach(([num,title,items])=>{
+      h+='<div class="cwl-sec"><div class="cwl-sec-head"><span class="cwl-num">'+num+'</span>'+
+        '<span class="cwl-sec-title">'+title+'</span></div><div class="cwl-grid">';
+      items.forEach(([term,def],i)=>{ h+='<div class="cwl-card"><div class="cwl-tag">'+String(i+1).padStart(2,'0')+'</div>'+
+        '<div class="cwl-term">'+term+'</div><div class="cwl-def">'+def+'</div></div>'; });
+      h+='</div></div>';
+    });
+    h+='<div class="cwl-sec"><div class="cwl-sec-head"><span class="cwl-num">IV</span>'+
+      '<span class="cwl-sec-title">GUÍAS PARA EMPEZAR — LAS QUE FALTAN, CON SU PROMPT LISTO</span></div>'+
+      '<div class="cwl-grid" style="grid-template-columns:repeat(auto-fill,minmax(320px,1fr))">';
+    GUIDES.forEach(([t,d,prompt],i)=>{
+      h+='<div class="cwl-guide"><div class="cwl-tag">TOMO '+(i+1)+' · POR ESCRIBIR</div>'+
+        '<div class="cwl-gtitle">'+t+'</div><div class="cwl-gsub">'+d+'</div>'+
+        '<div class="cwl-prompt">'+prompt.slice(0,150)+'…</div>'+
+        '<div class="cwl-actions">'+
+        '<button class="cwl-btn" data-copy="'+i+'" style="background:#F7931A;color:#000">⧉ COPIAR PROMPT</button>'+
+        '<button class="cwl-btn" data-agent="'+i+'" style="background:transparent;border:1px solid #24304a;color:#8a93a8">◈ CREAR CON AGENTE →</button>'+
+        '</div></div>';
+    });
+    h+='</div></div>';
+    lib.innerHTML=h;
+    lib.querySelectorAll('[data-copy]').forEach(b=>b.onclick=()=>{
+      const pr=GUIDES[+b.dataset.copy][2];
+      (navigator.clipboard?navigator.clipboard.writeText(pr):Promise.reject()).then(()=>{ b.textContent='✓ COPIADO'; setTimeout(()=>b.textContent='⧉ COPIAR PROMPT',1500); }).catch(()=>{});
+      log('crypto','prompt copiado: '+GUIDES[+b.dataset.copy][0]); });
+    lib.querySelectorAll('[data-agent]').forEach(b=>b.onclick=()=>{
+      const pr=GUIDES[+b.dataset.agent][2];
+      CW.close();
+      const p=document.getElementById('ag-panel'); if(p) p.classList.add('open');
+      const cmdEl=document.getElementById('ag-cmd'); if(cmdEl){ cmdEl.value=pr.slice(0,500); cmdEl.focus(); }
+      log('crypto','guía enviada al agente: '+GUIDES[+b.dataset.agent][0]); });
+  }
 
   function setMode(m){ mode=m;
     document.querySelectorAll('.cwm').forEach(b=>b.classList.toggle('on',b.dataset.m===m));
     document.getElementById('cw-coinsel').classList.toggle('show', m==='market');
+    if(m==='biblioteca'){ buildLib(); }
+    document.getElementById('cw-lib').classList.toggle('show', m==='biblioteca');
     if(m==='blockchain'&&!blocks.length) initBlocks();
     log('crypto','mundo → '+m);
   }
