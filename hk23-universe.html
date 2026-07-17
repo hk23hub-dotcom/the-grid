@@ -7297,6 +7297,9 @@ var qrcode = function() {
         '<div class="hkov-eyebrow">GALAXIA HERMANA · TU ESPACIO PARA CREAR</div>'+
         '<div class="hkov-title" id="gal-title">—</div>'+
         '<canvas id="gal-canvas" style="width:100%;height:280px;border:1px solid #141414;border-radius:2px;background:#040406;margin-bottom:14px"></canvas>'+
+        '<div style="margin-bottom:12px">'+
+          '<div style="font-family:\'Space Mono\',monospace;font-size:8px;letter-spacing:3px;color:#333;margin-bottom:8px">BIOMA DEL MUNDO — no todos son iguales</div>'+
+          '<div id="gal-biomes" style="display:flex;gap:6px;flex-wrap:wrap"></div></div>'+
         '<div id="gal-tpl-row" style="margin-bottom:12px">'+
           '<div style="font-family:\'Space Mono\',monospace;font-size:8px;letter-spacing:3px;color:#333;margin-bottom:8px">ARRANCÁ CON UN TEMPLATE DE EJEMPLO</div>'+
           '<div id="gal-tpls" style="display:flex;gap:6px;flex-wrap:wrap"></div></div>'+
@@ -7348,7 +7351,17 @@ var qrcode = function() {
     runGalCanvas();
     logEvent('galaxia','entró a '+g.name);
   }
+  const BIOMES=[['entidades','✦ ENTIDADES'],['arboles','🌳 ÁRBOLES'],['avatar','🌌 AVATAR'],['pixel','▦ PIXEL']];
   function renderGalTpls(){
+    const brow=$('gal-biomes');
+    if(brow&&galOpen){ brow.innerHTML='';
+      BIOMES.forEach(([v,l])=>{ const b=document.createElement('button');
+        const on=(galOpen.biome||'entidades')===v;
+        b.className='ag-btn'; b.style.cssText='padding:6px 12px;font-size:8px;'+(on?'background:#B84DFF;color:#000':'background:transparent;border:1px solid #2A2A2A;color:#888');
+        b.textContent=l; brow.appendChild(b);
+        b.onclick=()=>{ galOpen.biome=v; store.set('hk23_galaxias',galaxias); renderGalTpls(); runGalCanvas();
+          logEvent('galaxia',galOpen.name+' bioma → '+v); }; });
+    }
     const row=$('gal-tpls'); if(!row||!galOpen) return; row.innerHTML='';
     Object.keys(GAL_TEMPLATES).forEach(k=>{
       const b=document.createElement('button');
@@ -7365,31 +7378,79 @@ var qrcode = function() {
     const cvg=$('gal-canvas'); if(!cvg) return;
     const gx=cvg.getContext('2d');
     cvg.width=cvg.clientWidth*(devicePixelRatio||1); cvg.height=280*(devicePixelRatio||1);
+    function branch(x,y,len,ang,depth,grow,col){
+      if(depth<=0||len<4) return;
+      const gl=Math.min(1,grow);
+      const x2=x+Math.cos(ang)*len*gl, y2=y+Math.sin(ang)*len*gl;
+      gx.strokeStyle=col; gx.lineWidth=depth*0.9;
+      gx.beginPath(); gx.moveTo(x,y); gx.lineTo(x2,y2); gx.stroke();
+      if(depth<=2 && gl>0.9){ gx.fillStyle=galOpen.color; gx.globalAlpha=.8;
+        gx.beginPath(); gx.arc(x2,y2,3,0,6.283); gx.fill(); gx.globalAlpha=1; }
+      const g2=Math.max(0,(grow-0.35));
+      branch(x2,y2,len*0.76,ang-0.42-Math.sin(depth)*0.1,depth-1,g2,col);
+      branch(x2,y2,len*0.76,ang+0.42+Math.cos(depth)*0.1,depth-1,g2,col);
+    }
     function frame(t){
       if(!galOpen || !$('ov-galaxy').classList.contains('open')) return;
       const W=cvg.width, H=cvg.height, cx=W/2, cy=H/2;
+      const biome=galOpen.biome||'entidades';
       gx.clearRect(0,0,W,H);
-      // polvo
-      for(let i=0;i<40;i++){ const a=i*2.399+t*0.00008, r=20+i*(Math.min(W,H)/90);
-        gx.beginPath(); gx.arc(cx+Math.cos(a)*r, cy+Math.sin(a)*r*0.55, 1, 0, 6.283);
-        gx.fillStyle=galOpen.color+'44'; gx.fill(); }
-      // núcleo
-      const ng=gx.createRadialGradient(cx,cy,0,cx,cy,34);
-      ng.addColorStop(0,'#fff'); ng.addColorStop(0.3,galOpen.color); ng.addColorStop(1,'transparent');
-      gx.fillStyle=ng; gx.beginPath(); gx.arc(cx,cy,34,0,6.283); gx.fill();
-      // mundos
       const nodes=galOpen.nodes||[];
-      nodes.forEach((n,i)=>{
-        const a=t*0.0003*(i%2?1:-1)+i*(6.283/Math.max(nodes.length,1));
-        const r=70+ (i%3)*34;
-        const x=cx+Math.cos(a)*r, y=cy+Math.sin(a)*r*0.55;
-        gx.beginPath(); gx.arc(x,y,9,0,6.283); gx.fillStyle=n.color; gx.fill();
-        gx.font='700 10px "Space Mono",monospace'; gx.textAlign='center';
-        gx.fillStyle='#F0EDE8'; gx.fillText(n.name, x, y-15);
-      });
+
+      if(biome==='arboles'){
+        gx.fillStyle='#04120a'; gx.fillRect(0,0,W,H);
+        const grow=Math.min(1.4,(t%9000)/5200);
+        branch(cx, H-20, 60, -Math.PI/2, 8, grow, '#6b4f2a');
+        nodes.forEach((n,i)=>{ const gg=Math.min(1.4,((t+ i*1400)%9000)/5200);
+          branch(cx+(i-nodes.length/2)*70, H-20, 44, -Math.PI/2, 6, gg, '#5a4525'); });
+        gx.font='10px "Space Mono",monospace'; gx.textAlign='center'; gx.fillStyle=galOpen.color;
+        gx.fillText('BIOMA: BOSQUE — cada mundo crece como un árbol', cx, 22);
+      } else if(biome==='avatar'){
+        gx.fillStyle='#03060e'; gx.fillRect(0,0,W,H);
+        for(let i=0;i<70;i++){ const a=i*2.399+t*0.0002, r=30+i*(Math.min(W,H)/150);
+          const x=cx+Math.cos(a)*r, y=cy+Math.sin(a)*r*0.7;
+          const pulse=.4+.6*Math.abs(Math.sin(t*0.002+i));
+          gx.fillStyle=['#00F0FF','#AAFF00','#B84DFF'][i%3]; gx.globalAlpha=pulse*.7;
+          gx.beginPath(); gx.arc(x,y,1.6,0,6.283); gx.fill(); }
+        gx.globalAlpha=1;
+        nodes.forEach((n,i)=>{ const a=t*0.0004+i*(6.283/Math.max(nodes.length,1)), r=80+(i%3)*30;
+          const x=cx+Math.cos(a)*r, y=cy+Math.sin(a)*r*0.6;
+          const gl=gx.createRadialGradient(x,y,0,x,y,16);
+          gl.addColorStop(0,n.color); gl.addColorStop(1,'transparent');
+          gx.fillStyle=gl; gx.beginPath(); gx.arc(x,y,16,0,6.283); gx.fill();
+          gx.fillStyle='#fff'; gx.beginPath(); gx.arc(x,y,3,0,6.283); gx.fill();
+          gx.font='700 9px "Space Mono",monospace'; gx.fillStyle='#dfffe0'; gx.textAlign='center'; gx.fillText(n.name,x,y-20); });
+        gx.font='10px "Space Mono",monospace'; gx.fillStyle='#00F0FF'; gx.textAlign='center';
+        gx.fillText('BIOMA: AVATAR — bioluminiscencia viva', cx, 22);
+      } else if(biome==='pixel'){
+        gx.fillStyle='#0a0810'; gx.fillRect(0,0,W,H);
+        const px=Math.max(6, Math.floor(W/60));
+        for(let gy=0; gy<H; gy+=px) for(let gx0=0; gx0<W; gx0+=px){
+          const n=(Math.sin(gx0*0.05+t*0.001)+Math.cos(gy*0.05))*0.5;
+          if(n>0.35){ gx.fillStyle=n>0.7?galOpen.color:(n>0.5?'#2a2340':'#141020');
+            gx.fillRect(gx0,gy,px-1,px-1); } }
+        nodes.forEach((n,i)=>{ const a=Math.floor(t*0.0003)*0.2+i, r=70+(i%3)*30;
+          const x=Math.round((cx+Math.cos(a)*r)/px)*px, y=Math.round((cy+Math.sin(a)*r*.6)/px)*px;
+          gx.fillStyle=n.color; gx.fillRect(x-px,y-px,px*2,px*2);
+          gx.font='700 9px monospace'; gx.fillStyle='#fff'; gx.textAlign='center'; gx.fillText(n.name,x,y-px*2); });
+        gx.font='10px monospace'; gx.fillStyle=galOpen.color; gx.textAlign='center';
+        gx.fillText('BIOMA: PIXEL — mini mundo 8-bit', cx, 22);
+      } else {
+        for(let i=0;i<40;i++){ const a=i*2.399+t*0.00008, r=20+i*(Math.min(W,H)/90);
+          gx.beginPath(); gx.arc(cx+Math.cos(a)*r, cy+Math.sin(a)*r*0.55, 1, 0, 6.283);
+          gx.fillStyle=galOpen.color+'44'; gx.fill(); }
+        const ng=gx.createRadialGradient(cx,cy,0,cx,cy,34);
+        ng.addColorStop(0,'#fff'); ng.addColorStop(0.3,galOpen.color); ng.addColorStop(1,'transparent');
+        gx.fillStyle=ng; gx.beginPath(); gx.arc(cx,cy,34,0,6.283); gx.fill();
+        nodes.forEach((n,i)=>{ const a=t*0.0003*(i%2?1:-1)+i*(6.283/Math.max(nodes.length,1));
+          const r=70+ (i%3)*34, x=cx+Math.cos(a)*r, y=cy+Math.sin(a)*r*0.55;
+          gx.beginPath(); gx.arc(x,y,9,0,6.283); gx.fillStyle=n.color; gx.fill();
+          gx.font='700 10px "Space Mono",monospace'; gx.textAlign='center';
+          gx.fillStyle='#F0EDE8'; gx.fillText(n.name, x, y-15); });
+      }
       if(!nodes.length){
-        gx.font='10px "Space Mono",monospace'; gx.textAlign='center'; gx.fillStyle='#333';
-        gx.fillText('GALAXIA LIMPIA — ELEGÍ UN TEMPLATE O AÑADÍ TU PRIMER MUNDO', cx, cy+70);
+        gx.font='10px "Space Mono",monospace'; gx.textAlign='center'; gx.fillStyle='#444';
+        gx.fillText('GALAXIA LIMPIA — ELEGÍ BIOMA, TEMPLATE O AÑADÍ TU PRIMER MUNDO', cx, cy+90);
       }
       galAnim=requestAnimationFrame(frame);
     }
@@ -8757,6 +8818,251 @@ var qrcode = function() {
   if(dock){ const b=document.createElement('button'); b.className='dk'; b.textContent='🧪 LAB';
     b.style.setProperty('--dc','#B84DFF'); b.style.color='#B84DFFCC';
     b.onclick=()=>setLab(!labOn); dock.insertBefore(b, dock.children[1]||null); }
+})();
+</script>
+<!-- ═══════════ MUNDO CRYPTO — biblioteca educativa · blockchain · market gigante ═══════════ -->
+<style id="crypto-world-style">
+  #cw{ position:fixed; inset:0; z-index:700; display:none; background:#04060c; overflow:hidden; }
+  #cw.open{ display:block; }
+  #cw-canvas{ position:absolute; inset:0; }
+  #cw-top{ position:absolute; top:0; left:0; right:0; z-index:5; display:flex; align-items:center; gap:8px;
+    padding:18px 22px; }
+  #cw-title{ font-size:12px; font-weight:700; letter-spacing:4px; color:#F7931A; }
+  #cw-title b{ color:#F0EDE8; }
+  #cw-modes{ display:flex; gap:5px; margin-left:12px; flex-wrap:wrap; }
+  .cwm{ font-family:'Space Mono',monospace; font-size:8px; letter-spacing:2px; text-transform:uppercase;
+    background:transparent; border:1px solid #223; border-radius:2px; color:#7a89a8; padding:6px 10px; cursor:pointer; transition:all .15s; }
+  .cwm.on, .cwm:hover{ color:#000; background:#F7931A; border-color:#F7931A; }
+  #cw-x{ margin-left:auto; font-family:'Space Mono',monospace; font-size:9px; letter-spacing:3px;
+    color:#000; background:#FF3A1F; border:none; border-radius:2px; padding:8px 14px; cursor:pointer; }
+  #cw-hint{ position:absolute; bottom:22px; left:50%; transform:translateX(-50%); z-index:5;
+    font-family:'Space Mono',monospace; font-size:8px; letter-spacing:3px; color:#2f3b52; text-align:center; }
+  #cw-coinsel{ position:absolute; bottom:44px; left:50%; transform:translateX(-50%); z-index:5; display:none; gap:6px; }
+  #cw-coinsel.show{ display:flex; }
+  .cw-coin-b{ font-family:'Space Mono',monospace; font-size:9px; letter-spacing:2px; padding:6px 12px;
+    border-radius:2px; border:1px solid #223; background:transparent; color:#9aa; cursor:pointer; }
+</style>
+
+<div id="cw">
+  <canvas id="cw-canvas"></canvas>
+  <div id="cw-top">
+    <div id="cw-title">MUNDO <b>CRYPTO</b> · CRYPTO VICE</div>
+    <div id="cw-modes">
+      <button class="cwm on" data-m="biblioteca">📚 BIBLIOTECA</button>
+      <button class="cwm" data-m="blockchain">⛓ BLOCKCHAIN</button>
+      <button class="cwm" data-m="market">📊 MARKET GIGANTE</button>
+    </div>
+    <button id="cw-x">✕ SALIR (X)</button>
+  </div>
+  <div id="cw-coinsel">
+    <button class="cw-coin-b" data-c="BTC">₿ BTC</button>
+    <button class="cw-coin-b" data-c="ETH">Ξ ETH</button>
+    <button class="cw-coin-b" data-c="SOL">◎ SOL</button>
+    <button class="cw-coin-b" data-c="ALL">🌐 TODAS</button>
+  </div>
+  <div id="cw-hint">ARRASTRÁ PARA MIRAR · TODO ESTO ES GRATIS · COMANDOS: blockchain · market · market btc</div>
+</div>
+
+<script>
+// ═══ MUNDO CRYPTO — entrás de verdad: biblioteca que enseña, blockchain, market ═══
+(function(){
+  const cw=document.getElementById('cw'), cv=document.getElementById('cw-canvas'), x=cv.getContext('2d');
+  let W,H,mode='biblioteca', coin='ALL', raf=null;
+  const fit=()=>{ W=cv.width=innerWidth; H=cv.height=innerHeight; };
+  const log=(k,d)=>{ (window.hkLog||function(){})(k,d); };
+
+  // ── BIBLIOTECA: conceptos flotando, blueprint for dummies ──
+  const CARDS=[
+    { t:'VELA JAPONESA', d:'Cada vela = un rango de tiempo. Cuerpo verde: subió. Rojo: bajó. Las mechas son los extremos que tocó.', kind:'candle' },
+    { t:'MECHA / WICK', d:'La raya fina arriba/abajo de la vela. Mecha larga = hubo pelea de precio y lo rechazaron.', kind:'wick' },
+    { t:'SOPORTE', d:'Piso donde el precio suele rebotar. Los compradores defienden esa zona.', kind:'support' },
+    { t:'RESISTENCIA', d:'Techo donde el precio suele frenar. Romperla con fuerza es señal alcista.', kind:'res' },
+    { t:'BLOCKCHAIN', d:'Un cuaderno público que nadie puede borrar. Cada bloque guarda transacciones y apunta al anterior.', kind:'chain' },
+    { t:'WALLET & SEED', d:'Tu billetera. La frase semilla (12 palabras) ES tu dinero: si la pierden, perdés todo. Nunca la compartas.', kind:'wallet' },
+    { t:'GAS FEE', d:'La comisión que pagás por usar la red. Sube cuando hay mucha gente operando a la vez.', kind:'gas' },
+    { t:'MARKET CAP', d:'Precio × monedas en circulación. Mide qué tan grande es una cripto, no si está "cara".', kind:'cap' },
+    { t:'HODL', d:'Comprar y aguantar sin vender en el pánico. Nació de un typo de "hold". Estrategia de paciencia.', kind:'hodl' },
+    { t:'BULL vs BEAR', d:'Toro = mercado subiendo (embiste hacia arriba). Oso = bajando (zarpazo hacia abajo).', kind:'bull' },
+    { t:'DEFI', d:'Finanzas sin banco: prestás, ganás interés o intercambiás directo entre wallets, con contratos.', kind:'defi' },
+    { t:'STAKING', d:'Bloqueás tus monedas para asegurar la red y cobrás recompensa. Como un plazo fijo on-chain.', kind:'stake' },
+    { t:'LIQUIDEZ', d:'Qué tan fácil es comprar/vender sin mover el precio. Poca liquidez = saltos bruscos.', kind:'liq' },
+    { t:'FOMO / FUD', d:'FOMO: miedo a quedarte afuera (comprás caro). FUD: miedo sembrado para que vendas barato.', kind:'fomo' },
+  ];
+  let cards=[];
+  function initCards(){ cards=CARDS.map((c,i)=>({ ...c,
+    x:Math.random()*W, y:Math.random()*H, vx:(Math.random()-.5)*.25, vy:(Math.random()-.5)*.2,
+    w:220, h:96, ph:Math.random()*6.28 })); }
+
+  function miniCandle(cx,cy,up){ // dibujito de vela
+    x.strokeStyle=up?'#14F195':'#FF3A1F'; x.fillStyle=up?'#14F195':'#FF3A1F'; x.lineWidth=1;
+    x.beginPath(); x.moveTo(cx,cy-14); x.lineTo(cx,cy+14); x.stroke();
+    x.fillRect(cx-5,cy-8,10,16);
+  }
+  function drawCard(c,t){
+    const bob=Math.sin(t*0.001+c.ph)*4;
+    x.save(); x.translate(c.x, c.y+bob);
+    x.fillStyle='rgba(8,14,26,.72)'; x.strokeStyle='rgba(247,147,26,.35)'; x.lineWidth=1;
+    x.beginPath(); x.roundRect(-c.w/2,-c.h/2,c.w,c.h,4); x.fill(); x.stroke();
+    // blueprint grid
+    x.strokeStyle='rgba(247,147,26,.06)';
+    for(let gx=-c.w/2;gx<c.w/2;gx+=12){ x.beginPath(); x.moveTo(gx,-c.h/2); x.lineTo(gx,c.h/2); x.stroke(); }
+    x.fillStyle='#F7931A'; x.font='700 11px "Space Mono",monospace'; x.textAlign='left';
+    x.fillText(c.t, -c.w/2+12, -c.h/2+20);
+    // mini visual
+    miniCandle(c.w/2-24, -c.h/2+22, c.kind!=='res'&&c.kind!=='fomo');
+    x.fillStyle='#9fb0cc'; x.font='9px "Space Grotesk",system-ui';
+    wrap(c.d, -c.w/2+12, -c.h/2+38, c.w-24, 13);
+    x.restore();
+  }
+  function wrap(txt,x0,y0,maxw,lh){ const words=txt.split(' '); let line='',yy=y0;
+    for(const w of words){ const test=line+w+' ';
+      if(x.measureText(test).width>maxw){ x.fillText(line,x0,yy); line=w+' '; yy+=lh; } else line=test; }
+    x.fillText(line,x0,yy); }
+
+  // ── BLOCKCHAIN: cadena de bloques enlazados ──
+  let blocks=[]; function initBlocks(){ blocks=Array.from({length:9},(_,i)=>({ n:840000+i,
+    hash:'0x'+Math.floor(Math.random()*1e9).toString(16).padStart(7,'0'), tx:3+Math.floor(Math.random()*40) })); }
+  let bScroll=0;
+  function drawBlockchain(t){
+    x.fillStyle='#040810'; x.fillRect(0,0,W,H);
+    bScroll-=0.6; const bw=200, gap=64, y=H/2;
+    x.font='9px "Space Mono",monospace';
+    blocks.forEach((b,i)=>{
+      let bx=(i*(bw+gap)+bScroll)% ((blocks.length)*(bw+gap));
+      if(bx<-bw) bx+=blocks.length*(bw+gap);
+      // cadena
+      if(i>0){ x.strokeStyle='#F7931A'; x.lineWidth=3;
+        x.beginPath(); x.moveTo(bx-gap,y); x.lineTo(bx,y); x.stroke(); }
+      x.fillStyle='rgba(10,18,30,.9)'; x.strokeStyle='#F7931A'; x.lineWidth=1.5;
+      x.beginPath(); x.roundRect(bx,y-70,bw,140,4); x.fill(); x.stroke();
+      x.fillStyle='#F7931A'; x.textAlign='left'; x.font='700 13px "Space Mono",monospace';
+      x.fillText('BLOCK #'+b.n, bx+14, y-44);
+      x.fillStyle='#6f8'; x.font='9px "Space Mono",monospace';
+      x.fillText('hash '+b.hash, bx+14, y-22);
+      x.fillStyle='#9fb0cc'; x.fillText('prev '+(blocks[i-1]?blocks[i-1].hash:'genesis'), bx+14, y-4);
+      x.fillText(b.tx+' transacciones', bx+14, y+18);
+      // mini merkle
+      for(let k=0;k<6;k++){ x.fillStyle=k<b.tx%6?'#14F195':'#233'; x.fillRect(bx+14+k*10, y+34, 7,7); }
+      x.fillStyle='#F7931A'; x.fillText('⛏ minado', bx+14, y+60);
+    });
+    x.fillStyle='#3a4a66'; x.font='10px "Space Mono",monospace'; x.textAlign='center';
+    x.fillText('CADA BLOQUE APUNTA AL ANTERIOR — POR ESO NADIE LO PUEDE CAMBIAR', W/2, 60);
+  }
+
+  // ── MARKET GIGANTE ──
+  const MK={ BTC:{sym:'₿',name:'BITCOIN',price:67420,chg:6.2,color:'#F7931A'},
+    ETH:{sym:'Ξ',name:'ETHEREUM',price:3280,chg:4.1,color:'#627EEA'},
+    SOL:{sym:'◎',name:'SOLANA',price:172,chg:9.4,color:'#14F195'},
+    DOGE:{sym:'Ð',name:'DOGECOIN',price:0.16,chg:-2.3,color:'#C2A633'},
+    ADA:{sym:'₳',name:'CARDANO',price:0.61,chg:1.2,color:'#2A6AFF'} };
+  function candleChart(cx,cy,w,h,up,color){
+    x.strokeStyle=color+'44'; x.lineWidth=1;
+    const n=22, cw=w/n;
+    let py=cy+h*0.3;
+    for(let i=0;i<n;i++){ const o=py, cl=py+(Math.sin(i*0.9)+ (up?0.4:-0.4))*h*0.06;
+      py=cl; const cx0=cx-w/2+i*cw;
+      const g=cl<o; x.strokeStyle=g?'#14F195':'#FF3A1F'; x.fillStyle=g?'#14F195':'#FF3A1F';
+      x.beginPath(); x.moveTo(cx0+cw/2, Math.min(o,cl)-6); x.lineTo(cx0+cw/2, Math.max(o,cl)+6); x.stroke();
+      x.fillRect(cx0+2, Math.min(o,cl), cw-4, Math.max(3,Math.abs(cl-o))); }
+  }
+  function drawMarket(t){
+    x.fillStyle='#03060e'; x.fillRect(0,0,W,H);
+    if(coin!=='ALL' && MK[coin]){
+      const c=MK[coin], cx=W/2, cy=H/2;
+      candleChart(cx, cy+40, Math.min(W*.8,900), 220, c.chg>0, c.color);
+      // moneda girando
+      const spin=Math.sin(t*0.002), rw=70*Math.abs(spin)+10;
+      const cg=x.createRadialGradient(cx-20,cy-160,0,cx,cy-150,80);
+      cg.addColorStop(0,'#fff'); cg.addColorStop(.4,c.color); cg.addColorStop(1,c.color+'55');
+      x.fillStyle=cg; x.beginPath(); x.ellipse(cx,cy-150,rw,74,0,0,6.283); x.fill();
+      x.fillStyle='#000'; x.font='700 '+(rw*0.9)+'px "Space Grotesk",system-ui'; x.textAlign='center'; x.textBaseline='middle';
+      if(rw>24) x.fillText(c.sym, cx, cy-150);
+      x.textBaseline='alphabetic';
+      // precio gigante + %
+      x.fillStyle='#F0EDE8'; x.font='800 84px "Space Grotesk",system-ui';
+      x.fillText('$'+c.price.toLocaleString(), cx, cy+30);
+      x.fillStyle=c.chg>0?'#14F195':'#FF3A1F'; x.font='800 60px "Space Grotesk",system-ui';
+      x.fillText((c.chg>0?'▲ +':'▼ ')+c.chg+'%', cx, cy+100);
+      x.fillStyle=c.color; x.font='12px "Space Mono",monospace'; x.fillText(c.name+' · 24H', cx, cy-250);
+    } else {
+      // todas: fila de tickers gigantes
+      const items=Object.values(MK); const rowH=H/items.length;
+      items.forEach((c,i)=>{ const y=i*rowH+rowH/2;
+        x.fillStyle=c.color; x.font='800 '+Math.min(54,rowH*.5)+'px "Space Grotesk",system-ui'; x.textAlign='left';
+        x.fillText(c.sym+' '+c.name, 40, y+12);
+        x.fillStyle='#F0EDE8'; x.textAlign='right';
+        x.fillText('$'+c.price.toLocaleString(), W-260, y+12);
+        x.fillStyle=c.chg>0?'#14F195':'#FF3A1F';
+        x.fillText((c.chg>0?'+':'')+c.chg+'%', W-40, y+12);
+        candleChart(W/2+40, y, 240, rowH*.6, c.chg>0, c.color);
+        x.strokeStyle='#111a2b'; x.beginPath(); x.moveTo(30,y+rowH/2-2); x.lineTo(W-30,y+rowH/2-2); x.stroke();
+      });
+    }
+  }
+
+  // ── loop ──
+  function loop(t){
+    if(!cw.classList.contains('open')){ raf=null; return; }
+    x.clearRect(0,0,W,H);
+    if(mode==='biblioteca'){
+      // fondo estelar
+      x.fillStyle='#04060c'; x.fillRect(0,0,W,H);
+      // moneda bitcoin central (en vez de planeta)
+      const cx=W/2, cy=H/2, spin=Math.sin(t*0.0016), rw=90*Math.abs(spin)+12;
+      const cg=x.createRadialGradient(cx-24,cy-24,0,cx,cy,110);
+      cg.addColorStop(0,'#FFE29A'); cg.addColorStop(.45,'#F7931A'); cg.addColorStop(1,'#7a4a08');
+      x.fillStyle=cg; x.globalAlpha=.9; x.beginPath(); x.ellipse(cx,cy,rw,104,0,0,6.283); x.fill(); x.globalAlpha=1;
+      x.fillStyle='#3a2606'; x.font='700 '+(rw*1.1)+'px "Space Grotesk",system-ui'; x.textAlign='center'; x.textBaseline='middle';
+      if(rw>26) x.fillText('₿', cx, cy); x.textBaseline='alphabetic';
+      cards.forEach(c=>{ if(c!==dragging){ c.x+=c.vx; c.y+=c.vy;
+        if(c.x<c.w/2||c.x>W-c.w/2) c.vx*=-1; if(c.y<c.h/2||c.y>H-c.h/2) c.vy*=-1; } drawCard(c,t); });
+    } else if(mode==='blockchain') drawBlockchain(t);
+    else drawMarket(t);
+    raf=requestAnimationFrame(loop);
+  }
+
+  // arrastrar cards
+  let dragging=null;
+  cv.addEventListener('pointerdown',e=>{ if(mode!=='biblioteca') return;
+    dragging=cards.slice().reverse().find(c=>Math.abs(c.x-e.clientX)<c.w/2&&Math.abs(c.y-e.clientY)<c.h/2); });
+  cv.addEventListener('pointermove',e=>{ if(dragging){ dragging.x=e.clientX; dragging.y=e.clientY; } });
+  cv.addEventListener('pointerup',()=>dragging=null);
+
+  function setMode(m){ mode=m;
+    document.querySelectorAll('.cwm').forEach(b=>b.classList.toggle('on',b.dataset.m===m));
+    document.getElementById('cw-coinsel').classList.toggle('show', m==='market');
+    if(m==='blockchain'&&!blocks.length) initBlocks();
+    log('crypto','mundo → '+m);
+  }
+  document.querySelectorAll('.cwm').forEach(b=>b.onclick=()=>setMode(b.dataset.m));
+  document.querySelectorAll('.cw-coin-b').forEach(b=>b.onclick=()=>{ coin=b.dataset.c; setMode('market'); });
+
+  const CW={ open(m){ cw.classList.add('open'); fit(); if(!cards.length) initCards(); initBlocks();
+      setMode(m||'biblioteca'); if(!raf) raf=requestAnimationFrame(loop);
+      document.documentElement.style.setProperty('--red','#F7931A'); log('crypto','entró al mundo'); },
+    close(){ cw.classList.remove('open'); document.documentElement.style.setProperty('--red','#FF3A1F'); },
+    market(c){ CW.open('market'); if(c&&(MK[c.toUpperCase()])){ coin=c.toUpperCase(); } else coin='ALL'; setMode('market'); },
+    blockchain(){ CW.open('blockchain'); } };
+  window.CryptoWorld=CW;
+  addEventListener('resize',()=>{ if(cw.classList.contains('open')){ fit(); initCards.length&&null; } });
+  document.getElementById('cw-x').onclick=()=>CW.close();
+  addEventListener('keydown',e=>{ if((e.key==='x'||e.key==='X'||e.key==='Escape')&&cw.classList.contains('open')) CW.close(); });
+
+  // ── entradas: dock ₿ CRYPTO, planeta CRYPTO VICE, comandos ──
+  const dock=document.getElementById('hk-dock');
+  if(dock){ [...dock.querySelectorAll('.dk')].forEach(b=>{ if(b.textContent.includes('CRYPTO')){
+    b.onclick=()=>CW.open('biblioteca'); } }); }
+  if(typeof openFractalUniverse!=='undefined' || window.openFractalUniverse){
+    const prev=window.openFractalUniverse;
+    if(prev){ window.openFractalUniverse=(proj)=>{ if(proj&&(proj.id==='cryptovice'||/crypto/i.test(proj.label||''))){ CW.open('biblioteca'); return; } prev(proj); }; }
+  }
+  const cmd=document.getElementById('ag-cmd');
+  if(cmd) cmd.addEventListener('keydown',e=>{
+    if(e.key!=='Enter') return; const s=(cmd.value||'').trim().toLowerCase(); let m;
+    if(/^blockchain$/.test(s)){ e.stopImmediatePropagation(); e.preventDefault(); cmd.value=''; CW.blockchain(); }
+    else if((m=s.match(/^market(?:\s+(\w+))?$/))){ e.stopImmediatePropagation(); e.preventDefault(); cmd.value=''; CW.market(m[1]); }
+    else if(/^(mundo\s*crypto|crypto\s*mundo)$/.test(s)){ e.stopImmediatePropagation(); e.preventDefault(); cmd.value=''; CW.open('biblioteca'); }
+  }, true);
 })();
 </script>
 </body>
