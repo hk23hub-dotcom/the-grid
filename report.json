@@ -1,6 +1,6 @@
 {
-  "generated": "2026-07-20T11:49:29.423Z",
-  "date": "2026-07-20",
+  "generated": "2026-07-21T11:11:45.841Z",
+  "date": "2026-07-21",
   "worlds": [
     {
       "id": "hk23-universe",
@@ -61,15 +61,18 @@
     "local": 9
   },
   "featured": "chile-goldmine",
-  "commits24h": [],
-  "weekCommitCount": 9,
+  "commits24h": [
+    "bea0573 oracle: reporte diario 2026-07-20"
+  ],
+  "weekCommitCount": 8,
   "actions": [
-    "Reactivar 4 mundo(s) sin push en 30d: AFFILIATE GROWTH AGENT, ATLAS X, HK23 VICE OS ECOSYSTEM, HOW TO USE CLAUDE",
+    "Reactivar 7 mundo(s) sin push en 30d: VICEGOLFER COMMAND CENTER, CRYPTOVICE HONEYSCAM, UNO AL DIA SOPROLE, AFFILIATE GROWTH AGENT, ATLAS X, HK23 VICE OS ECOSYSTEM, HOW TO USE CLAUDE",
     "Ningún mundo está LIVE — conectar VERCEL_TOKEN o desplegar uno",
     "Revisar leads y sugerencias capturadas en el universo (ORACLE in-page → export JSON)",
     "Repartir links ?ref= de la semana a los referidos"
   ],
   "reports": [
+    "2026-07-21.md",
     "2026-07-20.md",
     "2026-07-19.md",
     "2026-07-18.md",
