@@ -7988,6 +7988,7 @@ var qrcode = function() {
   window.hkOracle=openOracle;
   window.hkBackrooms=()=>Backrooms.enter('shortcut');
   window.hkOpenGalaxy=(name)=>{ const g=galaxias.find(x=>x.name===name); if(g) openGalaxy(g); };
+  window.hkSembrar=sembrarGalaxia;
   logEvent('sistema','core agents en línea: GATE/ORACLE/CURATOR/BACKROOMS/DEFENSA');
 })();
 </script>
@@ -9506,9 +9507,14 @@ var qrcode = function() {
     <div id="cos-title">🔭 COSMOS · DEEP FIELD</div>
     <button class="cos-btn on" data-v="galaxias">🌌 GALAXIAS</button>
     <button class="cos-btn" data-v="planeta">🪐 PLANETA</button>
+    <button class="cos-btn" id="cos-far">🌠 UNIVERSO ENTERO</button>
+    <button class="cos-btn" id="cos-zo">−</button>
+    <button class="cos-btn" id="cos-zi">+</button>
+    <button class="cos-btn" id="cos-new" style="color:#B84DFF;border-color:#3a2a5c">✧ CREAR GALAXIA</button>
     <button id="cos-x">✕ SALIR (X)</button>
   </div>
-  <div id="cos-hint">CLIC EN TU GALAXIA PARA ENTRAR · LAS VECINAS TIENEN OTRAS COSAS · 1/2 CAMBIA LA VISTA</div>
+  <div id="cos-switch" style="position:absolute;bottom:44px;left:50%;transform:translateX(-50%);z-index:5;display:flex;gap:6px;flex-wrap:wrap;justify-content:center;max-width:92vw"></div>
+  <div id="cos-hint">RUEDA = ALEJARTE / ACERCARTE · CLIC EN UNA GALAXIA = ENTRAR · CHIPS DE ABAJO = SALTAR DE UNIVERSO</div>
 </div>
 
 <script>
@@ -9644,15 +9650,33 @@ var qrcode = function() {
     x.fillText('◈ AGENTES ALIENÍGENAS EN TRÁNSITO — PLANETA ⇄ ESTACIÓN · TODO EN MOVIMIENTO', 24, H-46);
   }
 
+  // ── ZOOM de perspectiva: alejate hasta el universo entero ──
+  let Z=1;
+  const setZ=(v)=>{ Z=Math.max(0.22, Math.min(3, v)); };
+  cv.addEventListener('wheel',e=>{ if(view!=='galaxias') return; e.preventDefault();
+    setZ(Z*(e.deltaY<0?1.12:0.89)); },{passive:false});
+  document.getElementById('cos-zi').onclick=()=>setZ(Z*1.3);
+  document.getElementById('cos-zo').onclick=()=>setZ(Z*0.75);
+  document.getElementById('cos-far').onclick=()=>{ setView('galaxias'); setZ(0.34); };
+
   function loop(t){
     if(!ov.classList.contains('open')){ raf=null; return; }
     x.fillStyle='#000104'; x.fillRect(0,0,W,H);
-    // deep field siempre de fondo
-    deep.forEach(d=>{ x.save(); x.translate(d.x,d.y); x.rotate(d.a);
+    // deep field siempre de fondo (escala suave con el zoom)
+    deep.forEach(d=>{ x.save();
+      const zx=(d.x-W/2)*Math.sqrt(Z)+W/2, zy=(d.y-H/2)*Math.sqrt(Z)+H/2;
+      x.translate(zx,zy); x.rotate(d.a);
       x.globalAlpha=d.al; x.fillStyle=d.hue;
       x.beginPath(); x.ellipse(0,0,d.r,d.r*d.e,0,0,6.283); x.fill(); x.restore(); });
     x.globalAlpha=1;
-    if(view==='galaxias') gals.forEach(g=>drawSpiral(g,t));
+    if(view==='galaxias'){
+      x.save(); x.translate(W/2,H/2); x.scale(Z,Z); x.translate(-W/2,-H/2);
+      gals.forEach(g=>drawSpiral(g,t));
+      x.restore();
+      if(Z<0.5){ x.font='10px "Space Mono",monospace'; x.textAlign='center';
+        x.fillStyle='rgba(140,160,220,0.5)';
+        x.fillText('EL UNIVERSO ENTERO — CADA MANCHA ES OTRA GALAXIA ESPERANDO SER CREADA', W/2, H-70); }
+    }
     else drawPlanetView(t);
     raf=requestAnimationFrame(loop);
   }
@@ -9666,7 +9690,7 @@ var qrcode = function() {
   }
   document.querySelectorAll('.cos-btn').forEach(b=>b.onclick=()=>setView(b.dataset.v));
 
-  const COS={ open(v){ ov.classList.add('open'); fit(); makeDeep(); makeGalaxies(); setView(v||'galaxias');
+  const COS={ open(v){ ov.classList.add('open'); fit(); makeDeep(); makeGalaxies(); renderSwitch(); setView(v||'galaxias');
       if(!raf) raf=requestAnimationFrame(loop); log('cosmos','vista desde lejos'); },
     close(){ ov.classList.remove('open'); } };
   window.CosmosView=COS;
@@ -9677,15 +9701,41 @@ var qrcode = function() {
     if(e.key==='x'||e.key==='X'||e.key==='Escape') COS.close();
     if(e.key==='1') setView('galaxias'); if(e.key==='2') setView('planeta');
   }, true);
-  // clic: entrar a TU galaxia (→ mapa) o a una vecina (→ su mundo distinto)
+  // entrar a una galaxia (clic o chip): la tuya → mapa; una vecina → su mundo distinto
+  function enterGal(g){
+    if(!g||g.id==='andromeda') return;
+    COS.close();
+    if(g.id==='hk23'){ (window.WarpJump||((cb)=>cb()))(()=>{ if(typeof goTo==='function') goTo('map'); }, '#FF3A1F'); }
+    else if(g.sis && window.hkOpenGalaxy){ (window.WarpJump||((cb)=>cb()))(()=>window.hkOpenGalaxy(g.sis.name), g.sis.color); }
+  }
   cv.addEventListener('click',e=>{
     if(view!=='galaxias') return;
-    const hit=gals.find(g=>Math.hypot(g.x-e.clientX,g.y-e.clientY)<g.size*0.9);
-    if(!hit||hit.id==='andromeda') return;
-    COS.close();
-    if(hit.id==='hk23'){ (window.WarpJump||((cb)=>cb()))(()=>{ if(typeof goTo==='function') goTo('map'); }, '#FF3A1F'); }
-    else if(hit.sis && window.hkOpenGalaxy){ (window.WarpJump||((cb)=>cb()))(()=>window.hkOpenGalaxy(hit.sis.name), hit.sis.color); }
+    // coordenadas del mundo con el zoom aplicado
+    const wx=(e.clientX-W/2)/Z+W/2, wy=(e.clientY-H/2)/Z+H/2;
+    enterGal(gals.find(g=>Math.hypot(g.x-wx,g.y-wy)<g.size*0.9));
   });
+  // ── SWITCHER: saltá de universo en universo con un toque ──
+  function renderSwitch(){
+    const row=document.getElementById('cos-switch'); if(!row||!gals) return;
+    row.innerHTML='';
+    gals.filter(g=>g.id!=='andromeda').forEach(g=>{
+      const b=document.createElement('button'); b.className='cos-btn';
+      b.textContent=(g.id==='hk23'?'✦ ':'✧ ')+(g.sis?g.sis.name:g.name.split(' — ')[0]);
+      b.style.color=g.label; b.style.borderColor=g.label+'44';
+      b.onclick=()=>enterGal(g);
+      row.appendChild(b);
+    });
+  }
+  // ── CREAR GALAXIA sin salir del cosmos: nace en el cielo al instante ──
+  document.getElementById('cos-new').onclick=()=>{
+    if(!window.hkPrompt||!window.hkGalaxia){ return; }
+    window.hkPrompt('Nombrá la nueva galaxia del universo','ej. GALAXIA MADRE-2', (n)=>{
+      // sembrar sin saltar al mapa: usamos la siembra global y refrescamos el cielo
+      const seed=window.hkSembrar||null;
+      if(seed) seed(n); else window.hkGalaxia();
+      setTimeout(()=>{ makeGalaxies(); renderSwitch(); }, 150);
+    });
+  };
 
   // ── accesos: tecla V, dock 🔭, comando cosmos/vista ──
   addEventListener('keydown',e=>{
