@@ -3102,7 +3102,22 @@ mapCanvas.addEventListener('click', e => {
     openFractalUniverse(proj);
   } else if (hoveredBlackHole) {
     const bh = BLACK_HOLES.find(b => b.id === hoveredBlackHole);
-    showAffirmation(bh, true);
+    // el hoyo negro pregunta antes de tragar: ¿qué vas a dejar ir HOY?
+    if (window.hkPrompt) {
+      window.hkPrompt('El hoyo negro pregunta: ¿qué vas a dejar ir hoy?', 'miedo · duda · rabia · lo que pese…', (palabra) => {
+        const propio = { ...bh, negatives: [palabra.toUpperCase().slice(0, 30)] };
+        try {
+          const tr = JSON.parse(localStorage.getItem('hk23_transmutadas')) || [];
+          tr.push({ t: new Date().toISOString(), palabra: palabra.slice(0, 30) });
+          localStorage.setItem('hk23_transmutadas', JSON.stringify(tr));
+        } catch (e) {}
+        if (window.hkLog) window.hkLog('transmutación', 'dejó ir: ' + palabra.slice(0, 30));
+        showAffirmation(propio, true);
+      });
+      // si cancela, no pasa nada: el hoyo no traga a la fuerza
+    } else {
+      showAffirmation(bh, true);
+    }
   } else if (hoveredKey) {
     const k = KEYS.find(k => k.id === hoveredKey);
     // Key acts as a portal-black-hole: pick random bh affirmation, mark collected
@@ -3489,9 +3504,36 @@ function openFractalNodePanel(node, projectColor, projectLabel) {
 }
 
 // ═══════════ AFFIRMATION TRANSMUTATION ═══════════
+// ─── NIVELES DE AFIRMACIÓN — juntá 100 por nivel; cada nivel afirma más fuerte ───
+// (según los charts: mejor que "yo soy" es atraer, emanar, existir, hablar y crear)
+const AFF_LEVELS = [
+  { verb: 'YO SOY',        label: 'NIVEL 1 · SER' },
+  { verb: 'ATRAIGO',       label: 'NIVEL 2 · ATRACCIÓN' },
+  { verb: 'EMANO',         label: 'NIVEL 3 · EMANACIÓN' },
+  { verb: 'EXISTO COMO',   label: 'NIVEL 4 · EXISTENCIA' },
+  { verb: 'HABLO Y CREO',  label: 'NIVEL 5 · VERBO CREADOR' },
+];
+const AFF_POR_NIVEL = 100;
+function affCount() { try { return JSON.parse(localStorage.getItem('hk23_aff_count')) || 0; } catch (e) { return 0; } }
+function affLevel() { return Math.min(AFF_LEVELS.length - 1, Math.floor(affCount() / AFF_POR_NIVEL)); }
+function affBump() {
+  const n = affCount() + 1;
+  try { localStorage.setItem('hk23_aff_count', JSON.stringify(n)); } catch (e) {}
+  if (n % AFF_POR_NIVEL === 0 && affLevel() < AFF_LEVELS.length) {
+    const lvl = AFF_LEVELS[affLevel()];
+    const t = document.getElementById('collect-toast');
+    if (t) { t.textContent = '⬆ SUBISTE DE NIVEL — AHORA AFIRMÁS CON: ' + lvl.verb;
+      t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 3200); }
+    if (window.hkLog) window.hkLog('afirmación', 'nivel alcanzado: ' + lvl.label);
+  }
+  return n;
+}
+
 function showAffirmation(bh, fromBlackHole = true, keyId = null) {
   const neg = bh.negatives[Math.floor(Math.random() * bh.negatives.length)];
-  const aff = bh.affirmations[Math.floor(Math.random() * bh.affirmations.length)];
+  const affRaw = bh.affirmations[Math.floor(Math.random() * bh.affirmations.length)];
+  const lvl = AFF_LEVELS[affLevel()];
+  const aff = lvl.verb + ' ' + affRaw.replace(/^\s*(yo\s+soy|soy)\s+/i, '');
 
   const overlay = document.getElementById('affirmation-overlay');
   const labelEl = document.getElementById('aff-label');
@@ -3508,6 +3550,11 @@ function showAffirmation(bh, fromBlackHole = true, keyId = null) {
   absorbEl.textContent = neg;
   textEl.textContent = aff;
   textEl.style.color = bh.color;
+  // el nivel y la colección se ven en cada transmutación
+  const cNow = affCount(), lvlNow = AFF_LEVELS[affLevel()];
+  const next = AFF_POR_NIVEL - (cNow % AFF_POR_NIVEL);
+  labelEl.textContent = 'TRANSMUTACIÓN · ' + lvlNow.label + ' — COLECCIÓN ' + cNow +
+    (affLevel() < AFF_LEVELS.length - 1 ? ' · FALTAN ' + next + ' PARA EL PRÓXIMO VERBO' : ' · VERBO MÁXIMO');
 
   overlay.style.display = 'flex';
   overlay.style.opacity = '0';
@@ -3531,6 +3578,7 @@ function showAffirmation(bh, fromBlackHole = true, keyId = null) {
     // Register collectible when affirmation appears
     if (isNew) {
       addCollectible(collectibleId, bh.id === 'void' ? 'rare' : 'common');
+      affBump();
     }
     // Mark key as visually collected
     if (keyId) {
@@ -3864,7 +3912,16 @@ animateBg();
   };
 
   // expose for other UI hooks if needed
-  window.MediaEngine = { add:addLayer, clear:()=>layers.slice().forEach(l=>removeLayer(l.id)), layers };
+  // construye un elemento de fondo (iframe/video/img) para CUALQUIER contenedor — ej. una galaxia
+  function bgElement(url){
+    const media = parseMedia(url);
+    if(!media) return null;
+    const layer = { media, muted:true };
+    const inner = buildInner(layer);        // reusa parseo, embeds, fallback de preview
+    inner.style.position='absolute'; inner.style.inset='0';
+    return inner;
+  }
+  window.MediaEngine = { add:addLayer, clear:()=>layers.slice().forEach(l=>removeLayer(l.id)), layers, bgElement };
 
   // ── seed: the short you dropped in, running as a live bg ──
   addLayer('https://www.youtube.com/shorts/k0cVxCm5B8k');
@@ -6989,18 +7046,52 @@ var qrcode = function() {
     function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
     function inline(s){ return esc(s).replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>').replace(/`([^`]+)`/g,'<b>$1</b>'); }
   }
+  let bibSection='libros';
   function renderBib(){
     const list=$('bib-list'); list.innerHTML='';
     $('bib-reader').style.display='none'; $('bib-locked').style.display='none'; $('bib-back').style.display='none';
     list.style.display='';
-    $('bib-title').textContent='LIBROS & GUÍAS';
-    BIB.forEach(book=>{
-      const d=document.createElement('div'); d.className='bib-book';
-      d.innerHTML='<div class="bt">'+book.title+'</div><div class="bd">'+book.desc+'</div>'+
-        '<div class="bl">'+(canRead(book)?'◈ LEER AQUÍ MISMO →':'🔒 '+(book.tier||'referido').toUpperCase()+' — TEASER DISPONIBLE')+'</div>';
-      d.onclick=()=>openBook(book);
-      list.appendChild(d);
+    $('bib-title').textContent='LA GRAN BIBLIOTECA';
+    // secciones: una biblioteca de verdad — libros, plugins, agentes, productos
+    const chips=document.createElement('div');
+    chips.style.cssText='display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px';
+    [['libros','📚 LIBROS'],['plugins','🔌 PLUGINS'],['agentes','◈ AGENTES'],['productos','💰 PRODUCTOS']].forEach(([k,l])=>{
+      const b=document.createElement('button');
+      b.style.cssText='font-family:"Space Mono",monospace;font-size:8px;letter-spacing:2px;padding:6px 12px;border-radius:2px;cursor:pointer;'+
+        (bibSection===k?'background:#FFD200;color:#000;border:none;font-weight:700':'background:transparent;border:1px solid #2A2A2A;color:#888');
+      b.textContent=l; b.onclick=()=>{ bibSection=k; renderBib(); };
+      chips.appendChild(b);
     });
+    list.appendChild(chips);
+    const card=(t,d,badge,badgeCol,fn,cta)=>{
+      const el=document.createElement('div'); el.className='bib-book';
+      el.innerHTML='<div style="display:flex;align-items:center;gap:8px"><div class="bt" style="flex:1">'+t+'</div>'+
+        (badge?'<span style="font-family:\'Space Mono\',monospace;font-size:7px;letter-spacing:2px;color:'+badgeCol+';border:1px solid '+badgeCol+'44;padding:2px 7px;border-radius:2px">'+badge+'</span>':'')+'</div>'+
+        '<div class="bd">'+d+'</div><div class="bl">'+cta+'</div>';
+      el.onclick=fn; list.appendChild(el); };
+    if(bibSection==='libros'){
+      BIB.forEach(book=>card(book.title, book.desc, (book.tier||'referido').toUpperCase(), '#FFD200',
+        ()=>openBook(book), canRead(book)?'◈ LEER AQUÍ MISMO →':'🔒 TEASER — ENTRÁ CON CÓDIGO'));
+      card('COLECCIÓN REWIRED', 'El estante está reservado y encendido. Los tomos REWIRED viven fuera de este repo — pasame los textos (o los títulos y dónde están) y los publico acá, legibles página por página.', 'ESTANTE VIVO', '#FF3A1F',
+        ()=>window.open('https://hk23hub.gumroad.com','_blank'), '⚡ MIENTRAS TANTO: VER EN GUMROAD →');
+    } else if(bibSection==='plugins'){
+      card('MEDIA ENGINE','Fondos vivos desde cualquier link: shorts, TikTok, Spotify, mp4. Multi-capa, PiP, mirror, pixels.','LIVE','#AAFF00',()=>{ $('ov-bib').classList.remove('open'); const p=document.getElementById('me-panel'); if(p)p.classList.add('open'); },'▶ ABRIR →');
+      card('QR VIVO','Las entidades forman un QR escaneable con destino editable. Export PNG.','LIVE','#AAFF00',()=>{ $('ov-bib').classList.remove('open'); const p=document.getElementById('ag-panel'); if(p)p.classList.add('open'); const t=document.querySelector('.ag-tab[data-pane="qr"]'); if(t)t.click(); },'◈ ABRIR →');
+      card('ENTITY LAB','Agarrá, fusioná y jugá con las entidades. Tetris, Pong, foto-mapping.','LIVE','#AAFF00',()=>{ $('ov-bib').classList.remove('open'); if(window.EntityLab) window.EntityLab.on(); },'🧪 ACTIVAR →');
+      card('MUNDO CRYPTO','Biblioteca educativa, blockchain visual y market gigante.','LIVE','#AAFF00',()=>{ $('ov-bib').classList.remove('open'); if(window.CryptoWorld) window.CryptoWorld.open('biblioteca'); },'₿ ENTRAR →');
+    } else if(bibSection==='agentes'){
+      card('ATLAS','Control central del universo: QR, ideas, fondos, galaxias, comandos.','24/7','#00F0FF',()=>{ $('ov-bib').classList.remove('open'); const p=document.getElementById('ag-panel'); if(p)p.classList.add('open'); },'◈ HABLAR CON ATLAS →');
+      card('ORACLE','El reporter: estado del universo + acciones ejecutables, export MD/JSON diario.','24/7','#00F0FF',()=>{ $('ov-bib').classList.remove('open'); if(window.hkOracle) window.hkOracle(); },'📡 PEDIR REPORTE →');
+      card('CURATOR','Nada existe sin misión: cura lo inerte y lo transforma en acción.','24/7','#00F0FF',()=>{ $('ov-bib').classList.remove('open'); const p=document.getElementById('ag-panel'); if(p)p.classList.add('open'); const t=document.querySelector('.ag-tab[data-pane="curator"]'); if(t)t.click(); },'🦉 VER ARTEFACTOS →');
+      card('MEGA-HEYOKA','El protocolo de defensa final: todos los agentes en un autobot.','DEFENSA','#FF3A1F',()=>{ $('ov-bib').classList.remove('open'); if(window.hkDefensa) window.hkDefensa(); },'🛡 ACTIVAR →');
+      card('ARIA','La capa reflexiva del grafo (vive en vice-os-artifact/hk23-brain).','EXTERNA','#B84DFF',()=>openBook(BIB.find(b=>b.id==='hk23-brain-aria')||BIB[0]),'📖 LEER SU MANUAL →');
+    } else {
+      const P=[['AGENT OS','agentos'],['HK23 PREMIUM','hk23premium'],['HK23 FULL','hk23full'],['HK23 TEMPLATE','hk23template'],['HK23 GENESIS','hk23genesis'],['ATLAS X','ljkokj']];
+      P.forEach(([n,slug])=>card(n,'Producto real en tu Gumroad — un clic y está en el checkout.','EN VENTA','#FF3A1F',
+        ()=>window.open('https://hk23hub.gumroad.com/l/'+slug,'_blank'),'💰 COMPRAR →'));
+      card('GALAXIAS EXPORTABLES','Cada galaxia que creás se exporta como archivo .hk23.json — vendible, prestable.','ÚNICO','#B84DFF',
+        ()=>{ $('ov-bib').classList.remove('open'); if(typeof goTo==='function') goTo('map'); },'✧ IR A MIS GALAXIAS →');
+    }
   }
   function openBook(book){
     $('bib-list').style.display='none'; $('bib-back').style.display='';
@@ -7102,36 +7193,91 @@ var qrcode = function() {
 
   // ═══════ GALAXIAS — crear de verdad ═══════
   const galaxias=store.get('hk23_galaxias',[]);
+  const GAL_FORMS=['espiral','nebulosa','asteroides','cometa','estacion'];
+  const GAL_FORM_ICON={espiral:'✧',nebulosa:'☁',asteroides:'☄',cometa:'💫',estacion:'🛰'};
   function sembrarGalaxia(nombre){
     // crear galaxias es un acto del dueño — libre, no gateado
     const cols=['#FF3A1F','#FFD200','#AAFF00','#00F0FF','#B84DFF'];
+    const form=GAL_FORMS[Math.floor(Math.random()*GAL_FORMS.length)];
     const g={ name:(nombre||'GALAXIA '+(galaxias.length+1)).toUpperCase().slice(0,24),
-      color:cols[galaxias.length%cols.length],
+      color:cols[galaxias.length%cols.length], form,
       x:0.14+Math.random()*0.72, y:0.18+Math.random()*0.62,
+      drift:form==='cometa'? {a:Math.random()*6.28, r:0.06+Math.random()*0.05} : null,
       stars:Array.from({length:22},(_,k)=>{ const a=k/22*Math.PI*3.2, rad=0.02+k/22*0.12;
         return { dx:Math.cos(a)*rad, dy:Math.sin(a)*rad*0.7, r:Math.random()*1.6+0.8 }; }) };
     galaxias.push(g); store.set('hk23_galaxias',galaxias);
-    logEvent('galaxia','sembrada: '+g.name);
-    toast('✧ GALAXIA SEMBRADA — '+g.name);
+    logEvent('galaxia','sembrada: '+g.name+' ('+form+')');
+    toast(GAL_FORM_ICON[form]+' '+form.toUpperCase()+' SEMBRADA — '+g.name);
     if(typeof currentScreen!=='undefined' && currentScreen!=='map' && typeof goTo==='function') goTo('map');
   }
   function drawGalaxias(ctx,W,H,t){
     galaxias.forEach(g=>{
-      const cx=g.x*W, cy=g.y*H;
-      // núcleo con glow
-      const grad=ctx.createRadialGradient(cx,cy,0,cx,cy,Math.min(W,H)*0.09);
-      grad.addColorStop(0, g.color+'AA'); grad.addColorStop(0.4, g.color+'22'); grad.addColorStop(1,'transparent');
-      ctx.fillStyle=grad; ctx.globalAlpha=0.6; ctx.beginPath(); ctx.arc(cx,cy,Math.min(W,H)*0.09,0,6.283); ctx.fill();
-      // brazos espirales
-      ctx.save(); ctx.translate(cx,cy); ctx.rotate(t*0.00008);
-      g.stars.forEach(s=>{ ctx.beginPath(); ctx.arc(s.dx*W, s.dy*W, s.r, 0, 6.283);
-        ctx.fillStyle=g.color; ctx.globalAlpha=0.9; ctx.fill(); });
-      ctx.restore(); ctx.globalAlpha=1;
-      // núcleo brillante
-      ctx.beginPath(); ctx.arc(cx,cy,3,0,6.283); ctx.fillStyle='#fff'; ctx.globalAlpha=0.9; ctx.fill(); ctx.globalAlpha=1;
-      // etiqueta
+      // los cometas navegan: orbitan lento alrededor de su punto base
+      let cx=g.x*W, cy=g.y*H;
+      if(g.form==='cometa'&&g.drift){ g.drift.a+=0.0016;
+        cx+=Math.cos(g.drift.a)*g.drift.r*W; cy+=Math.sin(g.drift.a)*g.drift.r*H*0.6; }
+      const R=Math.min(W,H);
+      const form=g.form||'espiral';
+      if(form==='espiral'){
+        const grad=ctx.createRadialGradient(cx,cy,0,cx,cy,R*0.09);
+        grad.addColorStop(0,g.color+'AA'); grad.addColorStop(0.4,g.color+'22'); grad.addColorStop(1,'transparent');
+        ctx.fillStyle=grad; ctx.globalAlpha=0.6; ctx.beginPath(); ctx.arc(cx,cy,R*0.09,0,6.283); ctx.fill();
+        ctx.save(); ctx.translate(cx,cy); ctx.rotate(t*0.00008);
+        g.stars.forEach(s=>{ ctx.beginPath(); ctx.arc(s.dx*W,s.dy*W,s.r,0,6.283);
+          ctx.fillStyle=g.color; ctx.globalAlpha=0.9; ctx.fill(); });
+        ctx.restore();
+      } else if(form==='nebulosa'){
+        [[0,0,.07],[-.03,.02,.05],[.035,-.015,.045],[.01,.035,.04]].forEach(([dx,dy,rr],i)=>{
+          const grad=ctx.createRadialGradient(cx+dx*W,cy+dy*H,0,cx+dx*W,cy+dy*H,R*rr);
+          const pulse=.5+.3*Math.sin(t*.0006+i*2);
+          grad.addColorStop(0,g.color+'66'); grad.addColorStop(1,'transparent');
+          ctx.globalAlpha=pulse; ctx.fillStyle=grad;
+          ctx.beginPath(); ctx.arc(cx+dx*W,cy+dy*H,R*rr,0,6.283); ctx.fill(); });
+        for(let k=0;k<8;k++){ ctx.globalAlpha=.8;
+          ctx.fillStyle='#fff'; ctx.beginPath();
+          ctx.arc(cx+Math.sin(k*7+t*.0003)*R*.05, cy+Math.cos(k*5)*R*.035, 1, 0, 6.283); ctx.fill(); }
+      } else if(form==='asteroides'){
+        ctx.save(); ctx.translate(cx,cy); ctx.rotate(t*0.00005);
+        g.stars.forEach((s,i)=>{ const rx=s.dx*W*1.2, ry=s.dy*W*1.2;
+          ctx.save(); ctx.translate(rx,ry); ctx.rotate(i+t*0.0004);
+          ctx.fillStyle=i%3? g.color:'#8a8a92'; ctx.globalAlpha=.85;
+          const rr=s.r+1.5;
+          ctx.beginPath(); ctx.moveTo(rr,0);
+          for(let v=1;v<6;v++){ const a=v/6*6.283; const vr=rr*(0.7+((i*v)%3)*0.2);
+            ctx.lineTo(Math.cos(a)*vr, Math.sin(a)*vr); }
+          ctx.closePath(); ctx.fill(); ctx.restore(); });
+        ctx.restore();
+      } else if(form==='cometa'){
+        const ta=(g.drift?g.drift.a:0)+Math.PI; // cola opuesta al avance
+        const tg=ctx.createLinearGradient(cx,cy, cx+Math.cos(ta)*R*.14, cy+Math.sin(ta)*R*.14);
+        tg.addColorStop(0,g.color+'AA'); tg.addColorStop(1,'transparent');
+        ctx.fillStyle=tg; ctx.globalAlpha=.7;
+        ctx.beginPath(); ctx.moveTo(cx+Math.cos(ta+1.65)*5, cy+Math.sin(ta+1.65)*5);
+        ctx.lineTo(cx+Math.cos(ta)*R*.14, cy+Math.sin(ta)*R*.14);
+        ctx.lineTo(cx+Math.cos(ta-1.65)*5, cy+Math.sin(ta-1.65)*5); ctx.closePath(); ctx.fill();
+        ctx.globalAlpha=1; ctx.fillStyle='#fff';
+        ctx.beginPath(); ctx.arc(cx,cy,4.5,0,6.283); ctx.fill();
+        ctx.fillStyle=g.color; ctx.globalAlpha=.5;
+        ctx.beginPath(); ctx.arc(cx,cy,8,0,6.283); ctx.fill();
+      } else { // estación espacial
+        ctx.save(); ctx.translate(cx,cy); ctx.rotate(t*0.0002);
+        ctx.strokeStyle=g.color; ctx.lineWidth=2; ctx.globalAlpha=.9;
+        ctx.beginPath(); ctx.arc(0,0,R*.035,0,6.283); ctx.stroke();
+        ctx.beginPath(); ctx.arc(0,0,R*.018,0,6.283); ctx.stroke();
+        for(let k=0;k<4;k++){ const a=k*Math.PI/2;
+          ctx.beginPath(); ctx.moveTo(Math.cos(a)*R*.018, Math.sin(a)*R*.018);
+          ctx.lineTo(Math.cos(a)*R*.035, Math.sin(a)*R*.035); ctx.stroke(); }
+        // luces titilando
+        for(let k=0;k<6;k++){ const a=k/6*6.283+t*0.0002;
+          ctx.fillStyle=(Math.sin(t*0.008+k)>0)?'#fff':g.color;
+          ctx.beginPath(); ctx.arc(Math.cos(a)*R*.035, Math.sin(a)*R*.035, 1.6, 0, 6.283); ctx.fill(); }
+        ctx.restore();
+      }
+      ctx.globalAlpha=1;
+      // núcleo + etiqueta
       ctx.font='700 10px "Space Mono", monospace'; ctx.fillStyle=g.color; ctx.textAlign='center';
-      ctx.fillText('✧ '+g.name, cx, cy - Math.min(W,H)*0.075);
+      ctx.fillText((GAL_FORM_ICON[form]||'✧')+' '+g.name, cx, cy - R*0.075);
+      g._cx=cx; g._cy=cy; // posición real para el click (los cometas se mueven)
     });
   }
 
@@ -7144,6 +7290,11 @@ var qrcode = function() {
   for(let i=0;i<7;i++){ const k=FLYER_KINDS[i%FLYER_KINDS.length];
     flyers.push({ ...k, x:Math.random()*innerWidth, y:Math.random()*innerHeight,
       vx:(Math.random()-0.5)*0.5, vy:(Math.random()-0.5)*0.3, ph:Math.random()*6.28 }); }
+  // ESTACIONES COLOSALES — lejos del centro, en rincones distintos; se entra con clic
+  [[0.09,0.85],[0.91,0.12]].forEach(([fx,fy],i)=>{
+    flyers.push({ kind:'base', station:true, portal:false,
+      x:fx*innerWidth, y:fy*innerHeight,
+      vx:(Math.random()-0.5)*0.08, vy:(Math.random()-0.5)*0.06, ph:i*3 }); });
   function drawFlyers(ctx,W,H,t){
     flyers.forEach(f=>{
       f.x+=f.vx; f.y+=f.vy;
@@ -7158,6 +7309,17 @@ var qrcode = function() {
         ctx.beginPath(); ctx.moveTo(12,0); ctx.lineTo(-9,-6); ctx.lineTo(-5,0); ctx.lineTo(-9,6); ctx.closePath(); ctx.fill(); }
       else if(f.kind==='diamante'){ ctx.fillStyle='#FFD200'; ctx.globalAlpha=.9;
         ctx.beginPath(); ctx.moveTo(0,-8); ctx.lineTo(6,0); ctx.lineTo(0,8); ctx.lineTo(-6,0); ctx.closePath(); ctx.fill(); }
+      else if(f.kind==='base'){ // estación colosal: cabeza-dome con luces (Knowhere a lo lejos)
+        ctx.globalAlpha=.95;
+        ctx.fillStyle='#1a1626'; ctx.beginPath(); ctx.arc(0,0,15,Math.PI,0); ctx.fill();
+        ctx.fillRect(-15,0,30,7);
+        ctx.strokeStyle='rgba(170,255,0,.6)'; ctx.lineWidth=1.2;
+        ctx.beginPath(); ctx.arc(0,0,15,Math.PI,0); ctx.stroke();
+        ctx.fillStyle='#AAFF00'; ctx.beginPath(); ctx.arc(4,-4,3,0,6.283); ctx.fill(); // ojo
+        for(let k=-2;k<=2;k++){ ctx.fillStyle=(Math.sin(t*0.006+k)>0)?'#00F0FF':'#333';
+          ctx.fillRect(k*5-1,3,2,2); }
+        ctx.font='7px "Space Mono",monospace'; ctx.textAlign='center';
+        ctx.fillStyle='rgba(170,255,0,.7)'; ctx.fillText('KNOWHERE', 0, -20); }
       else { ctx.fillStyle='#FF3A1F'; ctx.globalAlpha=.75;
         ctx.beginPath(); ctx.arc(0,0,3.4,0,6.283); ctx.fill();
         ctx.strokeStyle='rgba(255,58,31,.35)'; ctx.lineWidth=2;
@@ -7193,12 +7355,25 @@ var qrcode = function() {
         '<button class="hkov-x" id="gal-x">✕</button>'+
         '<div class="hkov-eyebrow">GALAXIA HERMANA · TU ESPACIO PARA CREAR</div>'+
         '<div class="hkov-title" id="gal-title">—</div>'+
-        '<canvas id="gal-canvas" style="width:100%;height:280px;border:1px solid #141414;border-radius:2px;background:#040406;margin-bottom:14px"></canvas>'+
+        '<div id="gal-stage" style="position:relative;width:100%;height:280px;border:1px solid #141414;border-radius:2px;overflow:hidden;margin-bottom:10px;background:#040406">'+
+          '<div id="gal-bg" style="position:absolute;inset:0"></div>'+
+          '<canvas id="gal-canvas" style="position:absolute;inset:0;width:100%;height:100%"></canvas>'+
+        '</div>'+
+        '<div style="display:flex;gap:6px;margin-bottom:12px">'+
+          '<input id="gal-bg-url" class="ag-input" style="flex:1;margin:0" placeholder="pegá un link de fondo para ESTA galaxia — yt, tiktok, mp4, spotify…">'+
+          '<button class="gate-cta" id="gal-bg-set" style="background:#FF3A1F;color:#000">FONDO →</button>'+
+          '<button class="gate-cta" id="gal-bg-clr" style="background:transparent;border:1px solid #2A2A2A;color:#888">✕</button>'+
+        '</div>'+
+        '<div style="margin-bottom:12px">'+
+          '<div style="font-family:\'Space Mono\',monospace;font-size:8px;letter-spacing:3px;color:#333;margin-bottom:8px">BIOMA DEL MUNDO — no todos son iguales</div>'+
+          '<div id="gal-biomes" style="display:flex;gap:6px;flex-wrap:wrap"></div></div>'+
         '<div id="gal-tpl-row" style="margin-bottom:12px">'+
           '<div style="font-family:\'Space Mono\',monospace;font-size:8px;letter-spacing:3px;color:#333;margin-bottom:8px">ARRANCÁ CON UN TEMPLATE DE EJEMPLO</div>'+
           '<div id="gal-tpls" style="display:flex;gap:6px;flex-wrap:wrap"></div></div>'+
         '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
           '<button class="gate-cta" id="gal-add" style="background:#B84DFF;color:#000">+ AÑADIR MUNDO</button>'+
+          '<button class="gate-cta" id="gal-enter" style="background:#00F0FF;color:#000">🚀 ENTRAR — PANTALLA COMPLETA</button>'+
+          '<button class="gate-cta" id="gal-export" style="background:#FFD200;color:#000">⬇ EXPORTAR (VENDER / PRESTAR)</button>'+
           '<button class="gate-cta" id="gal-clear" style="background:transparent;border:1px solid #2A2A2A;color:#888">VACIAR</button>'+
         '</div></div>';
       document.body.appendChild(ov);
@@ -7211,14 +7386,73 @@ var qrcode = function() {
           store.set('hk23_galaxias',galaxias); renderGalTpls();
           logEvent('galaxia', galOpen.name+' + mundo: '+n); }); };
       $('gal-clear').onclick=()=>{ if(!galOpen) return; galOpen.nodes=[]; store.set('hk23_galaxias',galaxias); renderGalTpls(); };
+      // FONDO por galaxia: el link que pegás es el fondo de ESE mundo
+      $('gal-bg-set').onclick=()=>{ if(!galOpen) return; const u=$('gal-bg-url').value.trim(); if(!u) return;
+        galOpen.bg=u; store.set('hk23_galaxias',galaxias); applyGalBg();
+        logEvent('galaxia',galOpen.name+' fondo: '+u.slice(0,40)); toast('▶ FONDO DE '+galOpen.name); };
+      $('gal-bg-url').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); $('gal-bg-set').click(); } });
+      $('gal-bg-clr').onclick=()=>{ if(!galOpen) return; galOpen.bg=null; store.set('hk23_galaxias',galaxias); applyGalBg(); };
+      // 🚀 ENTRAR: la galaxia toma la pantalla completa — estás adentro
+      $('gal-enter').onclick=()=>{ if(!galOpen) return;
+        const card=ov.querySelector('.hkov-card');
+        const full=card.dataset.full==='1';
+        if(full){ card.dataset.full='0'; card.style.cssText=''; $('gal-stage').style.height='280px';
+          $('gal-enter').textContent='🚀 ENTRAR — PANTALLA COMPLETA'; }
+        else { card.dataset.full='1';
+          card.style.cssText='width:100vw;max-width:100vw;height:100vh;max-height:100vh;border-radius:0;border:none;padding:26px 28px;';
+          $('gal-stage').style.height=(innerHeight-260)+'px';
+          $('gal-enter').textContent='◂ VOLVER AL UNIVERSO MADRE';
+          document.documentElement.style.setProperty('--red', galOpen.color);
+          toast('🚀 ESTÁS EN '+galOpen.name+' — CONSTRUÍ TRANQUILO'); }
+        runGalCanvas();
+      };
+      // ⬇ EXPORTAR: el archivo de la galaxia es lo que vendés o prestás
+      $('gal-export').onclick=()=>{ if(!galOpen) return;
+        const data={ tipo:'galaxia-hk23', version:1, exportada:new Date().toISOString(),
+          licencia:'HK23 UNIVERSE — transferible: vendela, prestala o regalala',
+          galaxia:{ name:galOpen.name, form:galOpen.form||'espiral', color:galOpen.color,
+            template:galOpen.template||null, nodes:galOpen.nodes||[] } };
+        const a=document.createElement('a');
+        a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));
+        a.download='galaxia-'+galOpen.name.toLowerCase().replace(/[^a-z0-9]+/g,'-')+'.hk23.json'; a.click();
+        logEvent('galaxia','exportada para venta/préstamo: '+galOpen.name);
+        toast('⬇ '+galOpen.name+' EXPORTADA — ESE ARCHIVO ES EL PRODUCTO'); };
     }
     $('gal-title').textContent='✧ '+g.name;
     renderGalTpls();
+    applyGalBg();
     ov.classList.add('open');
     runGalCanvas();
     logEvent('galaxia','entró a '+g.name);
   }
+  function applyGalBg(){
+    const holder=$('gal-bg'), stage=$('gal-stage'), cvg=$('gal-canvas'), inp=$('gal-bg-url');
+    if(!holder) return; holder.innerHTML='';
+    if(galOpen && galOpen.bg){
+      if(inp) inp.value=galOpen.bg;
+      const el = window.MediaEngine && window.MediaEngine.bgElement
+        ? window.MediaEngine.bgElement(galOpen.bg) : null;
+      if(el){ holder.appendChild(el); }
+      if(stage) stage.style.background='#000';
+      // el canvas de biomas flota semitransparente sobre el video
+      if(cvg) cvg.style.opacity='0.55';
+    } else {
+      if(inp) inp.value='';
+      if(stage) stage.style.background='#040406';
+      if(cvg) cvg.style.opacity='1';
+    }
+  }
+  const BIOMES=[['entidades','✦ ENTIDADES'],['arboles','🌳 ÁRBOLES'],['avatar','🌌 AVATAR'],['pixel','▦ PIXEL']];
   function renderGalTpls(){
+    const brow=$('gal-biomes');
+    if(brow&&galOpen){ brow.innerHTML='';
+      BIOMES.forEach(([v,l])=>{ const b=document.createElement('button');
+        const on=(galOpen.biome||'entidades')===v;
+        b.className='ag-btn'; b.style.cssText='padding:6px 12px;font-size:8px;'+(on?'background:#B84DFF;color:#000':'background:transparent;border:1px solid #2A2A2A;color:#888');
+        b.textContent=l; brow.appendChild(b);
+        b.onclick=()=>{ galOpen.biome=v; store.set('hk23_galaxias',galaxias); renderGalTpls(); runGalCanvas();
+          logEvent('galaxia',galOpen.name+' bioma → '+v); }; });
+    }
     const row=$('gal-tpls'); if(!row||!galOpen) return; row.innerHTML='';
     Object.keys(GAL_TEMPLATES).forEach(k=>{
       const b=document.createElement('button');
@@ -7235,31 +7469,79 @@ var qrcode = function() {
     const cvg=$('gal-canvas'); if(!cvg) return;
     const gx=cvg.getContext('2d');
     cvg.width=cvg.clientWidth*(devicePixelRatio||1); cvg.height=280*(devicePixelRatio||1);
+    function branch(x,y,len,ang,depth,grow,col){
+      if(depth<=0||len<4) return;
+      const gl=Math.min(1,grow);
+      const x2=x+Math.cos(ang)*len*gl, y2=y+Math.sin(ang)*len*gl;
+      gx.strokeStyle=col; gx.lineWidth=depth*0.9;
+      gx.beginPath(); gx.moveTo(x,y); gx.lineTo(x2,y2); gx.stroke();
+      if(depth<=2 && gl>0.9){ gx.fillStyle=galOpen.color; gx.globalAlpha=.8;
+        gx.beginPath(); gx.arc(x2,y2,3,0,6.283); gx.fill(); gx.globalAlpha=1; }
+      const g2=Math.max(0,(grow-0.35));
+      branch(x2,y2,len*0.76,ang-0.42-Math.sin(depth)*0.1,depth-1,g2,col);
+      branch(x2,y2,len*0.76,ang+0.42+Math.cos(depth)*0.1,depth-1,g2,col);
+    }
     function frame(t){
       if(!galOpen || !$('ov-galaxy').classList.contains('open')) return;
       const W=cvg.width, H=cvg.height, cx=W/2, cy=H/2;
+      const biome=galOpen.biome||'entidades';
       gx.clearRect(0,0,W,H);
-      // polvo
-      for(let i=0;i<40;i++){ const a=i*2.399+t*0.00008, r=20+i*(Math.min(W,H)/90);
-        gx.beginPath(); gx.arc(cx+Math.cos(a)*r, cy+Math.sin(a)*r*0.55, 1, 0, 6.283);
-        gx.fillStyle=galOpen.color+'44'; gx.fill(); }
-      // núcleo
-      const ng=gx.createRadialGradient(cx,cy,0,cx,cy,34);
-      ng.addColorStop(0,'#fff'); ng.addColorStop(0.3,galOpen.color); ng.addColorStop(1,'transparent');
-      gx.fillStyle=ng; gx.beginPath(); gx.arc(cx,cy,34,0,6.283); gx.fill();
-      // mundos
       const nodes=galOpen.nodes||[];
-      nodes.forEach((n,i)=>{
-        const a=t*0.0003*(i%2?1:-1)+i*(6.283/Math.max(nodes.length,1));
-        const r=70+ (i%3)*34;
-        const x=cx+Math.cos(a)*r, y=cy+Math.sin(a)*r*0.55;
-        gx.beginPath(); gx.arc(x,y,9,0,6.283); gx.fillStyle=n.color; gx.fill();
-        gx.font='700 10px "Space Mono",monospace'; gx.textAlign='center';
-        gx.fillStyle='#F0EDE8'; gx.fillText(n.name, x, y-15);
-      });
+
+      if(biome==='arboles'){
+        gx.fillStyle='#04120a'; gx.fillRect(0,0,W,H);
+        const grow=Math.min(1.4,(t%9000)/5200);
+        branch(cx, H-20, 60, -Math.PI/2, 8, grow, '#6b4f2a');
+        nodes.forEach((n,i)=>{ const gg=Math.min(1.4,((t+ i*1400)%9000)/5200);
+          branch(cx+(i-nodes.length/2)*70, H-20, 44, -Math.PI/2, 6, gg, '#5a4525'); });
+        gx.font='10px "Space Mono",monospace'; gx.textAlign='center'; gx.fillStyle=galOpen.color;
+        gx.fillText('BIOMA: BOSQUE — cada mundo crece como un árbol', cx, 22);
+      } else if(biome==='avatar'){
+        gx.fillStyle='#03060e'; gx.fillRect(0,0,W,H);
+        for(let i=0;i<70;i++){ const a=i*2.399+t*0.0002, r=30+i*(Math.min(W,H)/150);
+          const x=cx+Math.cos(a)*r, y=cy+Math.sin(a)*r*0.7;
+          const pulse=.4+.6*Math.abs(Math.sin(t*0.002+i));
+          gx.fillStyle=['#00F0FF','#AAFF00','#B84DFF'][i%3]; gx.globalAlpha=pulse*.7;
+          gx.beginPath(); gx.arc(x,y,1.6,0,6.283); gx.fill(); }
+        gx.globalAlpha=1;
+        nodes.forEach((n,i)=>{ const a=t*0.0004+i*(6.283/Math.max(nodes.length,1)), r=80+(i%3)*30;
+          const x=cx+Math.cos(a)*r, y=cy+Math.sin(a)*r*0.6;
+          const gl=gx.createRadialGradient(x,y,0,x,y,16);
+          gl.addColorStop(0,n.color); gl.addColorStop(1,'transparent');
+          gx.fillStyle=gl; gx.beginPath(); gx.arc(x,y,16,0,6.283); gx.fill();
+          gx.fillStyle='#fff'; gx.beginPath(); gx.arc(x,y,3,0,6.283); gx.fill();
+          gx.font='700 9px "Space Mono",monospace'; gx.fillStyle='#dfffe0'; gx.textAlign='center'; gx.fillText(n.name,x,y-20); });
+        gx.font='10px "Space Mono",monospace'; gx.fillStyle='#00F0FF'; gx.textAlign='center';
+        gx.fillText('BIOMA: AVATAR — bioluminiscencia viva', cx, 22);
+      } else if(biome==='pixel'){
+        gx.fillStyle='#0a0810'; gx.fillRect(0,0,W,H);
+        const px=Math.max(6, Math.floor(W/60));
+        for(let gy=0; gy<H; gy+=px) for(let gx0=0; gx0<W; gx0+=px){
+          const n=(Math.sin(gx0*0.05+t*0.001)+Math.cos(gy*0.05))*0.5;
+          if(n>0.35){ gx.fillStyle=n>0.7?galOpen.color:(n>0.5?'#2a2340':'#141020');
+            gx.fillRect(gx0,gy,px-1,px-1); } }
+        nodes.forEach((n,i)=>{ const a=Math.floor(t*0.0003)*0.2+i, r=70+(i%3)*30;
+          const x=Math.round((cx+Math.cos(a)*r)/px)*px, y=Math.round((cy+Math.sin(a)*r*.6)/px)*px;
+          gx.fillStyle=n.color; gx.fillRect(x-px,y-px,px*2,px*2);
+          gx.font='700 9px monospace'; gx.fillStyle='#fff'; gx.textAlign='center'; gx.fillText(n.name,x,y-px*2); });
+        gx.font='10px monospace'; gx.fillStyle=galOpen.color; gx.textAlign='center';
+        gx.fillText('BIOMA: PIXEL — mini mundo 8-bit', cx, 22);
+      } else {
+        for(let i=0;i<40;i++){ const a=i*2.399+t*0.00008, r=20+i*(Math.min(W,H)/90);
+          gx.beginPath(); gx.arc(cx+Math.cos(a)*r, cy+Math.sin(a)*r*0.55, 1, 0, 6.283);
+          gx.fillStyle=galOpen.color+'44'; gx.fill(); }
+        const ng=gx.createRadialGradient(cx,cy,0,cx,cy,34);
+        ng.addColorStop(0,'#fff'); ng.addColorStop(0.3,galOpen.color); ng.addColorStop(1,'transparent');
+        gx.fillStyle=ng; gx.beginPath(); gx.arc(cx,cy,34,0,6.283); gx.fill();
+        nodes.forEach((n,i)=>{ const a=t*0.0003*(i%2?1:-1)+i*(6.283/Math.max(nodes.length,1));
+          const r=70+ (i%3)*34, x=cx+Math.cos(a)*r, y=cy+Math.sin(a)*r*0.55;
+          gx.beginPath(); gx.arc(x,y,9,0,6.283); gx.fillStyle=n.color; gx.fill();
+          gx.font='700 10px "Space Mono",monospace'; gx.textAlign='center';
+          gx.fillStyle='#F0EDE8'; gx.fillText(n.name, x, y-15); });
+      }
       if(!nodes.length){
-        gx.font='10px "Space Mono",monospace'; gx.textAlign='center'; gx.fillStyle='#333';
-        gx.fillText('GALAXIA LIMPIA — ELEGÍ UN TEMPLATE O AÑADÍ TU PRIMER MUNDO', cx, cy+70);
+        gx.font='10px "Space Mono",monospace'; gx.textAlign='center'; gx.fillStyle='#444';
+        gx.fillText('GALAXIA LIMPIA — ELEGÍ BIOMA, TEMPLATE O AÑADÍ TU PRIMER MUNDO', cx, cy+90);
       }
       galAnim=requestAnimationFrame(frame);
     }
@@ -7267,10 +7549,15 @@ var qrcode = function() {
   }
   // click en el mapa sobre una galaxia → entrás
   document.addEventListener('click', e=>{
-    if(e.target && e.target.id==='map-canvas' && galaxias.length){
-      const W=innerWidth, H=innerHeight, hitR=Math.min(W,H)*0.075;
-      const g=galaxias.find(g=>Math.hypot(g.x*W-e.clientX, g.y*H-e.clientY)<hitR);
-      if(g) openGalaxy(g);
+    if(e.target && e.target.id==='map-canvas'){
+      // estaciones: siempre enterables desde el mapa
+      const st=flyers.find(f=>f.station && Math.hypot(f.x-e.clientX, f.y-e.clientY)<34);
+      if(st && window.StationWorld){ (window.WarpJump||((cb)=>cb()))(()=>window.StationWorld.open(), '#AAFF00'); return; }
+      if(galaxias.length){
+        const W=innerWidth, H=innerHeight, hitR=Math.min(W,H)*0.075;
+        const g=galaxias.find(g=>Math.hypot((g._cx??g.x*W)-e.clientX, (g._cy??g.y*H)-e.clientY)<hitR);
+        if(g) (window.WarpJump||((cb)=>cb()))(()=>openGalaxy(g), g.color);
+      }
     }
   });
 
@@ -7283,7 +7570,8 @@ var qrcode = function() {
   sizeOverlay(); addEventListener('resize',sizeOverlay);
   (function oloop(t){ octx.clearRect(0,0,overlayCv.width,overlayCv.height);
     const scr=(typeof currentScreen!=='undefined')?currentScreen:'map';
-    if(scr==='map'||scr==='portal'){
+    // SOLO en el mapa: el portal queda limpio, puro HK23
+    if(scr==='map'){
       drawGalaxias(octx,overlayCv.width,overlayCv.height,t||0);
       drawFlyers(octx,overlayCv.width,overlayCv.height,t||0);
     }
@@ -7699,6 +7987,8 @@ var qrcode = function() {
   window.hkBiblioteca=()=>{ renderBib(); document.getElementById('ov-bib').classList.add('open'); };
   window.hkOracle=openOracle;
   window.hkBackrooms=()=>Backrooms.enter('shortcut');
+  window.hkOpenGalaxy=(name)=>{ const g=galaxias.find(x=>x.name===name); if(g) openGalaxy(g); };
+  window.hkSembrar=sembrarGalaxia;
   logEvent('sistema','core agents en línea: GATE/ORACLE/CURATOR/BACKROOMS/DEFENSA');
 })();
 </script>
@@ -7844,6 +8134,7 @@ var qrcode = function() {
   const CS={ open(){
     $('ov-crypto').classList.add('open');
     if(CS._scanned) render(); else scanThenRender();
+    if(window.CryptoSwarm) window.CryptoSwarm.start(); // el fondo forma los logos: ₿ Ξ SOL Ð ₳
     log('crypto','abrió señales ('+tier()+')');
   } };
   window.CryptoSignals=CS;
@@ -7933,79 +8224,199 @@ var qrcode = function() {
   })(0);
 })();
 
-// ═══ ALIEN AGENT BASE — la sede psy-fi de los agentes ═══
+// ═══ KNOWHERE STATION — estación colosal enterable + EL COLECCIONISTA (marketplace) ═══
 (function(){
-  const screen=document.getElementById('screen-agents');
-  if(!screen) return;
-  const cv=document.createElement('canvas'); cv.id='alien-base-canvas';
-  screen.insertBefore(cv, screen.firstChild);
+  // overlay propio: NO pisa el universo — se entra desde las estaciones del mapa
+  const ov=document.createElement('div'); ov.id='station-world';
+  ov.style.cssText='position:fixed;inset:0;z-index:760;display:none;background:#04030a;overflow:hidden;';
+  ov.innerHTML='<canvas id="st-cv" style="position:absolute;inset:0"></canvas>'+
+    '<div style="position:absolute;top:18px;left:22px;z-index:5;font-family:\'Space Mono\',monospace;font-size:11px;letter-spacing:4px;color:#AAFF00">◈ KNOWHERE STATION <span style="color:#444">· EL COLECCIONISTA</span></div>'+
+    '<button id="st-x" style="position:absolute;top:14px;right:20px;z-index:6;font-family:\'Space Mono\',monospace;font-size:9px;letter-spacing:3px;color:#000;background:#FF3A1F;border:none;border-radius:2px;padding:8px 14px;cursor:pointer">✕ SALIR (X)</button>'+
+    '<div id="st-market" style="position:absolute;right:18px;top:60px;bottom:18px;width:min(340px,90vw);z-index:5;background:rgba(5,7,4,.9);border:1px solid rgba(170,255,0,.25);border-radius:3px;padding:16px;overflow-y:auto;backdrop-filter:blur(8px)">'+
+      '<div style="font-family:\'Space Mono\',monospace;font-size:9px;letter-spacing:3px;color:#AAFF00;margin-bottom:4px">🗿 EL COLECCIONISTA</div>'+
+      '<div style="font-size:11px;color:#666;line-height:1.6;margin-bottom:14px">Marketplace de cosas raras del universo. Lo que está acá, existe una vez.</div>'+
+      '<div id="st-items"></div></div>';
+  document.body.appendChild(ov);
+  document.getElementById('st-x').onclick=()=>ov.style.display='none';
+  addEventListener('keydown',e=>{ if((e.key==='x'||e.key==='X'||e.key==='Escape')&&ov.style.display==='block') ov.style.display='none'; });
+  const cv=document.getElementById('st-cv');
   const x=cv.getContext('2d');
   let W,H;
-  const GLYPHS='⏃⏄⏅⌬⌖⍟⌭⍜⎔⌇⋉⋇☌⏣';
-  let drops=[];
-  function size(){ W=cv.width=screen.clientWidth||innerWidth; H=cv.height=screen.clientHeight||innerHeight;
-    drops=Array.from({length:26},()=>({ x:Math.random()*W, y:Math.random()*H,
-      v:0.3+Math.random()*0.8, g:GLYPHS[Math.floor(Math.random()*GLYPHS.length)], a:0.1+Math.random()*0.25 })); }
+  function size(){ W=cv.width=innerWidth; H=cv.height=innerHeight; }
   size(); addEventListener('resize',size);
-  function hex(cx,cy,r){ x.beginPath();
-    for(let i=0;i<6;i++){ const a=Math.PI/3*i+Math.PI/6;
-      const px=cx+Math.cos(a)*r, py=cy+Math.sin(a)*r;
-      i?x.lineTo(px,py):x.moveTo(px,py); }
-    x.closePath(); }
+  // marketplace: tus rarezas reales
+  function renderMarket(){
+    const wrap=document.getElementById('st-items'); wrap.innerHTML='';
+    const items=[];
+    try{ const st=JSON.parse(localStorage.getItem('hk23_universe_state'))||{};
+      (st.ideas||[]).filter(i=>i.collected>=i.pieces).forEach(i=>items.push(
+        { n:'BLUEPRINT · '+i.name, r:'RARO', c:'#AAFF00', d:'Idea completada, lista para ejecutar. Una sola copia viva.', act:'VER', fn:()=>{ ov.style.display='none'; const b=document.querySelector('[data-act=impl]'); if(b) b.click(); } }));
+    }catch(e){}
+    try{ (JSON.parse(localStorage.getItem('hk23_galaxias'))||[]).forEach(g=>items.push(
+        { n:'GALAXIA · '+g.name, r:'ÚNICO', c:'#B84DFF', d:'Mundo '+(g.form||'espiral')+' exportable. Se vende con todo adentro.', act:'ABRIR', fn:()=>{ ov.style.display='none'; } }));
+    }catch(e){}
+    items.push(
+      { n:'EL GATSBY · CHAPA ORIGINAL', r:'MÍTICO', c:'#FFD200', d:'Reliquia del auto legendario con libre albedrío. (Vive en la versión madre — llega con la fusión.)', act:'—' },
+      { n:'CONSTITUCIÓN HK23 · 1ª ED.', r:'LEGENDARIO', c:'#00F0FF', d:'El libro de leyes del universo, legible en la Biblioteca.', act:'LEER', fn:()=>{ ov.style.display='none'; if(window.hkBiblioteca) window.hkBiblioteca(); } },
+      { n:'TEMPLATE DEL UNIVERSO', r:'EN VENTA', c:'#FF3A1F', d:'El producto: todo este universo, un solo HTML.', act:'COMPRAR', fn:()=>window.open('https://hk23hub.gumroad.com','_blank') });
+    items.forEach(it=>{ const d=document.createElement('div');
+      d.style.cssText='border:1px solid #1a2410;border-radius:2px;padding:11px 12px;margin-bottom:8px;background:rgba(8,12,5,.7)';
+      d.innerHTML='<div style="display:flex;gap:8px;align-items:center;margin-bottom:5px">'+
+        '<span style="font-size:11px;font-weight:700;color:#F0EDE8;flex:1">'+it.n+'</span>'+
+        '<span style="font-family:\'Space Mono\',monospace;font-size:7px;letter-spacing:2px;color:'+it.c+';border:1px solid '+it.c+'44;padding:2px 6px;border-radius:2px">'+it.r+'</span></div>'+
+        '<div style="font-size:10px;color:#667;line-height:1.55;margin-bottom:7px">'+it.d+'</div>'+
+        (it.fn? '<button style="font-family:\'Space Mono\',monospace;font-size:8px;letter-spacing:2px;background:'+it.c+';color:#000;border:none;border-radius:2px;padding:5px 12px;cursor:pointer;font-weight:700">'+it.act+' →</button>':'');
+      if(it.fn) d.querySelector('button').onclick=it.fn;
+      wrap.appendChild(d); });
+  }
+  window.StationWorld={ open(){ ov.style.display='block'; size(); renderMarket();
+    (window.hkLog||function(){})('estacion','entró a Knowhere'); } };
+  // luces "ciudad dentro de la cabeza" (Knowhere) — sembradas una vez
+  let windows=null;
+  function seedWindows(){ windows=Array.from({length:150},()=>({
+    u:0.30+Math.random()*0.42, v:0.30+Math.random()*0.34,
+    c:['#AAFF00','#00F0FF','#FFD200','#FF7A3B'][Math.floor(Math.random()*4)],
+    ph:Math.random()*6.28, sz:Math.random()<0.15?2:1 })); }
+  // naves entrando al ojo/boca
+  let ships=Array.from({length:9},(_,i)=>({ a:Math.random()*6.28, r:0.5+Math.random()*0.5, sp:0.0005+Math.random()*0.0009, i }));
+
   (function loop(t){
-    if(screen.classList.contains('active')){
-      if(cv.width!==(screen.clientWidth||innerWidth)) size();
+    if(ov.style.display==='block'){
+      if(cv.width!==innerWidth) { size(); windows=null; }
+      if(!windows) seedWindows();
       x.clearRect(0,0,W,H);
-      // suelo hexagonal que late
-      const hr=34;
-      for(let ry=0; ry<H+hr; ry+=hr*1.5){
-        for(let rx=0; rx<W+hr; rx+=hr*1.74){
-          const ox=(Math.floor(ry/(hr*1.5))%2)?hr*0.87:0;
-          const d=Math.hypot(rx+ox-W/2, ry-H*0.62);
-          const pulse=0.5+0.5*Math.sin(t*0.0016 - d*0.012);
-          x.strokeStyle=`rgba(170,255,0,${0.04+0.09*pulse})`;
-          x.lineWidth=1; hex(rx+ox, ry, hr*0.55); x.stroke();
-        }
-      }
-      // anillo-portal con runas girando
-      const pcx=W*0.78, pcy=H*0.30, pr=Math.min(W,H)*0.16;
-      x.save(); x.translate(pcx,pcy);
-      for(let ring=0; ring<2; ring++){
-        x.rotate((ring?-1:1)*t*0.00035);
-        x.strokeStyle=`rgba(0,240,255,${0.30-ring*0.12})`; x.lineWidth=1.5;
-        x.beginPath(); x.arc(0,0,pr+ring*16,0,6.283); x.stroke();
-        x.font='11px monospace'; x.fillStyle=`rgba(0,240,255,${0.5-ring*0.18})`;
-        for(let i=0;i<10;i++){ const a=i/10*6.283;
-          x.fillText(GLYPHS[(i+ring*3)%GLYPHS.length], Math.cos(a)*(pr+ring*16)-4, Math.sin(a)*(pr+ring*16)+4); }
+
+      // ── nebulosa verde de Knowhere (como en la película) ──
+      const sky=x.createLinearGradient(0,0,0,H);
+      sky.addColorStop(0,'#03100c'); sky.addColorStop(0.55,'#041a12'); sky.addColorStop(1,'#020a08');
+      x.fillStyle=sky; x.fillRect(0,0,W,H);
+      // bancos de gas que derivan
+      [[0.2,0.3,0.30,'#1d5c3f'],[0.75,0.2,0.26,'#0f4d4a'],[0.5,0.75,0.34,'#274d1d'],[0.9,0.65,0.22,'#8a5a22']].forEach(([fx,fy,fr,col],i)=>{
+        const dx=Math.sin(t*0.00007+i*2)*W*0.04;
+        const ng=x.createRadialGradient(fx*W+dx,fy*H,0,fx*W+dx,fy*H,fr*Math.min(W,H)*1.6);
+        ng.addColorStop(0,col+'55'); ng.addColorStop(0.6,col+'22'); ng.addColorStop(1,'transparent');
+        x.fillStyle=ng; x.fillRect(0,0,W,H); });
+      for(let i=0;i<70;i++){ x.globalAlpha=0.3+0.5*Math.abs(Math.sin(t*0.001+i));
+        x.fillStyle='#cde5d5'; x.fillRect((i*97)%W,(i*57)%H,1,1); } x.globalAlpha=1;
+      // escombros de roca flotando alrededor de la cabeza
+      for(let i=0;i<14;i++){ const a=i*2.4+t*0.00005*(i%2?1:-1);
+        const dx=W*0.44+Math.cos(a)*Math.min(W,H)*(0.36+ (i%4)*0.05);
+        const dy=H*0.60+Math.sin(a)*Math.min(W,H)*(0.24+(i%3)*0.04);
+        x.save(); x.translate(dx,dy); x.rotate(i+t*0.0002);
+        x.fillStyle=i%3?'#152018':'#1e2a20';
+        const rr=3+(i%5)*2.4;
+        x.beginPath(); x.moveTo(rr,0);
+        for(let v=1;v<6;v++){ const va=v/6*6.283; const vr=rr*(0.65+((i*v)%3)*0.25);
+          x.lineTo(Math.cos(va)*vr, Math.sin(va)*vr); }
+        x.closePath(); x.fill(); x.restore(); }
+
+      // ── NAVE-MADRE (Independence Day): arco oscuro que tapa el cielo ──
+      const mW=W*1.15, mcy=-H*0.34, mrx=mW/2, mry=H*0.52;
+      const grd=x.createRadialGradient(W/2, mcy, mry*0.3, W/2, mcy, mry);
+      grd.addColorStop(0,'#141020'); grd.addColorStop(0.82,'#0a0812'); grd.addColorStop(1,'#05060e');
+      x.fillStyle=grd; x.beginPath(); x.ellipse(W/2,mcy,mrx,mry,0,0,Math.PI*2); x.fill();
+      // borde inferior con luz
+      x.strokeStyle='rgba(120,90,200,0.35)'; x.lineWidth=2;
+      x.beginPath(); x.ellipse(W/2,mcy,mrx,mry,0,0.15,Math.PI-0.15); x.stroke();
+      // ciudad-luces en la panza de la nave
+      for(let i=0;i<80;i++){ const a=0.2+Math.random()*(Math.PI-0.4);
+        const rr=mry*(0.72+Math.random()*0.26);
+        const lx=W/2+Math.cos(a)*mrx*(rr/mry), ly=mcy+Math.sin(a)*rr;
+        if(ly>0&&ly<H*0.5){ x.globalAlpha=0.25+0.5*Math.abs(Math.sin(t*0.002+i));
+          x.fillStyle=i%7?'#6a5aa0':'#00F0FF'; x.fillRect(lx,ly,1.4,1.4); } } x.globalAlpha=1;
+      // rayo central de la nave-madre
+      const bx=W/2+Math.sin(t*0.0004)*W*0.05, bTop=mcy+mry*0.9;
+      const mb=x.createLinearGradient(bx,bTop,bx,H);
+      mb.addColorStop(0,'rgba(0,240,255,0.14)'); mb.addColorStop(1,'transparent');
+      x.fillStyle=mb; x.beginPath(); x.moveTo(bx-18,bTop); x.lineTo(bx+18,bTop);
+      x.lineTo(bx+70,H); x.lineTo(bx-70,H); x.closePath(); x.fill();
+
+      // ── KNOWHERE: la cabeza colosal ancestral como estación ──
+      const hx=W*0.44, hy=H*0.66, hs=Math.min(W,H)*0.52; // escala de la cabeza
+      x.save(); x.translate(hx,hy);
+      // silueta de piedra (perfil 3/4) — path de cráneo
+      x.beginPath();
+      x.moveTo(-0.30*hs,-0.62*hs);           // frente-corona
+      x.bezierCurveTo(-0.02*hs,-0.80*hs, 0.34*hs,-0.66*hs, 0.42*hs,-0.30*hs); // cráneo derecho
+      x.bezierCurveTo(0.50*hs,-0.05*hs, 0.44*hs,0.10*hs, 0.52*hs,0.16*hs);    // sien/pómulo
+      x.bezierCurveTo(0.44*hs,0.30*hs, 0.36*hs,0.30*hs, 0.34*hs,0.42*hs);     // nariz
+      x.bezierCurveTo(0.30*hs,0.52*hs, 0.20*hs,0.52*hs, 0.16*hs,0.60*hs);     // labio/mentón
+      x.bezierCurveTo(0.08*hs,0.72*hs, -0.10*hs,0.74*hs, -0.22*hs,0.66*hs);   // mandíbula
+      x.bezierCurveTo(-0.40*hs,0.54*hs, -0.46*hs,0.20*hs, -0.44*hs,0.02*hs);  // nuca
+      x.bezierCurveTo(-0.46*hs,-0.30*hs, -0.44*hs,-0.52*hs, -0.30*hs,-0.62*hs);
+      x.closePath();
+      const stone=x.createLinearGradient(-0.4*hs,-0.6*hs,0.4*hs,0.6*hs);
+      stone.addColorStop(0,'#2b3328'); stone.addColorStop(0.45,'#1a221a'); stone.addColorStop(1,'#0b120d');
+      x.fillStyle=stone; x.fill();
+      x.strokeStyle='rgba(140,190,140,0.22)'; x.lineWidth=2; x.stroke();
+      // riscos: crestas rocosas irregulares sobre el contorno (silueta craggy de Celestial)
+      x.fillStyle='#121a12';
+      [[-0.36,-0.50],[-0.16,-0.72],[0.10,-0.70],[0.30,-0.52],[0.46,-0.16],[-0.46,-0.10],[-0.42,0.30]].forEach(([px,py],i)=>{
+        x.save(); x.translate(px*hs,py*hs); x.rotate(Math.atan2(py,px)+Math.PI/2);
+        x.beginPath(); x.moveTo(-0.06*hs,0);
+        x.lineTo(-0.02*hs,-(0.06+(i%3)*0.03)*hs); x.lineTo(0.01*hs,-(0.03+(i%2)*0.02)*hs);
+        x.lineTo(0.04*hs,-(0.07+(i%4)*0.02)*hs); x.lineTo(0.07*hs,0);
+        x.closePath(); x.fill(); x.restore(); });
+      // grietas con brillo verde de la colonia filtrándose
+      [[-0.2,-0.4,0.1,0.1],[0.1,-0.2,-0.15,0.3],[-0.3,0.1,0.2,0.2],[0.02,0.05,0.12,-0.18]].forEach(([a,b,c,d])=>{
+        x.strokeStyle='rgba(0,0,0,0.55)'; x.lineWidth=2;
+        x.beginPath(); x.moveTo(a*hs,b*hs); x.lineTo((a+c)*hs,(b+d)*hs); x.stroke();
+        x.strokeStyle='rgba(170,255,0,0.14)'; x.lineWidth=0.8;
+        x.beginPath(); x.moveTo(a*hs+1,b*hs+1); x.lineTo((a+c)*hs+1,(b+d)*hs+1); x.stroke(); });
+      // OJO = gran domo iluminado (el centro de la colonia)
+      const eyeX=0.14*hs, eyeY=-0.16*hs, eyeR=0.14*hs;
+      const eg=x.createRadialGradient(eyeX,eyeY,0,eyeX,eyeY,eyeR);
+      const eyePulse=0.7+0.3*Math.sin(t*0.002);
+      eg.addColorStop(0,`rgba(170,255,0,${eyePulse})`); eg.addColorStop(0.5,'rgba(0,240,255,0.5)'); eg.addColorStop(1,'transparent');
+      x.fillStyle=eg; x.beginPath(); x.arc(eyeX,eyeY,eyeR,0,6.283); x.fill();
+      x.strokeStyle='rgba(0,240,255,0.6)'; x.lineWidth=2; x.beginPath(); x.arc(eyeX,eyeY,eyeR*0.6,0,6.283); x.stroke();
+      // BOCA abierta = hangar iluminado
+      const mgX=0.16*hs, mgY=0.44*hs;
+      const mg=x.createRadialGradient(mgX,mgY,0,mgX,mgY,0.1*hs);
+      mg.addColorStop(0,'rgba(255,210,0,0.8)'); mg.addColorStop(1,'transparent');
+      x.fillStyle=mg; x.beginPath(); x.ellipse(mgX,mgY,0.11*hs,0.05*hs,0,0,6.283); x.fill();
+      // ventanas = ciudad dentro de la cabeza
+      windows.forEach(w=>{ const px=(-0.44+w.u*0.9)*hs, py=(-0.6+w.v*1.2)*hs;
+        x.fillStyle=w.c; x.globalAlpha=0.35+0.55*Math.abs(Math.sin(t*0.003+w.ph));
+        x.fillRect(px,py,w.sz,w.sz); }); x.globalAlpha=1;
+      // GRÚAS TRABAJANDO en la corona — brazos que giran, cables que suben carga
+      for(let k=0;k<5;k++){ const gx0=(-0.24+k*0.11)*hs, gy0=-0.6*hs-(k%2)*6;
+        x.strokeStyle='rgba(170,255,0,0.55)'; x.lineWidth=1.5;
+        x.beginPath(); x.moveTo(gx0,gy0); x.lineTo(gx0,gy0-0.13*hs); x.stroke();
+        // brazo giratorio
+        const arm=Math.sin(t*0.0009+k*1.7)*0.7;
+        const ax=gx0+Math.cos(arm)*0.09*hs, ay=(gy0-0.13*hs)+Math.sin(arm)*0.02*hs;
+        x.beginPath(); x.moveTo(gx0,gy0-0.13*hs); x.lineTo(ax,ay); x.stroke();
+        // cable + carga subiendo
+        const lift=(Math.sin(t*0.0013+k)+1)/2;
+        x.strokeStyle='rgba(170,255,0,0.3)';
+        x.beginPath(); x.moveTo(ax,ay); x.lineTo(ax, ay+0.10*hs*lift); x.stroke();
+        x.fillStyle='#FFD200'; x.fillRect(ax-2.5, ay+0.10*hs*lift, 5,5);
+        // agente operando (puntito que camina por la corona)
+        const wx=gx0+Math.sin(t*0.0011+k*2)*0.04*hs;
+        x.fillStyle='#00F0FF'; x.beginPath(); x.arc(wx, gy0-3, 2, 0, 6.283); x.fill();
       }
       x.restore();
-      // ojo del portal
-      const eg=x.createRadialGradient(pcx,pcy,0,pcx,pcy,pr*0.7);
-      eg.addColorStop(0,'rgba(170,255,0,0.25)'); eg.addColorStop(0.6,'rgba(0,240,255,0.10)'); eg.addColorStop(1,'transparent');
-      x.fillStyle=eg; x.beginPath(); x.arc(pcx,pcy,pr*0.7,0,6.283); x.fill();
-      // nave nodriza patrullando
-      const mx=W*0.5+Math.sin(t*0.00022)*W*0.34, my=H*0.14+Math.sin(t*0.0005)*10;
-      x.fillStyle='rgba(184,77,255,0.85)';
-      x.beginPath(); x.ellipse(mx,my,34,9,0,0,6.283); x.fill();
-      x.fillStyle='rgba(230,200,255,0.9)';
-      x.beginPath(); x.arc(mx,my-7,12,Math.PI,0); x.fill();
-      for(let i=-2;i<=2;i++){ x.fillStyle=`rgba(170,255,0,${0.5+0.5*Math.sin(t*0.01+i)})`;
-        x.beginPath(); x.arc(mx+i*12,my+3,1.8,0,6.283); x.fill(); }
-      // rayo tractor
-      const beam=x.createLinearGradient(mx,my,mx,my+H*0.4);
-      beam.addColorStop(0,'rgba(170,255,0,0.16)'); beam.addColorStop(1,'transparent');
-      x.fillStyle=beam;
-      x.beginPath(); x.moveTo(mx-8,my+8); x.lineTo(mx+8,my+8);
-      x.lineTo(mx+42,my+H*0.4); x.lineTo(mx-42,my+H*0.4); x.closePath(); x.fill();
-      // glifos cayendo
-      x.font='13px monospace';
-      drops.forEach(d=>{ d.y+=d.v; if(d.y>H+20){ d.y=-20; d.x=Math.random()*W; }
-        x.fillStyle=`rgba(170,255,0,${d.a})`; x.fillText(d.g, d.x, d.y); });
-      // barrido de escáner
-      const sy=(t*0.05)%(H*1.4);
-      const sg=x.createLinearGradient(0,sy-40,0,sy+40);
-      sg.addColorStop(0,'transparent'); sg.addColorStop(0.5,'rgba(0,240,255,0.07)'); sg.addColorStop(1,'transparent');
-      x.fillStyle=sg; x.fillRect(0,sy-40,W,80);
+
+      // ── naves entrando/saliendo del ojo ──
+      ships.forEach(s=>{ s.a+=s.sp;
+        const ex=hx+0.14*hs, ey=hy-0.16*hs;
+        const dist=(0.6+0.4*Math.sin(s.a*1.3))*Math.min(W,H)*0.45;
+        const sx=ex+Math.cos(s.a)*dist, sy=ey+Math.sin(s.a)*dist*0.7;
+        // estela hacia el ojo
+        x.strokeStyle='rgba(0,240,255,0.25)'; x.lineWidth=1;
+        x.beginPath(); x.moveTo(sx,sy); x.lineTo(sx+(ex-sx)*0.14, sy+(ey-sy)*0.14); x.stroke();
+        x.fillStyle=s.i%3?'#00F0FF':'#FFD200';
+        x.beginPath(); x.moveTo(sx,sy); x.lineTo(sx-6,sy-2.5); x.lineTo(sx-4,sy); x.lineTo(sx-6,sy+2.5); x.closePath(); x.fill(); });
+
+      // ── neblina / haz de escáner sutil ──
+      const sy2=(t*0.04)%(H*1.4);
+      const sg=x.createLinearGradient(0,sy2-50,0,sy2+50);
+      sg.addColorStop(0,'transparent'); sg.addColorStop(0.5,'rgba(0,240,255,0.05)'); sg.addColorStop(1,'transparent');
+      x.fillStyle=sg; x.fillRect(0,sy2-50,W,100);
+      // rótulo
+      x.font='10px "Space Mono", monospace'; x.fillStyle='rgba(170,255,0,0.4)'; x.textAlign='left';
+      x.fillText('◈ KNOWHERE STATION — SEDE DE LOS AGENTES · POBLACIÓN: 7 AGENTES · 24/7', 24, H-24);
     }
     requestAnimationFrame(loop);
   })(0);
@@ -8061,6 +8472,8 @@ var qrcode = function() {
     ['D','Defensa · Optimus',  ()=>{ if(window.hkDefensa) window.hkDefensa(); }],
     ['A','Agent panel',        ()=>{ const p=document.getElementById('ag-panel'); if(p) p.classList.toggle('open'); }],
     ['K','Backrooms',          ()=>{ if(window.hkBackrooms) window.hkBackrooms(); }],
+    ['V','Cosmos · vista lejana', ()=>{}],
+    ['L','Entity Lab',            ()=>{}],
   ];
   const KEYMAP={ '1':'map','2':'arte','3':'lore','4':'viceos','5':'systems','6':'flow','7':'agents' };
   // leyenda estilo clásico — se abre con ?
@@ -8084,20 +8497,21 @@ var qrcode = function() {
     if(hit) hit[2]();
   });
 
-  // ═══ LEYENDA FIJA DE ESQUINA — siempre visible, con barrita de opacidad ═══
-  const savedOp=parseFloat(localStorage.getItem('hk23_sc_opacity')||'0.75');
-  const savedMin=localStorage.getItem('hk23_sc_min')==='1';
+  // ═══ LEYENDA DE ESQUINA — fantasma: un ⌨ que ni se nota hasta que lo tocás ═══
+  const savedOp=parseFloat(localStorage.getItem('hk23_sc_opacity')||'0.35');
+  const savedMin=true; // siempre nace plegada
   const corner=document.createElement('div'); corner.id='sc-corner';
-  corner.style.cssText='position:fixed;right:16px;bottom:88px;z-index:512;width:196px;'+
-    'background:rgba(6,6,8,.92);border:1px solid #1C1C1C;border-radius:3px;padding:10px 12px;'+
-    "font-family:'Space Mono',monospace;backdrop-filter:blur(8px);transition:opacity .2s;";
+  corner.style.cssText='position:fixed;left:16px;bottom:110px;z-index:512;width:auto;'+
+    'background:transparent;border:1px solid transparent;border-radius:3px;padding:4px 6px;'+
+    "font-family:'Space Mono',monospace;transition:opacity .25s, background .25s;";
   const rows=KEYS.map(([k,l])=>'<div style="display:flex;gap:8px;align-items:center;margin-bottom:3px">'+
     '<span style="border:1px solid #262626;border-radius:2px;padding:1px 5px;font-size:8px;color:#F0EDE8;min-width:14px;text-align:center">'+k+'</span>'+
     '<span style="font-size:7px;letter-spacing:1px;color:#666;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">'+l+'</span></div>').join('');
   corner.innerHTML=
-    '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;cursor:pointer" id="sc-head">'+
-      '<span style="font-size:8px;letter-spacing:3px;color:#555">⌨ SHORTCUTS</span>'+
-      '<span id="sc-toggle" style="margin-left:auto;color:#444;font-size:10px">'+(savedMin?'▸':'▾')+'</span></div>'+
+    '<div style="display:flex;align-items:center;gap:6px;cursor:pointer" id="sc-head">'+
+      '<span id="sc-ghost" style="font-size:11px;color:#555">⌨</span>'+
+      '<span id="sc-title" style="font-size:8px;letter-spacing:3px;color:#555;display:none">SHORTCUTS</span>'+
+      '<span id="sc-toggle" style="margin-left:auto;color:#444;font-size:10px;display:none">▾</span></div>'+
     '<div id="sc-body" style="display:'+(savedMin?'none':'block')+'">'+rows+
       '<div style="display:flex;gap:8px;align-items:center;margin-bottom:3px">'+
         '<span style="border:1px solid #262626;border-radius:2px;padding:1px 5px;font-size:8px;color:#F0EDE8">1-7</span>'+
@@ -8114,14 +8528,107 @@ var qrcode = function() {
   const op=document.getElementById('sc-op');
   op.oninput=()=>{ const v=op.value/100; corner.style.opacity=v; localStorage.setItem('hk23_sc_opacity',v); };
   // que el slider se pueda usar aunque esté casi transparente
-  corner.onmouseenter=()=>{ corner.style.opacity=1; };
-  corner.onmouseleave=()=>{ corner.style.opacity=parseFloat(localStorage.getItem('hk23_sc_opacity')||'0.75'); };
-  document.getElementById('sc-head').onclick=()=>{
-    const b=document.getElementById('sc-body'), t=document.getElementById('sc-toggle');
-    const min=b.style.display!=='none';
-    b.style.display=min?'none':'block'; t.textContent=min?'▸':'▾';
-    localStorage.setItem('hk23_sc_min', min?'1':'0');
-  };
+  // fantasma → panel completo solo con hover
+  function expandSC(v){
+    corner.style.opacity = v ? 1 : parseFloat(localStorage.getItem('hk23_sc_opacity')||'0.35');
+    corner.style.background = v ? 'rgba(6,6,8,.94)' : 'transparent';
+    corner.style.borderColor = v ? '#1C1C1C' : 'transparent';
+    corner.style.width = v ? '196px' : 'auto';
+    corner.style.padding = v ? '10px 12px' : '4px 6px';
+    corner.style.backdropFilter = v ? 'blur(8px)' : 'none';
+    document.getElementById('sc-body').style.display = v ? 'block' : 'none';
+    document.getElementById('sc-title').style.display = v ? 'inline' : 'none';
+    document.getElementById('sc-ghost').style.display = v ? 'none' : 'inline';
+    const opRow=document.getElementById('sc-op').parentElement;
+    opRow.style.display = v ? 'flex' : 'none';
+  }
+  corner.onmouseenter=()=>expandSC(true);
+  corner.onmouseleave=()=>expandSC(false);
+  document.getElementById('sc-head').onclick=()=>expandSC(true);
+  expandSC(false);
+  // chip ⌨ en el dock: siempre encontrás los shortcuts aunque el fantasma esté invisible
+  const dockRef=document.getElementById('hk-dock');
+  if(dockRef){ const kb=document.createElement('button'); kb.className='dk'; kb.textContent='⌨';
+    kb.title='Shortcuts (?)'; kb.style.setProperty('--dc','#F0EDE8');
+    kb.onclick=()=>{ leg.style.display=leg.style.display==='none'?'block':'none'; };
+    dockRef.appendChild(kb); }
+})();
+</script>
+
+<script>
+// ═══ WARP JUMP — atravesar la galaxia en etapas y POOM: adentro ═══
+(function(){
+  const mode=()=>{ try{ return localStorage.getItem('hk23_warp_mode')||'warp'; }catch(e){ return 'warp'; } };
+  let cvW=null;
+  function WarpJump(cb, color){
+    const m=mode();
+    if(m==='off'){ cb(); return; }
+    color=color||'#00F0FF';
+    if(!cvW){ cvW=document.createElement('canvas');
+      cvW.style.cssText='position:fixed;inset:0;z-index:950;pointer-events:none;display:none;';
+      document.body.appendChild(cvW); }
+    const W=cvW.width=innerWidth, H=cvW.height=innerHeight, g=cvW.getContext('2d');
+    cvW.style.display='block';
+    const cx=W/2, cy=H/2, t0=performance.now(), DUR=1500;
+    const stars=Array.from({length:m==='portal'?0:240},()=>({ a:Math.random()*6.283, d:Math.random()*Math.min(W,H)*.5+20, s:.5+Math.random()*1.5 }));
+    let fired=false;
+    (function frame(now){
+      const p=Math.min(1,(now-t0)/DUR); // 0→1
+      g.fillStyle='rgba(3,3,5,'+(p<.85?0.5:0.9)+')'; g.fillRect(0,0,W,H);
+      if(m==='portal'){
+        // anillos que se expanden hacia vos
+        for(let k=0;k<7;k++){ const rp=((p*2.2)+k/7)%1;
+          g.strokeStyle=color+Math.floor((1-rp)*200).toString(16).padStart(2,'0');
+          g.lineWidth=2+rp*5;
+          g.beginPath(); g.arc(cx,cy,rp*rp*Math.max(W,H)*.75,0,6.283); g.stroke(); }
+      } else {
+        // etapas: crucero (p<.4) → aceleración (p<.85) → flash
+        const speed = p<.4 ? p*2 : p<.85 ? 2+(p-.4)*22 : 14;
+        stars.forEach(s=>{
+          s.d += s.s*speed;
+          const wrap=Math.max(W,H)*.75; if(s.d>wrap){ s.d=10+Math.random()*40; }
+          const x1=cx+Math.cos(s.a)*s.d, y1=cy+Math.sin(s.a)*s.d;
+          const len=Math.min(90, s.d*speed*.02+1);
+          const x2=cx+Math.cos(s.a)*(s.d+len), y2=cy+Math.sin(s.a)*(s.d+len);
+          g.strokeStyle=p<.4?'rgba(240,237,232,.7)':color;
+          g.globalAlpha=Math.min(1,.3+p);
+          g.lineWidth=p<.4?1:1.6;
+          g.beginPath(); g.moveTo(x1,y1); g.lineTo(x2,y2); g.stroke();
+        });
+        g.globalAlpha=1;
+      }
+      if(p>.85 && !fired){ fired=true; cb(); } // POOM: entrás justo antes del flash
+      if(p>=.9){ const f=(p-.9)/.1;
+        g.fillStyle='rgba(255,255,255,'+(f<.5?f:1-f)*.9+')'; g.fillRect(0,0,W,H); }
+      if(p<1) requestAnimationFrame(frame);
+      else { cvW.style.display='none'; }
+    })(t0);
+  }
+  window.WarpJump=WarpJump;
+  // hook 1: ENTER THE UNIVERSE
+  const eb=document.querySelector('.enter-btn');
+  if(eb){ eb.removeAttribute('onclick'); eb.onclick=()=>WarpJump(()=>goTo('map'),'#FF3A1F'); }
+  // hook 2: entrar a los planetas (fractal)
+  if(typeof openFractalUniverse==='function'){
+    const orig=openFractalUniverse;
+    window.openFractalUniverse=(proj)=>WarpJump(()=>orig(proj), proj&&proj.color);
+  }
+  // selector en DISEÑOS: WARP / PORTAL / OFF
+  const pane=document.querySelector('.ag-pane[data-pane="designs"]');
+  if(pane){
+    const wrap=document.createElement('div');
+    wrap.innerHTML='<div class="ag-label" style="margin-top:14px">ANIMACIÓN DE ENTRADA</div>';
+    const row=document.createElement('div'); row.className='ag-btnrow';
+    [['warp','🌌 WARP'],['portal','◎ PORTAL'],['off','✕ OFF']].forEach(([v,l])=>{
+      const b=document.createElement('button'); b.className='ag-btn ghost'; b.textContent=l;
+      const paint=()=>{ b.style.background=mode()===v?'#00F0FF':'transparent'; b.style.color=mode()===v?'#000':'#888'; };
+      b.onclick=()=>{ try{ localStorage.setItem('hk23_warp_mode',v); }catch(e){}
+        row.querySelectorAll('button').forEach(x=>{ x.style.background='transparent'; x.style.color='#888'; });
+        paint(); WarpJump(()=>{},'#B84DFF'); };
+      paint(); row.appendChild(b);
+    });
+    wrap.appendChild(row); pane.appendChild(wrap);
+  }
 })();
 </script>
 
@@ -8136,6 +8643,1115 @@ var qrcode = function() {
       document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
     }
   });
+})();
+</script>
+<!-- ═══════════ ENTITY LAB — agarrá, fusioná, jugá, mapeá ═══════════ -->
+<style id="entity-lab-style">
+  #lab-canvas{ position:fixed; inset:0; z-index:7; pointer-events:none; }
+  body.lab-on #lab-canvas{ pointer-events:auto; cursor:grab; }
+  body.lab-on #lab-canvas.grabbing{ cursor:grabbing; }
+  #lab-bar{ position:fixed; top:68px; left:20px; z-index:516; display:none; gap:5px; flex-wrap:wrap;
+    background:rgba(6,6,8,.92); border:1px solid #1C1C1C; border-radius:3px; padding:7px 9px; backdrop-filter:blur(8px); }
+  body.lab-on #lab-bar{ display:flex; }
+  .lb{ font-family:'Space Mono',monospace; font-size:8px; letter-spacing:2px; text-transform:uppercase;
+    background:transparent; border:1px solid #222; border-radius:2px; color:#888; padding:6px 10px; cursor:pointer; }
+  .lb:hover{ color:#000; background:#B84DFF; border-color:#B84DFF; }
+  #lab-hint{ position:fixed; top:112px; left:20px; z-index:516; display:none;
+    font-family:'Space Mono',monospace; font-size:7px; letter-spacing:1px; color:#3A3A3A; line-height:1.8; }
+  body.lab-on #lab-hint{ display:block; }
+  .game-ov{ position:fixed; inset:0; z-index:800; background:rgba(2,2,3,.97); display:none;
+    align-items:center; justify-content:center; flex-direction:column; }
+  .game-ov.open{ display:flex; }
+  .game-hud{ font-family:'Space Mono',monospace; font-size:10px; letter-spacing:4px; color:#666; margin-bottom:12px; }
+  .game-hud b{ color:#F0EDE8; }
+  .game-x{ position:absolute; top:20px; right:24px; font-family:'Space Mono',monospace; font-size:10px;
+    letter-spacing:3px; color:#000; background:#FF3A1F; border:none; border-radius:2px; padding:8px 16px; cursor:pointer; }
+</style>
+
+<canvas id="lab-canvas"></canvas>
+<div id="lab-bar">
+  <button class="lb" id="lb-tetris">▦ TETRIS</button>
+  <button class="lb" id="lb-pong">◐ PONG</button>
+  <button class="lb" id="lb-foto">📷 MAPEAR FOTO</button>
+  <button class="lb" id="lb-lore">📜 LORE</button>
+  <button class="lb" id="lb-off" style="color:#FF3A1F">✕ SALIR DEL LAB</button>
+  <input type="file" id="lb-file" accept="image/*" style="display:none">
+</div>
+<div id="lab-hint">ARRASTRÁ PARA AGARRAR · RUEDA = TAMAÑO · SOLTÁ UN ÁTOMO SOBRE OTRO = FUSIÓN · DOBLE CLIC = REVELAR DESTINO</div>
+
+<div class="game-ov" id="tetris-ov">
+  <button class="game-x" onclick="document.getElementById('tetris-ov').classList.remove('open')">✕ SALIR</button>
+  <div class="game-hud">ENTITY TETRIS — <b id="tt-score">0</b> PTS · ←→ MOVER · ↑ ROTAR · ↓ CAER · LAS ENTIDADES SON LAS PIEZAS</div>
+  <canvas id="tt-cv"></canvas>
+</div>
+<div class="game-ov" id="pong-ov">
+  <button class="game-x" onclick="document.getElementById('pong-ov').classList.remove('open')">✕ SALIR</button>
+  <div class="game-hud">HEYOKA PONG — VOS <b id="pg-me">0</b> · <b id="pg-ai">0</b> ATLAS · MOVÉ EL MOUSE · PRIMERO A 5</div>
+  <canvas id="pg-cv"></canvas>
+</div>
+
+<script>
+// ═══ ENTITY LAB — las entidades son tuyas: agarralas, fusionalas, jugá ═══
+(function(){
+  const cv=document.getElementById('lab-canvas'), x=cv.getContext('2d');
+  let W,H; const fit=()=>{ W=cv.width=innerWidth; H=cv.height=innerHeight; };
+  fit(); addEventListener('resize',fit);
+  const store={ get(k,d){ try{ return JSON.parse(localStorage.getItem(k)) ?? d; }catch(e){ return d; } },
+    set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} } };
+  const log=(k,d)=>{ (window.hkLog||function(){})(k,d); };
+  const toast=(msg)=>{ const t=document.getElementById('collect-toast'); if(!t) return;
+    t.textContent=msg; t.classList.add('show'); clearTimeout(toast._t);
+    toast._t=setTimeout(()=>t.classList.remove('show'),2400); };
+
+  // ── EL LORE DE LAS ENTIDADES ──
+  const TYPES={
+    cubo:   { color:'#FFD200', lore:'Los CUBOS son ideas camufladas. Se hacen pasar por decoración, pero adentro llevan una pieza de blueprint. Reventalos.' },
+    ovni:   { color:'#B84DFF', lore:'Los OVNIS son taxis del sótano. Lindos por fuera. Doble clic y ya estás en las backrooms.' },
+    atomo:  { color:'#00F0FF', lore:'Los ÁTOMOS se fusionan. Soltá uno sobre otro y crecen. Con masa 5+, explotan en piezas de idea.' },
+    celula: { color:'#AAFF00', lore:'Las CÉLULAS están vivas: crecen solas y se dividen si las agrandás demasiado. El universo respira por ellas.' },
+    rombo:  { color:'#FF3A1F', lore:'Los ROMBOS son puertas a tus proyectos. Nunca sabés a cuál — el universo decide. Doble clic y viajás.' },
+  };
+  const KINDS=Object.keys(TYPES);
+  const lore=store.get('hk23_lab_lore',{fusiones:0, reveladas:0, viajes:0, fotos:0});
+
+  // ── población del laboratorio ──
+  let ents=[], photoMode=false;
+  function spawn(n){
+    for(let i=0;i<n;i++){
+      const kind=KINDS[Math.floor(Math.random()*KINDS.length)];
+      ents.push({ kind, x:Math.random()*W, y:Math.random()*H,
+        vx:(Math.random()-.5)*.4, vy:(Math.random()-.5)*.3,
+        r:6+Math.random()*8, mass:1, ph:Math.random()*6.28,
+        color:TYPES[kind].color, camo:'#'+['666','777','888','999'][i%4]+'', revealed:false,
+        tx:null, ty:null, pc:null });
+    }
+  }
+  spawn(26);
+
+  function drawEnt(e,t){
+    const bob=Math.sin(t*0.002+e.ph)*2;
+    const col=e.revealed? e.color : (photoMode&&e.pc? e.pc : e.camo);
+    x.save(); x.translate(e.x, e.y+bob); x.globalAlpha=.95;
+    if(e.kind==='cubo'){ x.fillStyle=col; x.fillRect(-e.r,-e.r,e.r*2,e.r*2);
+      x.strokeStyle='rgba(255,255,255,.25)'; x.strokeRect(-e.r,-e.r,e.r*2,e.r*2); }
+    else if(e.kind==='ovni'){ x.fillStyle=col;
+      x.beginPath(); x.ellipse(0,0,e.r*1.4,e.r*.5,0,0,6.283); x.fill();
+      x.fillStyle='rgba(255,255,255,.6)'; x.beginPath(); x.arc(0,-e.r*.4,e.r*.55,Math.PI,0); x.fill(); }
+    else if(e.kind==='atomo'){ x.strokeStyle=col; x.lineWidth=1.2;
+      for(let k=0;k<3;k++){ x.save(); x.rotate(k*Math.PI/3+t*0.001);
+        x.beginPath(); x.ellipse(0,0,e.r*1.5,e.r*.55,0,0,6.283); x.stroke(); x.restore(); }
+      x.fillStyle=col; x.beginPath(); x.arc(0,0,e.r*.5,0,6.283); x.fill(); }
+    else if(e.kind==='celula'){ x.fillStyle=col; x.globalAlpha=.35;
+      x.beginPath(); x.arc(0,0,e.r*1.4,0,6.283); x.fill();
+      x.globalAlpha=.9; x.beginPath(); x.arc(e.r*.2,-e.r*.2,e.r*.5,0,6.283); x.fill(); }
+    else { x.fillStyle=col; x.beginPath();
+      x.moveTo(0,-e.r*1.3); x.lineTo(e.r,0); x.lineTo(0,e.r*1.3); x.lineTo(-e.r,0); x.closePath(); x.fill(); }
+    if(e.mass>1){ x.fillStyle='#fff'; x.font='700 9px "Space Mono",monospace'; x.textAlign='center';
+      x.fillText('x'+e.mass, 0, -e.r-6); }
+    x.restore(); x.globalAlpha=1;
+  }
+
+  let grabbed=null, labOn=false;
+  function loop(t){
+    x.clearRect(0,0,W,H);
+    if(labOn||photoMode){
+      ents.forEach(e=>{
+        if(photoMode&&e.tx!=null){ e.x+=(e.tx-e.x)*.1; e.y+=(e.ty-e.y)*.1; }
+        else if(e!==grabbed){ e.x+=e.vx; e.y+=e.vy;
+          if(e.x<0||e.x>W) e.vx*=-1; if(e.y<0||e.y>H) e.vy*=-1;
+          if(e.kind==='celula'){ e.r+=0.004; if(e.r>22){ e.r=8; const c={...e, x:e.x+14, r:7}; ents.push(c); } } }
+        drawEnt(e,t);
+      });
+    }
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+  const hit=(mx,my)=>ents.slice().reverse().find(e=>Math.hypot(e.x-mx,e.y-my)<Math.max(16,e.r*1.6));
+
+  // ── agarrar / arrastrar / fusionar ──
+  cv.addEventListener('pointerdown',e=>{ if(!labOn) return;
+    grabbed=hit(e.clientX,e.clientY);
+    if(grabbed){ cv.classList.add('grabbing'); cv.setPointerCapture(e.pointerId);
+      if(!grabbed.revealed){ grabbed.revealed=true; } } // al agarrarla revela su color/destino
+  });
+  cv.addEventListener('pointermove',e=>{ if(grabbed){ grabbed.x=e.clientX; grabbed.y=e.clientY; } });
+  cv.addEventListener('pointerup',e=>{
+    if(!grabbed) return;
+    // fusión de átomos
+    if(grabbed.kind==='atomo'){
+      const other=ents.find(o=>o!==grabbed&&o.kind==='atomo'&&Math.hypot(o.x-grabbed.x,o.y-grabbed.y)<o.r+grabbed.r+6);
+      if(other){ other.mass+=grabbed.mass; other.r=Math.min(30, other.r+grabbed.r*.4);
+        ents=ents.filter(o=>o!==grabbed);
+        lore.fusiones++; store.set('hk23_lab_lore',lore);
+        toast('⚛ FUSIÓN — MASA x'+other.mass);
+        if(other.mass>=5){ ents=ents.filter(o=>o!==other); dropPieces(other.x,other.y);
+          toast('⚛ ÁTOMO CRÍTICO — EXPLOTÓ EN PIEZAS DE IDEA'); }
+      }
+    }
+    grabbed=null; cv.classList.remove('grabbing');
+  });
+  // rueda = tamaño
+  cv.addEventListener('wheel',e=>{ if(!labOn) return;
+    const t=hit(e.clientX,e.clientY); if(!t) return;
+    e.preventDefault();
+    t.r=Math.max(3, Math.min(34, t.r + (e.deltaY<0?1.6:-1.6)));
+  },{passive:false});
+  // doble clic = destino
+  cv.addEventListener('dblclick',e=>{ if(!labOn) return;
+    const t=hit(e.clientX,e.clientY); if(!t) return;
+    t.revealed=true;
+    if(t.kind==='ovni'){ lore.viajes++; store.set('hk23_lab_lore',lore);
+      if(window.hkBackrooms) window.hkBackrooms(); }
+    else if(t.kind==='rombo'){ lore.viajes++; store.set('hk23_lab_lore',lore);
+      if(typeof PROJECTS!=='undefined'&&typeof openFractalUniverse==='function'){
+        const pr=PROJECTS[Math.floor(Math.random()*PROJECTS.length)];
+        toast('◆ ROMBO → '+pr.label); openFractalUniverse(pr); } }
+    else if(t.kind==='cubo'){ ents=ents.filter(o=>o!==t); dropPieces(t.x,t.y,1);
+      lore.reveladas++; store.set('hk23_lab_lore',lore); }
+  });
+  // soltar piezas de idea reales (mismo estado que el campo de ideas)
+  function dropPieces(px,py,n){
+    const st=store.get('hk23_universe_state',null);
+    if(st&&st.ideas){
+      const open=st.ideas.filter(i=>i.collected<i.pieces)
+        .sort((a,b)=>(b.collected/b.pieces)-(a.collected/a.pieces));
+      const c=n||2;
+      for(let k=0;k<c&&open[k%open.length];k++){ const idea=open[k%open.length];
+        idea.collected=Math.min(idea.pieces, idea.collected+1); }
+      store.set('hk23_universe_state',st);
+      toast('✦ PIEZAS LIBERADAS — MIRÁ TUS IDEAS (I)');
+    }
+  }
+
+  // ── FOTO MAPPING: subí una imagen y las entidades la forman ──
+  document.getElementById('lb-foto').onclick=()=>document.getElementById('lb-file').click();
+  document.getElementById('lb-file').addEventListener('change',ev=>{
+    const f=ev.target.files[0]; if(!f) return;
+    const rd=new FileReader();
+    rd.onload=()=>{
+      const img=new Image();
+      img.onload=()=>{
+        const oc=document.createElement('canvas'), g=oc.getContext('2d');
+        const gw=48, gh=Math.max(8, Math.round(gw*img.height/img.width));
+        oc.width=gw; oc.height=gh; g.drawImage(img,0,0,gw,gh);
+        const d=g.getImageData(0,0,gw,gh).data, targets=[];
+        for(let r=0;r<gh;r++) for(let c=0;c<gw;c++){
+          const i=(r*gw+c)*4, lum=(d[i]+d[i+1]+d[i+2])/3;
+          if(d[i+3]>120 && lum>36) targets.push({ c, r, col:'rgb('+d[i]+','+d[i+1]+','+d[i+2]+')' });
+        }
+        const cap=800; while(targets.length>cap) targets.splice(Math.floor(Math.random()*targets.length),1);
+        while(ents.length<targets.length) spawn(20);
+        const S=Math.min(W/gw, (H*.8)/gh), x0=(W-gw*S)/2, y0=(H-gh*S)/2;
+        ents.forEach((e,i)=>{ const t=targets[i%targets.length];
+          e.tx=x0+t.c*S+S/2; e.ty=y0+t.r*S+S/2; e.pc=t.col; e.r=Math.max(3,S*.42); });
+        photoMode=true; lore.fotos++; store.set('hk23_lab_lore',lore);
+        toast('📷 LAS ENTIDADES ESTÁN FORMANDO TU IMAGEN — X PARA DISPERSAR');
+        log('lab','foto mapeada con '+targets.length+' entidades');
+      };
+      img.src=rd.result;
+    };
+    rd.readAsDataURL(f);
+  });
+  function disperse(){ photoMode=false; ents.forEach(e=>{ e.tx=null; e.ty=null; e.pc=null;
+    if(e._r0){ e.r=e._r0; e._r0=null; } }); }
+  addEventListener('keydown',e=>{ if(e.key==='Escape'&&photoMode) disperse(); });
+
+  // ═══ CRYPTO SWARM — las entidades se quiebran fino y forman los logos ═══
+  const COINS=[
+    { name:'BITCOIN',  sym:'₿', color:'#F7931A' },
+    { name:'ETHEREUM', sym:'Ξ', color:'#627EEA' },
+    { name:'SOLANA',   sym:'SOL', colors:['#14F195','#9945FF'] },
+    { name:'DOGE',     sym:'Ð', color:'#C2A633' },
+    { name:'CARDANO',  sym:'₳', color:'#2A6AFF' },
+  ];
+  function coinTargets(coin){
+    const oc=document.createElement('canvas'); oc.width=oc.height=380;
+    const g=oc.getContext('2d');
+    g.fillStyle='#fff';
+    if(coin.sym==='SOL'){ // las 3 barras del logo de Solana
+      [[70,110],[70,180],[70,250]].forEach(([xx,yy],i)=>{
+        g.save(); g.transform(1,0,-0.35,1,xx+60,yy);
+        g.fillRect(0,0,190,42); g.restore(); });
+    } else {
+      g.font='700 300px "Space Grotesk", system-ui, sans-serif';
+      g.textAlign='center'; g.textBaseline='middle';
+      g.fillText(coin.sym, 190, 205);
+    }
+    const d=g.getImageData(0,0,380,380).data, pts=[];
+    const step=4; // muestreo fino
+    for(let r=0;r<380;r+=step) for(let c=0;c<380;c+=step)
+      if(d[(r*380+c)*4+3]>120) pts.push({c:c/380, r:r/380,
+        col: coin.colors ? coin.colors[Math.floor(r/380*coin.colors.length)] : coin.color });
+    return pts;
+  }
+  const Swarm={ timer:null, i:0, obs:null,
+    show(coin){
+      const pts=coinTargets(coin);
+      const cap=900; while(pts.length>cap) pts.splice(Math.floor(Math.random()*pts.length),1);
+      while(ents.length<pts.length) spawn(30);
+      // quebrarse en pedazos chicos
+      ents.forEach(e=>{ if(!e._r0) e._r0=e.r; e.r=2.6; });
+      const S=Math.min(W,H)*0.72, x0=(W-S)/2, y0=(H-S)/2;
+      ents.forEach((e,i)=>{ const t=pts[i%pts.length];
+        e.tx=x0+t.c*S; e.ty=y0+t.r*S; e.pc=t.col; });
+      photoMode=true;
+      toast('◈ SWARM — '+coin.name);
+    },
+    start(){
+      this.i=0; this.show(COINS[0]);
+      clearInterval(this.timer);
+      this.timer=setInterval(()=>{ this.i=(this.i+1)%COINS.length; this.show(COINS[this.i]); }, 6000);
+      // se apaga solo cuando el panel de señales se cierra
+      const ov=document.getElementById('ov-crypto');
+      if(ov && !this.obs){ this.obs=new MutationObserver(()=>{
+        if(!ov.classList.contains('open')) Swarm.stop(); });
+        this.obs.observe(ov,{attributes:true}); }
+      log('lab','crypto swarm on');
+    },
+    stop(){ clearInterval(this.timer); this.timer=null; disperse(); }
+  };
+  window.CryptoSwarm=Swarm;
+
+  // ── LORE overlay ──
+  document.getElementById('lb-lore').onclick=()=>{
+    let ov=document.getElementById('ov-lore');
+    if(!ov){ ov=document.createElement('div'); ov.id='ov-lore'; ov.className='hkov'; document.body.appendChild(ov); }
+    ov.innerHTML='<div class="hkov-card"><button class="hkov-x" onclick="this.closest(\'.hkov\').classList.remove(\'open\')">✕</button>'+
+      '<div class="hkov-eyebrow">EL LORE DE LAS ENTIDADES</div>'+
+      '<div class="hkov-title">NADA ACÁ ES DECORACIÓN.</div>'+
+      Object.entries(TYPES).map(([k,v])=>'<div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:12px">'+
+        '<span style="width:12px;height:12px;border-radius:2px;background:'+v.color+';flex-shrink:0;margin-top:3px"></span>'+
+        '<div><b style="font-size:12px;letter-spacing:1px">'+k.toUpperCase()+'</b>'+
+        '<div style="font-size:11px;color:#777;line-height:1.7">'+v.lore+'</div></div></div>').join('')+
+      '<div style="font-family:\'Space Mono\',monospace;font-size:8px;letter-spacing:1px;color:#444;border-top:1px solid #141414;padding-top:12px;line-height:1.9">'+
+      'TU HISTORIAL — FUSIONES: <b style="color:#00F0FF">'+lore.fusiones+'</b> · CUBOS REVELADOS: <b style="color:#FFD200">'+lore.reveladas+'</b> · VIAJES: <b style="color:#B84DFF">'+lore.viajes+'</b> · FOTOS MAPEADAS: <b style="color:#AAFF00">'+lore.fotos+'</b></div></div>';
+    ov.classList.add('open');
+  };
+
+  // ── TETRIS de entidades ──
+  const TT={ cv:document.getElementById('tt-cv'), on:false, score:0 };
+  const SHAPES=[[[1,1,1,1]],[[1,1],[1,1]],[[0,1,0],[1,1,1]],[[1,0],[1,0],[1,1]],[[0,1],[0,1],[1,1]],[[1,1,0],[0,1,1]],[[0,1,1],[1,1,0]]];
+  const TCOLS=Object.values(TYPES).map(t=>t.color);
+  function tetris(){
+    const c=TT.cv, g=c.getContext('2d');
+    const CW=10, CH=18, S=Math.min(innerWidth*.9/CW, (innerHeight-140)/CH);
+    c.width=CW*S; c.height=CH*S;
+    let grid=Array.from({length:CH},()=>Array(CW).fill(null));
+    let cur=null, dead=false; TT.score=0;
+    const newPiece=()=>{ const si=Math.floor(Math.random()*SHAPES.length);
+      cur={ s:SHAPES[si].map(r=>r.slice()), x:3, y:0, col:TCOLS[si%TCOLS.length] };
+      if(clash(cur.s,cur.x,cur.y)){ dead=true; } };
+    const clash=(s,px,py)=>s.some((row,r)=>row.some((v,cc)=>v&&(py+r>=CH||px+cc<0||px+cc>=CW||(py+r>=0&&grid[py+r][px+cc]))));
+    const lock=()=>{ cur.s.forEach((row,r)=>row.forEach((v,cc)=>{ if(v&&cur.y+r>=0) grid[cur.y+r][cur.x+cc]=cur.col; }));
+      for(let r=CH-1;r>=0;r--){ if(grid[r].every(Boolean)){ grid.splice(r,1); grid.unshift(Array(CW).fill(null)); TT.score+=100; r++; } }
+      document.getElementById('tt-score').textContent=TT.score; newPiece(); };
+    const rot=s=>s[0].map((_,i)=>s.map(row=>row[i]).reverse());
+    newPiece();
+    const keys=e=>{
+      if(!TT.on) return;
+      if(e.key==='ArrowLeft'&&!clash(cur.s,cur.x-1,cur.y)) cur.x--;
+      else if(e.key==='ArrowRight'&&!clash(cur.s,cur.x+1,cur.y)) cur.x++;
+      else if(e.key==='ArrowDown'&&!clash(cur.s,cur.x,cur.y+1)) cur.y++;
+      else if(e.key==='ArrowUp'){ const rs=rot(cur.s); if(!clash(rs,cur.x,cur.y)) cur.s=rs; }
+      if(e.key.startsWith('Arrow')) e.preventDefault();
+    };
+    addEventListener('keydown',keys);
+    let last=0;
+    (function frame(t){
+      if(!TT.on){ removeEventListener('keydown',keys); return; }
+      if(t-last>Math.max(160, 600-TT.score/2)){ last=t;
+        if(!dead){ if(!clash(cur.s,cur.x,cur.y+1)) cur.y++; else lock(); } }
+      g.fillStyle='#050507'; g.fillRect(0,0,c.width,c.height);
+      g.strokeStyle='rgba(255,255,255,.04)';
+      for(let r=0;r<CH;r++)for(let cc=0;cc<CW;cc++) g.strokeRect(cc*S,r*S,S,S);
+      const cell=(cc,r,col)=>{ g.fillStyle=col; g.fillRect(cc*S+1,r*S+1,S-2,S-2);
+        g.fillStyle='rgba(255,255,255,.22)'; g.fillRect(cc*S+2,r*S+2,S*.3,S*.3); };
+      grid.forEach((row,r)=>row.forEach((v,cc)=>{ if(v) cell(cc,r,v); }));
+      if(!dead) cur.s.forEach((row,r)=>row.forEach((v,cc)=>{ if(v&&cur.y+r>=0) cell(cur.x+cc,cur.y+r,cur.col); }));
+      if(dead){ g.fillStyle='rgba(2,2,3,.8)'; g.fillRect(0,0,c.width,c.height);
+        g.fillStyle='#FF3A1F'; g.font='700 22px "Space Grotesk",system-ui'; g.textAlign='center';
+        g.fillText('LAS ENTIDADES GANARON', c.width/2, c.height/2-10);
+        g.fillStyle='#666'; g.font='11px "Space Mono",monospace';
+        g.fillText('SCORE '+TT.score+' — clic para revancha', c.width/2, c.height/2+18);
+        c.onclick=()=>{ c.onclick=null; TT.on=false; setTimeout(()=>{ TT.on=true; tetris(); },50); }; }
+      requestAnimationFrame(frame);
+    })(0);
+  }
+  document.getElementById('lb-tetris').onclick=()=>{
+    document.getElementById('tetris-ov').classList.add('open'); TT.on=true; tetris(); log('lab','tetris'); };
+  new MutationObserver(()=>{ if(!document.getElementById('tetris-ov').classList.contains('open')) TT.on=false; })
+    .observe(document.getElementById('tetris-ov'),{attributes:true});
+
+  // ── HEYOKA PONG — grande, pantalla completa ──
+  const PG={ on:false };
+  function pong(){
+    const c=document.getElementById('pg-cv'), g=c.getContext('2d');
+    c.width=Math.min(innerWidth*.94,1400); c.height=innerHeight-140;
+    let my=c.height/2, ai=c.height/2, bx=c.width/2, by=c.height/2;
+    let vx=6*(Math.random()<.5?1:-1), vy=4*(Math.random()<.5?1:-1), sMe=0, sAi=0;
+    const PH=Math.max(80,c.height*.16), PW=12;
+    const mm=e=>{ const r=c.getBoundingClientRect(); my=(e.clientY-r.top); };
+    c.addEventListener('mousemove',mm);
+    const reset=dir=>{ bx=c.width/2; by=c.height/2; vx=6*dir; vy=4*(Math.random()<.5?1:-1); };
+    (function frame(t){
+      if(!PG.on){ c.removeEventListener('mousemove',mm); return; }
+      bx+=vx; by+=vy;
+      if(by<8||by>c.height-8) vy*=-1;
+      // paletas
+      ai+=( by-ai )*0.065; // ATLAS sigue la bola, imperfecto
+      if(bx<26 && Math.abs(by-my)<PH/2){ vx=Math.abs(vx)*1.045; vy+=(by-my)*.06; }
+      if(bx>c.width-26 && Math.abs(by-ai)<PH/2){ vx=-Math.abs(vx)*1.045; vy+=(by-ai)*.06; }
+      if(bx<0){ sAi++; reset(1); } if(bx>c.width){ sMe++; reset(-1); }
+      document.getElementById('pg-me').textContent=sMe; document.getElementById('pg-ai').textContent=sAi;
+      g.fillStyle='#050507'; g.fillRect(0,0,c.width,c.height);
+      g.strokeStyle='rgba(255,58,31,.25)'; g.setLineDash([6,14]);
+      g.beginPath(); g.moveTo(c.width/2,0); g.lineTo(c.width/2,c.height); g.stroke(); g.setLineDash([]);
+      g.font='700 46px "Space Grotesk",system-ui'; g.textAlign='center'; g.fillStyle='rgba(240,237,232,.06)';
+      g.fillText('HK23', c.width/2, c.height/2+16);
+      g.fillStyle='#00F0FF'; g.fillRect(12, my-PH/2, PW, PH);
+      g.fillStyle='#FF3A1F'; g.fillRect(c.width-12-PW, ai-PH/2, PW, PH);
+      // la bola es un átomo
+      g.strokeStyle='#FFD200'; g.lineWidth=1.2;
+      for(let k=0;k<3;k++){ g.save(); g.translate(bx,by); g.rotate(k*Math.PI/3+t*0.004);
+        g.beginPath(); g.ellipse(0,0,14,5,0,0,6.283); g.stroke(); g.restore(); }
+      g.fillStyle='#FFD200'; g.beginPath(); g.arc(bx,by,5,0,6.283); g.fill();
+      if(sMe>=5||sAi>=5){ g.fillStyle='rgba(2,2,3,.82)'; g.fillRect(0,0,c.width,c.height);
+        g.fillStyle=sMe>=5?'#AAFF00':'#FF3A1F'; g.font='700 30px "Space Grotesk",system-ui';
+        g.fillText(sMe>=5?'LE GANASTE A ATLAS':'ATLAS NO PERDONA', c.width/2, c.height/2-8);
+        g.fillStyle='#666'; g.font='11px "Space Mono",monospace';
+        g.fillText('clic para revancha', c.width/2, c.height/2+22);
+        c.onclick=()=>{ c.onclick=null; PG.on=false; setTimeout(()=>{ PG.on=true; pong(); },50); };
+        return; }
+      requestAnimationFrame(frame);
+    })(0);
+  }
+  document.getElementById('lb-pong').onclick=()=>{
+    document.getElementById('pong-ov').classList.add('open'); PG.on=true; pong(); log('lab','pong'); };
+  new MutationObserver(()=>{ if(!document.getElementById('pong-ov').classList.contains('open')) PG.on=false; })
+    .observe(document.getElementById('pong-ov'),{attributes:true});
+
+  // ── encendido del LAB ──
+  function setLab(v){ labOn=v; document.body.classList.toggle('lab-on',v);
+    if(v){ toast('🧪 ENTITY LAB — LAS ENTIDADES SON TUYAS'); log('lab','on'); } }
+  document.getElementById('lb-off').onclick=()=>setLab(false);
+  window.EntityLab={ on:()=>setLab(true), off:()=>setLab(false), toggle:()=>setLab(!labOn) };
+  // hotkey L + botón en el dock
+  addEventListener('keydown',e=>{
+    if(/INPUT|TEXTAREA|SELECT/.test((document.activeElement||{}).tagName||'')) return;
+    if(e.key==='l'||e.key==='L') setLab(!labOn);
+  });
+  const dock=document.getElementById('hk-dock');
+  if(dock){ const b=document.createElement('button'); b.className='dk'; b.textContent='🧪 LAB';
+    b.style.setProperty('--dc','#B84DFF'); b.style.color='#B84DFFCC';
+    b.onclick=()=>setLab(!labOn); dock.insertBefore(b, dock.children[1]||null); }
+})();
+</script>
+<!-- ═══════════ MUNDO CRYPTO — biblioteca educativa · blockchain · market gigante ═══════════ -->
+<style id="crypto-world-style">
+  #cw{ position:fixed; inset:0; z-index:700; display:none; background:#04060c; overflow:hidden; }
+  #cw.open{ display:block; }
+  #cw-canvas{ position:absolute; inset:0; }
+  #cw-top{ position:absolute; top:0; left:0; right:0; z-index:5; display:flex; align-items:center; gap:8px;
+    padding:18px 22px; }
+  #cw-title{ font-size:12px; font-weight:700; letter-spacing:4px; color:#F7931A; }
+  #cw-title b{ color:#F0EDE8; }
+  #cw-modes{ display:flex; gap:5px; margin-left:12px; flex-wrap:wrap; }
+  .cwm{ font-family:'Space Mono',monospace; font-size:8px; letter-spacing:2px; text-transform:uppercase;
+    background:transparent; border:1px solid #223; border-radius:2px; color:#7a89a8; padding:6px 10px; cursor:pointer; transition:all .15s; }
+  .cwm.on, .cwm:hover{ color:#000; background:#F7931A; border-color:#F7931A; }
+  #cw-x{ margin-left:auto; font-family:'Space Mono',monospace; font-size:9px; letter-spacing:3px;
+    color:#000; background:#FF3A1F; border:none; border-radius:2px; padding:8px 14px; cursor:pointer; }
+  #cw-hint{ position:absolute; bottom:22px; left:50%; transform:translateX(-50%); z-index:5;
+    font-family:'Space Mono',monospace; font-size:8px; letter-spacing:3px; color:#2f3b52; text-align:center; }
+  #cw-coinsel{ position:absolute; bottom:44px; left:50%; transform:translateX(-50%); z-index:5; display:none; gap:6px; }
+  #cw-coinsel.show{ display:flex; }
+  .cw-coin-b{ font-family:'Space Mono',monospace; font-size:9px; letter-spacing:2px; padding:6px 12px;
+    border-radius:2px; border:1px solid #223; background:transparent; color:#9aa; cursor:pointer; }
+
+  /* ── MARKET v2: grilla exchange pro ── */
+  #cw-mkt{ position:absolute; inset:64px 0 0 0; z-index:4; overflow-y:auto; display:none;
+    padding:24px clamp(16px,4vw,60px) 90px; scrollbar-width:thin; scrollbar-color:#1a2438 #04060c; }
+  #cw-mkt.show{ display:block; }
+  .mkt-head{ display:flex; align-items:baseline; gap:14px; margin-bottom:18px; }
+  .mkt-title{ font-family:'Space Mono',monospace; font-size:10px; letter-spacing:5px; color:#c9d2e8; }
+  .mkt-sub{ font-family:'Space Mono',monospace; font-size:8px; letter-spacing:2px; color:#3a4661; }
+  .mkt-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(185px,1fr)); gap:10px; }
+  .mkt-card{ border:1px solid #141c2e; border-radius:10px; padding:14px 15px; cursor:pointer;
+    transition:transform .15s, border-color .15s; }
+  .mkt-card:hover{ transform:translateY(-2px); border-color:#2a3a5c; }
+  .mkt-top{ display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+  .mkt-logo{ width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-family:'Space Grotesk',system-ui; font-weight:700; font-size:14px; color:#000; flex-shrink:0; }
+  .mkt-sym{ font-family:'Space Grotesk',system-ui; font-weight:700; font-size:13px; color:#F0EDE8; letter-spacing:.5px; }
+  .mkt-chg{ font-family:'Space Mono',monospace; font-size:9px; font-weight:700; margin-left:auto; }
+  .mkt-price{ font-family:'Space Grotesk',system-ui; font-weight:700; font-size:19px; color:#F0EDE8; letter-spacing:-.3px; margin-bottom:8px; font-variant-numeric:tabular-nums; }
+  .mkt-meta{ font-family:'Space Mono',monospace; font-size:7.5px; letter-spacing:.5px; color:#4a566e; line-height:1.9; }
+  .mkt-meta b{ color:#F7931A; }
+
+  /* ── BIBLIOTECA v2: orden editorial, tipografías con jerarquía ── */
+  #cw-lib{ position:absolute; inset:64px 0 0 0; z-index:4; overflow-y:auto; display:none;
+    padding:30px clamp(20px,6vw,90px) 80px; scrollbar-width:thin; scrollbar-color:#1a2438 #04060c; }
+  #cw-lib.show{ display:block; }
+  .cwl-hero{ display:flex; align-items:center; gap:40px; flex-wrap:wrap; margin-bottom:20px;
+    border-bottom:1px solid rgba(247,147,26,.18); padding-bottom:26px; }
+  .cwl-hero-txt{ flex:1; min-width:260px; }
+  .cwl-kicker{ font-family:'Space Mono',monospace; font-size:9px; letter-spacing:6px; color:#F7931A; margin-bottom:10px; }
+  .cwl-display{ font-family:'Space Grotesk',system-ui; font-weight:700; font-size:clamp(34px,5vw,58px);
+    letter-spacing:-1.5px; line-height:.95; color:#F0EDE8; }
+  .cwl-display em{ font-style:italic; font-family:Georgia,'Times New Roman',serif; font-weight:400; color:#F7931A; }
+  .cwl-lede{ font-family:Georgia,'Times New Roman',serif; font-size:15px; line-height:1.7; color:#8a93a8;
+    max-width:520px; margin-top:14px; font-style:italic; }
+  #cw-coin{ width:220px; height:220px; flex-shrink:0; }
+  .cwl-sec{ margin-top:38px; }
+  .cwl-sec-head{ display:flex; align-items:baseline; gap:14px; margin-bottom:18px; }
+  .cwl-num{ font-family:Georgia,serif; font-size:34px; color:rgba(247,147,26,.5); font-style:italic; }
+  .cwl-sec-title{ font-family:'Space Mono',monospace; font-size:10px; letter-spacing:5px; color:#c9d2e8; }
+  .cwl-sec-head::after{ content:''; flex:1; height:1px; background:rgba(247,147,26,.14); }
+  .cwl-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:1px; background:rgba(247,147,26,.12); border:1px solid rgba(247,147,26,.12); }
+  .cwl-card{ background:#060910; padding:20px 22px; transition:background .2s; }
+  .cwl-card:hover{ background:#0a0f1c; }
+  .cwl-term{ font-family:'Space Grotesk',system-ui; font-weight:700; font-size:16px; letter-spacing:.3px; color:#F0EDE8; margin-bottom:6px; }
+  .cwl-def{ font-family:Georgia,'Times New Roman',serif; font-size:13px; line-height:1.65; color:#7d879c; }
+  .cwl-tag{ font-family:'Space Mono',monospace; font-size:7px; letter-spacing:3px; color:#F7931A; margin-bottom:8px; }
+  /* estante de guías con prompt */
+  .cwl-guide{ background:#060910; padding:22px; display:flex; flex-direction:column; gap:10px; }
+  .cwl-gtitle{ font-family:Georgia,'Times New Roman',serif; font-style:italic; font-size:19px; color:#F0EDE8; line-height:1.2; }
+  .cwl-gsub{ font-family:'Space Grotesk',system-ui; font-size:12px; color:#7d879c; line-height:1.6; }
+  .cwl-prompt{ font-family:'Space Mono',monospace; font-size:9px; line-height:1.7; color:#5d84a8;
+    background:#030509; border-left:2px solid #F7931A; padding:10px 12px; }
+  .cwl-actions{ display:flex; gap:8px; }
+  .cwl-btn{ font-family:'Space Mono',monospace; font-size:8px; letter-spacing:2px; font-weight:700;
+    border:none; border-radius:2px; padding:8px 13px; cursor:pointer; }
+</style>
+
+<div id="cw">
+  <canvas id="cw-canvas"></canvas>
+  <div id="cw-top">
+    <div id="cw-title">MUNDO <b>CRYPTO</b> · CRYPTO VICE</div>
+    <div id="cw-modes">
+      <button class="cwm on" data-m="biblioteca">📚 BIBLIOTECA</button>
+      <button class="cwm" data-m="blockchain">⛓ BLOCKCHAIN</button>
+      <button class="cwm" data-m="market">📊 MARKET GIGANTE</button>
+    </div>
+    <button id="cw-x">✕ SALIR (X)</button>
+  </div>
+  <div id="cw-coinsel">
+    <button class="cw-coin-b" data-c="BTC">₿ BTC</button>
+    <button class="cw-coin-b" data-c="ETH">Ξ ETH</button>
+    <button class="cw-coin-b" data-c="SOL">◎ SOL</button>
+    <button class="cw-coin-b" data-c="ALL">🌐 TODAS</button>
+  </div>
+  <div id="cw-hint">TODO ESTO ES GRATIS · COMANDOS: blockchain · market · market btc</div>
+  <div id="cw-lib"></div>
+  <div id="cw-mkt"></div>
+</div>
+
+<script>
+// ═══ MUNDO CRYPTO — entrás de verdad: biblioteca que enseña, blockchain, market ═══
+(function(){
+  const cw=document.getElementById('cw'), cv=document.getElementById('cw-canvas'), x=cv.getContext('2d');
+  let W,H,mode='biblioteca', coin='ALL', raf=null;
+  const fit=()=>{ W=cv.width=innerWidth; H=cv.height=innerHeight; };
+  const log=(k,d)=>{ (window.hkLog||function(){})(k,d); };
+
+  // ── BIBLIOTECA: conceptos flotando, blueprint for dummies ──
+  const CARDS=[
+    { t:'VELA JAPONESA', d:'Cada vela = un rango de tiempo. Cuerpo verde: subió. Rojo: bajó. Las mechas son los extremos que tocó.', kind:'candle' },
+    { t:'MECHA / WICK', d:'La raya fina arriba/abajo de la vela. Mecha larga = hubo pelea de precio y lo rechazaron.', kind:'wick' },
+    { t:'SOPORTE', d:'Piso donde el precio suele rebotar. Los compradores defienden esa zona.', kind:'support' },
+    { t:'RESISTENCIA', d:'Techo donde el precio suele frenar. Romperla con fuerza es señal alcista.', kind:'res' },
+    { t:'BLOCKCHAIN', d:'Un cuaderno público que nadie puede borrar. Cada bloque guarda transacciones y apunta al anterior.', kind:'chain' },
+    { t:'WALLET & SEED', d:'Tu billetera. La frase semilla (12 palabras) ES tu dinero: si la pierden, perdés todo. Nunca la compartas.', kind:'wallet' },
+    { t:'GAS FEE', d:'La comisión que pagás por usar la red. Sube cuando hay mucha gente operando a la vez.', kind:'gas' },
+    { t:'MARKET CAP', d:'Precio × monedas en circulación. Mide qué tan grande es una cripto, no si está "cara".', kind:'cap' },
+    { t:'HODL', d:'Comprar y aguantar sin vender en el pánico. Nació de un typo de "hold". Estrategia de paciencia.', kind:'hodl' },
+    { t:'BULL vs BEAR', d:'Toro = mercado subiendo (embiste hacia arriba). Oso = bajando (zarpazo hacia abajo).', kind:'bull' },
+    { t:'DEFI', d:'Finanzas sin banco: prestás, ganás interés o intercambiás directo entre wallets, con contratos.', kind:'defi' },
+    { t:'STAKING', d:'Bloqueás tus monedas para asegurar la red y cobrás recompensa. Como un plazo fijo on-chain.', kind:'stake' },
+    { t:'LIQUIDEZ', d:'Qué tan fácil es comprar/vender sin mover el precio. Poca liquidez = saltos bruscos.', kind:'liq' },
+    { t:'FOMO / FUD', d:'FOMO: miedo a quedarte afuera (comprás caro). FUD: miedo sembrado para que vendas barato.', kind:'fomo' },
+  ];
+  let cards=[];
+  function initCards(){ cards=CARDS.map((c,i)=>({ ...c,
+    x:Math.random()*W, y:Math.random()*H, vx:(Math.random()-.5)*.25, vy:(Math.random()-.5)*.2,
+    w:220, h:96, ph:Math.random()*6.28 })); }
+
+  function miniCandle(cx,cy,up){ // dibujito de vela
+    x.strokeStyle=up?'#14F195':'#FF3A1F'; x.fillStyle=up?'#14F195':'#FF3A1F'; x.lineWidth=1;
+    x.beginPath(); x.moveTo(cx,cy-14); x.lineTo(cx,cy+14); x.stroke();
+    x.fillRect(cx-5,cy-8,10,16);
+  }
+  function drawCard(c,t){
+    const bob=Math.sin(t*0.001+c.ph)*4;
+    x.save(); x.translate(c.x, c.y+bob);
+    x.fillStyle='rgba(8,14,26,.72)'; x.strokeStyle='rgba(247,147,26,.35)'; x.lineWidth=1;
+    x.beginPath(); x.roundRect(-c.w/2,-c.h/2,c.w,c.h,4); x.fill(); x.stroke();
+    // blueprint grid
+    x.strokeStyle='rgba(247,147,26,.06)';
+    for(let gx=-c.w/2;gx<c.w/2;gx+=12){ x.beginPath(); x.moveTo(gx,-c.h/2); x.lineTo(gx,c.h/2); x.stroke(); }
+    x.fillStyle='#F7931A'; x.font='700 11px "Space Mono",monospace'; x.textAlign='left';
+    x.fillText(c.t, -c.w/2+12, -c.h/2+20);
+    // mini visual
+    miniCandle(c.w/2-24, -c.h/2+22, c.kind!=='res'&&c.kind!=='fomo');
+    x.fillStyle='#9fb0cc'; x.font='9px "Space Grotesk",system-ui';
+    wrap(c.d, -c.w/2+12, -c.h/2+38, c.w-24, 13);
+    x.restore();
+  }
+  function wrap(txt,x0,y0,maxw,lh){ const words=txt.split(' '); let line='',yy=y0;
+    for(const w of words){ const test=line+w+' ';
+      if(x.measureText(test).width>maxw){ x.fillText(line,x0,yy); line=w+' '; yy+=lh; } else line=test; }
+    x.fillText(line,x0,yy); }
+
+  // ── BLOCKCHAIN: cadena de bloques enlazados ──
+  let blocks=[]; function initBlocks(){ blocks=Array.from({length:9},(_,i)=>({ n:840000+i,
+    hash:'0x'+Math.floor(Math.random()*1e9).toString(16).padStart(7,'0'), tx:3+Math.floor(Math.random()*40) })); }
+  let bScroll=0;
+  function drawBlockchain(t){
+    x.fillStyle='#040810'; x.fillRect(0,0,W,H);
+    bScroll-=0.6; const bw=200, gap=64, y=H/2;
+    x.font='9px "Space Mono",monospace';
+    blocks.forEach((b,i)=>{
+      let bx=(i*(bw+gap)+bScroll)% ((blocks.length)*(bw+gap));
+      if(bx<-bw) bx+=blocks.length*(bw+gap);
+      // cadena
+      if(i>0){ x.strokeStyle='#F7931A'; x.lineWidth=3;
+        x.beginPath(); x.moveTo(bx-gap,y); x.lineTo(bx,y); x.stroke(); }
+      x.fillStyle='rgba(10,18,30,.9)'; x.strokeStyle='#F7931A'; x.lineWidth=1.5;
+      x.beginPath(); x.roundRect(bx,y-70,bw,140,4); x.fill(); x.stroke();
+      x.fillStyle='#F7931A'; x.textAlign='left'; x.font='700 13px "Space Mono",monospace';
+      x.fillText('BLOCK #'+b.n, bx+14, y-44);
+      x.fillStyle='#6f8'; x.font='9px "Space Mono",monospace';
+      x.fillText('hash '+b.hash, bx+14, y-22);
+      x.fillStyle='#9fb0cc'; x.fillText('prev '+(blocks[i-1]?blocks[i-1].hash:'genesis'), bx+14, y-4);
+      x.fillText(b.tx+' transacciones', bx+14, y+18);
+      // mini merkle
+      for(let k=0;k<6;k++){ x.fillStyle=k<b.tx%6?'#14F195':'#233'; x.fillRect(bx+14+k*10, y+34, 7,7); }
+      x.fillStyle='#F7931A'; x.fillText('⛏ minado', bx+14, y+60);
+    });
+    x.fillStyle='#3a4a66'; x.font='10px "Space Mono",monospace'; x.textAlign='center';
+    x.fillText('CADA BLOQUE APUNTA AL ANTERIOR — POR ESO NADIE LO PUEDE CAMBIAR', W/2, 60);
+  }
+
+  // ── MARKET GIGANTE ──
+  const MK={ BTC:{sym:'₿',name:'BITCOIN',price:67420,chg:6.2,color:'#F7931A',vol:'$99.4M'},
+    ETH:{sym:'Ξ',name:'ETHEREUM',price:3280,chg:4.1,color:'#627EEA',vol:'$370M'},
+    SOL:{sym:'◎',name:'SOLANA',price:172,chg:9.4,color:'#14F195',vol:'$34.8M'},
+    DOGE:{sym:'Ð',name:'DOGECOIN',price:0.16,chg:-2.3,color:'#C2A633',vol:'$184K'},
+    ADA:{sym:'₳',name:'CARDANO',price:0.61,chg:1.2,color:'#2A6AFF',vol:'$40.4K'},
+    XRP:{sym:'✕',name:'RIPPLE',price:1.08,chg:-2.4,color:'#25A8C4',vol:'$111M'},
+    LINK:{sym:'⬡',name:'CHAINLINK',price:8.35,chg:-2.2,color:'#2A5ADA',vol:'$1.5M'},
+    DOT:{sym:'●',name:'POLKADOT',price:0.85,chg:0.8,color:'#E6007A',vol:'$85K'},
+    AVAX:{sym:'▲',name:'AVALANCHE',price:6.53,chg:-2.5,color:'#E84142',vol:'$163K'},
+    LTC:{sym:'Ł',name:'LITECOIN',price:44.97,chg:-0.3,color:'#7d93ad',vol:'$1.4M'},
+    BNB:{sym:'◆',name:'BNB',price:573,chg:-1.4,color:'#F0B90B',vol:'$604K'},
+    TRX:{sym:'▼',name:'TRON',price:0.32,chg:-0.4,color:'#FF3A1F',vol:'$241K'} };
+  let mktBuilt=false;
+  function buildMkt(){
+    if(mktBuilt) return; mktBuilt=true;
+    const m=document.getElementById('cw-mkt');
+    let h='<div class="mkt-head"><span class="mkt-title">⛁ CRYPTO FUTURES — EL MARKET GIGANTE</span>'+
+      '<span class="mkt-sub">MODO DEMO · TOCÁ UNA MONEDA PARA VERLA GIGANTE</span></div><div class="mkt-grid">';
+    Object.entries(MK).forEach(([k,c])=>{
+      const up=c.chg>0;
+      h+='<div class="mkt-card" data-coin="'+k+'" style="background:linear-gradient(135deg,'+c.color+'26 0%, #090d18 55%)">'+
+        '<div class="mkt-top"><span class="mkt-logo" style="background:'+c.color+'">'+c.sym+'</span>'+
+        '<span class="mkt-sym">'+k+'</span>'+
+        '<span class="mkt-chg" style="color:'+(up?'#14F195':'#FF5B4A')+'">'+(up?'+':'')+c.chg+'%</span></div>'+
+        '<div class="mkt-price">'+(c.price<1?c.price.toFixed(4):c.price.toLocaleString())+'</div>'+
+        '<div class="mkt-meta">24H VOL: '+c.vol+'<br>LEVERAGE: <b>1000x</b></div></div>';
+    });
+    h+='</div><div class="mkt-sub" style="display:block;margin-top:16px">PRECIOS DEMO — EL FORMATO ES EL PRODUCTO; CONECTÁ TU FEED CUANDO QUIERAS</div>';
+    m.innerHTML=h;
+    m.querySelectorAll('.mkt-card').forEach(card=>card.onclick=()=>{ coin=card.dataset.coin; syncMkt(); });
+  }
+  function syncMkt(){
+    const grid=document.getElementById('cw-mkt');
+    const showGrid = mode==='market' && coin==='ALL';
+    if(showGrid) buildMkt();
+    grid.classList.toggle('show', showGrid);
+  }
+  function candleChart(cx,cy,w,h,up,color){
+    x.strokeStyle=color+'44'; x.lineWidth=1;
+    const n=22, cw=w/n;
+    let py=cy+h*0.3;
+    for(let i=0;i<n;i++){ const o=py, cl=py+(Math.sin(i*0.9)+ (up?0.4:-0.4))*h*0.06;
+      py=cl; const cx0=cx-w/2+i*cw;
+      const g=cl<o; x.strokeStyle=g?'#14F195':'#FF3A1F'; x.fillStyle=g?'#14F195':'#FF3A1F';
+      x.beginPath(); x.moveTo(cx0+cw/2, Math.min(o,cl)-6); x.lineTo(cx0+cw/2, Math.max(o,cl)+6); x.stroke();
+      x.fillRect(cx0+2, Math.min(o,cl), cw-4, Math.max(3,Math.abs(cl-o))); }
+  }
+  function drawMarket(t){
+    x.fillStyle='#03060e'; x.fillRect(0,0,W,H);
+    if(coin!=='ALL' && MK[coin]){
+      const c=MK[coin], cx=W/2, cy=H/2;
+      candleChart(cx, cy+40, Math.min(W*.8,900), 220, c.chg>0, c.color);
+      // moneda girando
+      const spin=Math.sin(t*0.002), rw=70*Math.abs(spin)+10;
+      const cg=x.createRadialGradient(cx-20,cy-160,0,cx,cy-150,80);
+      cg.addColorStop(0,'#fff'); cg.addColorStop(.4,c.color); cg.addColorStop(1,c.color+'55');
+      x.fillStyle=cg; x.beginPath(); x.ellipse(cx,cy-150,rw,74,0,0,6.283); x.fill();
+      x.fillStyle='#000'; x.font='700 '+(rw*0.9)+'px "Space Grotesk",system-ui'; x.textAlign='center'; x.textBaseline='middle';
+      if(rw>24) x.fillText(c.sym, cx, cy-150);
+      x.textBaseline='alphabetic';
+      // precio gigante + %
+      x.fillStyle='#F0EDE8'; x.font='800 84px "Space Grotesk",system-ui';
+      x.fillText('$'+c.price.toLocaleString(), cx, cy+30);
+      x.fillStyle=c.chg>0?'#14F195':'#FF3A1F'; x.font='800 60px "Space Grotesk",system-ui';
+      x.fillText((c.chg>0?'▲ +':'▼ ')+c.chg+'%', cx, cy+100);
+      x.fillStyle=c.color; x.font='12px "Space Mono",monospace'; x.fillText(c.name+' · 24H', cx, cy-250);
+    } else {
+      // TODAS: la grilla vive en el DOM (#cw-mkt); acá solo el backdrop
+      for(let i=0;i<60;i++){ x.globalAlpha=0.2+0.4*Math.abs(Math.sin(t*0.001+i));
+        x.fillStyle='#8899bb'; x.fillRect((i*173)%W,(i*97)%H,1,1); } x.globalAlpha=1;
+    }
+  }
+
+  // ── loop ──
+  function loop(t){
+    if(!cw.classList.contains('open')){ raf=null; return; }
+    x.clearRect(0,0,W,H);
+    if(mode==='biblioteca'){
+      // backdrop sobrio: espacio + grilla blueprint sutil (el contenido vive en el DOM ordenado)
+      x.fillStyle='#04060c'; x.fillRect(0,0,W,H);
+      x.strokeStyle='rgba(247,147,26,0.04)';
+      for(let gx=0;gx<W;gx+=48){ x.beginPath(); x.moveTo(gx,0); x.lineTo(gx,H); x.stroke(); }
+      for(let gy=0;gy<H;gy+=48){ x.beginPath(); x.moveTo(0,gy); x.lineTo(W,gy); x.stroke(); }
+      for(let i=0;i<50;i++){ x.globalAlpha=0.2+0.4*Math.abs(Math.sin(t*0.001+i));
+        x.fillStyle='#8899bb'; x.fillRect((i*173)%W,(i*97)%H,1,1); } x.globalAlpha=1;
+      drawProCoin(t);
+    } else if(mode==='blockchain') drawBlockchain(t);
+    else drawMarket(t);
+    raf=requestAnimationFrame(loop);
+  }
+
+  // ── MONEDA BITCOIN PRO: canto perlado, campo cepillado, ₿ en relieve, brillo que barre ──
+  function drawProCoin(t){
+    const cc=document.getElementById('cw-coin'); if(!cc) return;
+    if(cc.width!==440){ cc.width=440; cc.height=440; }
+    const g=cc.getContext('2d'); g.clearRect(0,0,440,440);
+    const cx=220, cy=220, R=170;
+    const wob=Math.sin(t*0.0011)*0.08;             // leve balanceo 3D, nunca deja de ser moneda
+    g.save(); g.translate(cx,cy); g.scale(1-Math.abs(wob)*0.5, 1); g.rotate(wob*0.3);
+    // sombra al piso
+    g.save(); g.translate(0, R*1.06); g.scale(1,0.18);
+    const sh=g.createRadialGradient(0,0,0,0,0,R*0.9);
+    sh.addColorStop(0,'rgba(247,147,26,0.25)'); sh.addColorStop(1,'transparent');
+    g.fillStyle=sh; g.beginPath(); g.arc(0,0,R*0.9,0,6.283); g.fill(); g.restore();
+    // canto exterior metálico
+    const rim=g.createLinearGradient(-R,-R,R,R);
+    rim.addColorStop(0,'#8a5a10'); rim.addColorStop(0.3,'#ffd98a'); rim.addColorStop(0.55,'#b97812'); rim.addColorStop(0.8,'#ffe9b0'); rim.addColorStop(1,'#6f4a0c');
+    g.fillStyle=rim; g.beginPath(); g.arc(0,0,R,0,6.283); g.fill();
+    // perlado del canto (moneda acuñada)
+    for(let i=0;i<64;i++){ const a=i/64*6.283;
+      g.fillStyle=i%2?'rgba(60,38,6,0.55)':'rgba(255,236,180,0.5)';
+      g.beginPath(); g.arc(Math.cos(a)*R*0.955, Math.sin(a)*R*0.955, 2.6, 0, 6.283); g.fill(); }
+    // campo interior
+    const field=g.createRadialGradient(-R*0.3,-R*0.3,R*0.05,0,0,R*0.88);
+    field.addColorStop(0,'#ffcf72'); field.addColorStop(0.5,'#f7931a'); field.addColorStop(1,'#9c6008');
+    g.fillStyle=field; g.beginPath(); g.arc(0,0,R*0.88,0,6.283); g.fill();
+    // anillo de acuñación con leyenda
+    g.strokeStyle='rgba(90,56,8,0.55)'; g.lineWidth=2;
+    g.beginPath(); g.arc(0,0,R*0.74,0,6.283); g.stroke();
+    g.font='700 11px "Space Mono",monospace'; g.fillStyle='rgba(70,44,6,0.85)'; g.textAlign='center';
+    ['HK23','·','VICE','·','CRYPTO','·','2140','·'].forEach((w,i)=>{
+      const a=-Math.PI/2+i/8*6.283;
+      g.save(); g.translate(Math.cos(a)*R*0.81, Math.sin(a)*R*0.81); g.rotate(a+Math.PI/2);
+      g.fillText(w,0,0); g.restore(); });
+    // ₿ en relieve: sombra grabada + cara iluminada
+    g.font='900 '+R*1.05+'px "Space Grotesk",system-ui'; g.textAlign='center'; g.textBaseline='middle';
+    g.fillStyle='rgba(90,55,6,0.9)'; g.fillText('₿', 4, 10);
+    const bfill=g.createLinearGradient(0,-R*0.5,0,R*0.5);
+    bfill.addColorStop(0,'#fff2cf'); bfill.addColorStop(0.5,'#ffd067'); bfill.addColorStop(1,'#e8960f');
+    g.fillStyle=bfill; g.fillText('₿', 0, 4);
+    g.textBaseline='alphabetic';
+    // barrido especular
+    const sweep=((t*0.06)%600)/600*2.6-1.3;
+    const sp=g.createLinearGradient((sweep-0.35)*R*2,-R,(sweep+0.35)*R*2,R);
+    sp.addColorStop(0,'rgba(255,255,255,0)'); sp.addColorStop(0.5,'rgba(255,255,255,0.28)'); sp.addColorStop(1,'rgba(255,255,255,0)');
+    g.save(); g.beginPath(); g.arc(0,0,R,0,6.283); g.clip();
+    g.fillStyle=sp; g.fillRect(-R,-R,R*2,R*2); g.restore();
+    g.restore();
+  }
+
+  // ── LA BIBLIOTECA: currículo ordenado + estante de guías con prompts ──
+  const CURRI=[
+    ['I','FUNDAMENTOS — QUÉ ES ESTO', [
+      ['BLOCKCHAIN','Un cuaderno público que nadie puede borrar. Cada bloque guarda transacciones y apunta al anterior — por eso es inmutable.'],
+      ['WALLET & SEED','Tu billetera. La frase semilla (12 palabras) ES tu dinero: quien la tiene, tiene todo. No se comparte jamás.'],
+      ['MARKET CAP','Precio × monedas en circulación. Mide el tamaño de una cripto, no si está "cara" o "barata".'],
+      ['GAS FEE','La comisión por usar la red. Sube cuando hay multitud operando al mismo tiempo.']]],
+    ['II','LEER EL MERCADO — EL IDIOMA DE LAS VELAS', [
+      ['VELA JAPONESA','Cada vela es un rango de tiempo. Cuerpo verde: cerró arriba. Rojo: cerró abajo. El cuerpo cuenta la historia.'],
+      ['MECHA / WICK','La línea fina en las puntas: hasta dónde llegó el precio antes de que lo rechazaran. Mecha larga = hubo pelea.'],
+      ['SOPORTE & RESISTENCIA','El piso donde rebota y el techo donde frena. Romper una resistencia con volumen es la señal que todos esperan.'],
+      ['BULL vs BEAR','Toro embiste hacia arriba: mercado subiendo. Oso da el zarpazo hacia abajo: mercado cayendo.']]],
+    ['III','OPERAR — SIN QUE TE COMAN', [
+      ['HODL','Comprar y sostener sin vender en pánico. Nació de un typo de "hold". La paciencia como estrategia.'],
+      ['DEFI & STAKING','Finanzas sin banco: prestá, intercambiá o bloqueá monedas para asegurar la red y cobrar recompensa.'],
+      ['LIQUIDEZ','Qué tan fácil entrás y salís sin mover el precio. Poca liquidez = saltos violentos.'],
+      ['FOMO / FUD','Los dos enemigos: el miedo a quedarte afuera te hace comprar caro; el miedo sembrado te hace vender barato.']]],
+  ];
+  const GUIDES=[
+    ['Crypto desde cero en 7 días','El camino completo para el que nunca tocó una wallet: un capítulo por día, de qué es Bitcoin a tu primera operación.',
+     'Escribí "CRYPTO DESDE CERO EN 7 DÍAS", guía de 7 capítulos (uno por día) para principiante absoluto en el tono HK23 (directo, sin humo): día 1 qué es bitcoin y por qué importa; día 2 wallets y seed phrase con checklist de seguridad; día 3 exchanges y cómo comprar; día 4 leer velas y volumen; día 5 soporte/resistencia con 3 ejemplos; día 6 errores mortales del novato; día 7 tu primer plan de inversión con gestión de riesgo. Cada capítulo: 500 palabras + 3 bullets accionables + 1 ejercicio.'],
+    ['Tu primera wallet sin miedo','Paso a paso con capturas: crear, respaldar y blindar tu primera billetera en 20 minutos.',
+     'Escribí "TU PRIMERA WALLET SIN MIEDO": tutorial paso a paso para crear una wallet no-custodial, explicando custodial vs no-custodial, cómo respaldar la seed en metal/papel (nunca digital), qué es una dirección pública, cómo hacer la primera transacción de prueba con poco dinero, y checklist final de 10 puntos de seguridad. Tono HK23: claro, sin tecnicismos innecesarios, con advertencias honestas.'],
+    ['Leer velas como operador','Del gráfico en japonés al español: los 12 patrones de velas que mueven la aguja de verdad.',
+     'Escribí "LEER VELAS COMO OPERADOR": guía de los 12 patrones de velas japonesas más útiles (martillo, envolvente, doji, estrella fugaz, etc.), cada uno con: cómo se ve (descripción visual), qué psicología del mercado revela, en qué contexto es confiable y cuándo es trampa. Cierre: cómo combinar velas con soporte/resistencia y volumen. Formato: 1 página por patrón.'],
+    ['DeFi para humanos','Prestar, staker y farmear sin doctorado: los protocolos explicados como negocios de barrio.',
+     'Escribí "DEFI PARA HUMANOS": explicá lending, staking, liquidity pools y yield farming usando SOLO analogías de negocios de barrio (almacén, plazo fijo, sociedad de kiosco). Por cada concepto: la analogía, el número real de retorno típico, el riesgo real (impermanent loss, rug pulls, contratos), y una regla de oro. Cierre: portfolio DeFi conservador de ejemplo con porcentajes.'],
+    ['Seguridad: que no te roben','Los 10 ataques más comunes (phishing, fake apps, SIM swap) y el escudo contra cada uno.',
+     'Escribí "SEGURIDAD: QUE NO TE ROBEN": los 10 vectores de ataque más comunes en crypto (phishing, apps falsas, SIM swap, approvals maliciosos, ingeniería social, malware clipboard, etc.) con: cómo funciona el ataque contado como historia real, la señal de alerta y la defensa concreta. Cierre: rutina de higiene de seguridad mensual de 15 minutos.']];
+  let libBuilt=false;
+  function buildLib(){
+    if(libBuilt) return; libBuilt=true;
+    const lib=document.getElementById('cw-lib');
+    let h='<div class="cwl-hero"><div class="cwl-hero-txt">'+
+      '<div class="cwl-kicker">CRYPTO VICE · BIBLIOTECA ABIERTA</div>'+
+      '<div class="cwl-display">EL CONOCIMIENTO<br>ES <em>gratis.</em><br>EL MIEDO ES CARO.</div>'+
+      '<div class="cwl-lede">Todo lo que necesitás para entrar a crypto sin que te coman, ordenado del cero absoluto a operar con criterio. Flotando acá, sin paywall.</div>'+
+      '</div><canvas id="cw-coin"></canvas></div>';
+    CURRI.forEach(([num,title,items])=>{
+      h+='<div class="cwl-sec"><div class="cwl-sec-head"><span class="cwl-num">'+num+'</span>'+
+        '<span class="cwl-sec-title">'+title+'</span></div><div class="cwl-grid">';
+      items.forEach(([term,def],i)=>{ h+='<div class="cwl-card"><div class="cwl-tag">'+String(i+1).padStart(2,'0')+'</div>'+
+        '<div class="cwl-term">'+term+'</div><div class="cwl-def">'+def+'</div></div>'; });
+      h+='</div></div>';
+    });
+    h+='<div class="cwl-sec"><div class="cwl-sec-head"><span class="cwl-num">IV</span>'+
+      '<span class="cwl-sec-title">GUÍAS PARA EMPEZAR — LAS QUE FALTAN, CON SU PROMPT LISTO</span></div>'+
+      '<div class="cwl-grid" style="grid-template-columns:repeat(auto-fill,minmax(320px,1fr))">';
+    GUIDES.forEach(([t,d,prompt],i)=>{
+      h+='<div class="cwl-guide"><div class="cwl-tag">TOMO '+(i+1)+' · POR ESCRIBIR</div>'+
+        '<div class="cwl-gtitle">'+t+'</div><div class="cwl-gsub">'+d+'</div>'+
+        '<div class="cwl-prompt">'+prompt.slice(0,150)+'…</div>'+
+        '<div class="cwl-actions">'+
+        '<button class="cwl-btn" data-copy="'+i+'" style="background:#F7931A;color:#000">⧉ COPIAR PROMPT</button>'+
+        '<button class="cwl-btn" data-agent="'+i+'" style="background:transparent;border:1px solid #24304a;color:#8a93a8">◈ CREAR CON AGENTE →</button>'+
+        '</div></div>';
+    });
+    h+='</div></div>';
+    lib.innerHTML=h;
+    lib.querySelectorAll('[data-copy]').forEach(b=>b.onclick=()=>{
+      const pr=GUIDES[+b.dataset.copy][2];
+      (navigator.clipboard?navigator.clipboard.writeText(pr):Promise.reject()).then(()=>{ b.textContent='✓ COPIADO'; setTimeout(()=>b.textContent='⧉ COPIAR PROMPT',1500); }).catch(()=>{});
+      log('crypto','prompt copiado: '+GUIDES[+b.dataset.copy][0]); });
+    lib.querySelectorAll('[data-agent]').forEach(b=>b.onclick=()=>{
+      const pr=GUIDES[+b.dataset.agent][2];
+      CW.close();
+      const p=document.getElementById('ag-panel'); if(p) p.classList.add('open');
+      const cmdEl=document.getElementById('ag-cmd'); if(cmdEl){ cmdEl.value=pr.slice(0,500); cmdEl.focus(); }
+      log('crypto','guía enviada al agente: '+GUIDES[+b.dataset.agent][0]); });
+  }
+
+  function setMode(m){ mode=m;
+    document.querySelectorAll('.cwm').forEach(b=>b.classList.toggle('on',b.dataset.m===m));
+    document.getElementById('cw-coinsel').classList.toggle('show', m==='market');
+    if(m==='biblioteca'){ buildLib(); }
+    document.getElementById('cw-lib').classList.toggle('show', m==='biblioteca');
+    syncMkt();
+    if(m==='blockchain'&&!blocks.length) initBlocks();
+    log('crypto','mundo → '+m);
+  }
+  document.querySelectorAll('.cwm').forEach(b=>b.onclick=()=>setMode(b.dataset.m));
+  document.querySelectorAll('.cw-coin-b').forEach(b=>b.onclick=()=>{ coin=b.dataset.c; setMode('market'); });
+
+  const CW={ open(m){ cw.classList.add('open'); fit(); if(!cards.length) initCards(); initBlocks();
+      setMode(m||'biblioteca'); if(!raf) raf=requestAnimationFrame(loop);
+      document.documentElement.style.setProperty('--red','#F7931A'); log('crypto','entró al mundo'); },
+    close(){ cw.classList.remove('open'); document.documentElement.style.setProperty('--red','#FF3A1F'); },
+    market(c){ CW.open('market'); if(c&&(MK[c.toUpperCase()])){ coin=c.toUpperCase(); } else coin='ALL'; setMode('market'); },
+    blockchain(){ CW.open('blockchain'); } };
+  window.CryptoWorld=CW;
+  addEventListener('resize',()=>{ if(cw.classList.contains('open')){ fit(); initCards.length&&null; } });
+  document.getElementById('cw-x').onclick=()=>CW.close();
+  addEventListener('keydown',e=>{ if((e.key==='x'||e.key==='X'||e.key==='Escape')&&cw.classList.contains('open')) CW.close(); });
+
+  // ── entradas: dock ₿ CRYPTO, planeta CRYPTO VICE, comandos ──
+  const dock=document.getElementById('hk-dock');
+  if(dock){ [...dock.querySelectorAll('.dk')].forEach(b=>{ if(b.textContent.includes('CRYPTO')){
+    b.onclick=()=>CW.open('biblioteca'); } }); }
+  if(typeof openFractalUniverse!=='undefined' || window.openFractalUniverse){
+    const prev=window.openFractalUniverse;
+    if(prev){ window.openFractalUniverse=(proj)=>{ if(proj&&(proj.id==='cryptovice'||/crypto/i.test(proj.label||''))){ CW.open('biblioteca'); return; } prev(proj); }; }
+  }
+  const cmd=document.getElementById('ag-cmd');
+  if(cmd) cmd.addEventListener('keydown',e=>{
+    if(e.key!=='Enter') return; const s=(cmd.value||'').trim().toLowerCase(); let m;
+    if(/^blockchain$/.test(s)){ e.stopImmediatePropagation(); e.preventDefault(); cmd.value=''; CW.blockchain(); }
+    else if((m=s.match(/^market(?:\s+(\w+))?$/))){ e.stopImmediatePropagation(); e.preventDefault(); cmd.value=''; CW.market(m[1]); }
+    else if(/^(mundo\s*crypto|crypto\s*mundo)$/.test(s)){ e.stopImmediatePropagation(); e.preventDefault(); cmd.value=''; CW.open('biblioteca'); }
+  }, true);
+})();
+</script>
+<!-- ═══════════ COSMOS VIEW — James Webb timelapse: galaxias reales, deep field, vista planeta ═══════════ -->
+<style id="cosmos-style">
+  #cosmos{ position:fixed; inset:0; z-index:900; display:none; background:#000; overflow:hidden; }
+  #cosmos.open{ display:block; }
+  #cos-cv{ position:absolute; inset:0; }
+  #cos-ui{ position:absolute; top:16px; left:20px; right:20px; z-index:5; display:flex; align-items:center; gap:8px; }
+  #cos-title{ font-family:'Space Mono',monospace; font-size:10px; letter-spacing:4px; color:#8899bb; }
+  .cos-btn{ font-family:'Space Mono',monospace; font-size:8px; letter-spacing:2px; text-transform:uppercase;
+    background:transparent; border:1px solid #1a2438; border-radius:2px; color:#66779a; padding:6px 11px; cursor:pointer; }
+  .cos-btn.on, .cos-btn:hover{ color:#000; background:#8899ff; border-color:#8899ff; }
+  #cos-x{ margin-left:auto; font-family:'Space Mono',monospace; font-size:9px; letter-spacing:3px;
+    color:#000; background:#FF3A1F; border:none; border-radius:2px; padding:8px 14px; cursor:pointer; }
+  #cos-hint{ position:absolute; bottom:20px; left:50%; transform:translateX(-50%); z-index:5; text-align:center;
+    font-family:'Space Mono',monospace; font-size:8px; letter-spacing:3px; color:#334; }
+</style>
+
+<div id="cosmos">
+  <canvas id="cos-cv"></canvas>
+  <div id="cos-ui">
+    <div id="cos-title">🔭 COSMOS · DEEP FIELD</div>
+    <button class="cos-btn on" data-v="galaxias">🌌 GALAXIAS</button>
+    <button class="cos-btn" data-v="planeta">🪐 PLANETA</button>
+    <button class="cos-btn" id="cos-far">🌠 UNIVERSO ENTERO</button>
+    <button class="cos-btn" id="cos-zo">−</button>
+    <button class="cos-btn" id="cos-zi">+</button>
+    <button class="cos-btn" id="cos-new" style="color:#B84DFF;border-color:#3a2a5c">✧ CREAR GALAXIA</button>
+    <button id="cos-x">✕ SALIR (X)</button>
+  </div>
+  <div id="cos-switch" style="position:absolute;bottom:44px;left:50%;transform:translateX(-50%);z-index:5;display:flex;gap:6px;flex-wrap:wrap;justify-content:center;max-width:92vw"></div>
+  <div id="cos-hint">RUEDA = ALEJARTE / ACERCARTE · CLIC EN UNA GALAXIA = ENTRAR · CHIPS DE ABAJO = SALTAR DE UNIVERSO</div>
+</div>
+
+<script>
+// ═══ COSMOS — la vía láctea girando como la grabaría el James Webb ═══
+(function(){
+  const ov=document.getElementById('cosmos'), cv=document.getElementById('cos-cv'), x=cv.getContext('2d');
+  let W,H,view='galaxias',raf=null;
+  const fit=()=>{ W=cv.width=innerWidth; H=cv.height=innerHeight; };
+  const log=(k,d)=>{ (window.hkLog||function(){})(k,d); };
+
+  // ── deep field: cientos de galaxias lejanísimas (más allá) ──
+  let deep=null;
+  function makeDeep(){ deep=Array.from({length:300},()=>({
+    x:Math.random()*W, y:Math.random()*H, r:0.6+Math.random()*2.6,
+    e:0.3+Math.random()*0.7, a:Math.random()*Math.PI,
+    hue:['#9db4ff','#ffd9a0','#ff9d9d','#c9a0ff','#a0ffd9'][Math.floor(Math.random()*5)],
+    al:0.05+Math.random()*0.22 })); }
+
+  // ── galaxia espiral realista: brazos logarítmicos + polvo + núcleo ──
+  function makeSpiral(cfg){
+    const stars=[], dust=[];
+    const arms=cfg.arms||2;
+    for(let i=0;i<cfg.n;i++){
+      const arm=i%arms;
+      const d=Math.pow(Math.random(),0.62);          // más denso hacia el núcleo
+      const wind=cfg.wind||5.8;                       // cuánto enrollan los brazos
+      const ang=d*wind + arm*(Math.PI*2/arms) + (Math.random()-0.5)*0.38*(1-d*0.5);
+      const r=d*cfg.size;
+      // color: núcleo cálido → brazos fríos, con estrellas jóvenes brillantes
+      const col = d<0.18 ? '#fff6dd' : (Math.random()<0.12 ? '#cfe0ff' : (Math.random()<0.5?cfg.armCol:'#aab8e8'));
+      stars.push({ ang, r, col, sz: d<0.2?1.4:(Math.random()<0.08?1.8:0.9), tw:Math.random()*6.28 });
+      if(Math.random()<0.30 && d>0.2) dust.push({ ang:ang+0.09, r:r*0.98, sz:2.4+Math.random()*3 });
+    }
+    return { ...cfg, stars, dust };
+  }
+  let gals=null;
+  function makeGalaxies(){
+    const mine=makeSpiral({ id:'hk23', name:'HK23 — TU GALAXIA', n:1500, size:Math.min(W,H)*0.30,
+      arms:2, wind:6.2, armCol:'#ffb199', coreCol:'#ffddb0', x:W*0.38, y:H*0.52, tilt:0.46, spd:0.000045, label:'#FF3A1F' });
+    const others=[];
+    try{ (JSON.parse(localStorage.getItem('hk23_galaxias'))||[]).slice(0,4).forEach((g,i)=>{
+      others.push(makeSpiral({ id:'sis'+i, sis:g, name:g.name, n:700, size:Math.min(W,H)*(0.10+((i*7)%3)*0.02),
+        arms:2+(i%3), wind:5+(i%2)*1.4, armCol:g.color||'#9db4ff', coreCol:'#fff2cc',
+        x:W*(0.72+((i*13)%20)/100), y:H*(0.18+((i*29)%55)/100), tilt:0.35+((i*11)%25)/100, spd:0.00006*(i%2?1:-1), label:g.color||'#9db4ff' })); });
+    }catch(e){}
+    // Andrómeda de fondo (no enterable, decorativa)
+    others.push(makeSpiral({ id:'andromeda', name:'ANDRÓMEDA · 2.5M AÑOS LUZ', n:900, size:Math.min(W,H)*0.16,
+      arms:2, wind:7, armCol:'#9db4ff', coreCol:'#ffeecc', x:W*0.16, y:H*0.16, tilt:0.30, spd:0.00003, label:'#556' }));
+    gals=[mine,...others];
+  }
+  function drawSpiral(g,t){
+    x.save(); x.translate(g.x,g.y);
+    const rot=t*g.spd;
+    // halo
+    const halo=x.createRadialGradient(0,0,0,0,0,g.size*1.15);
+    halo.addColorStop(0,'rgba(255,240,214,0.10)'); halo.addColorStop(1,'transparent');
+    x.fillStyle=halo; x.beginPath(); x.ellipse(0,0,g.size*1.15,g.size*1.15*g.tilt,0,0,6.283); x.fill();
+    x.globalCompositeOperation='lighter';
+    // estrellas de los brazos (giran = timelapse)
+    g.stars.forEach(s=>{
+      const a=s.ang+rot;
+      const px=Math.cos(a)*s.r, py=Math.sin(a)*s.r*g.tilt;
+      x.globalAlpha=0.5+0.5*Math.abs(Math.sin(t*0.001+s.tw));
+      x.fillStyle=s.col; x.fillRect(px,py,s.sz,s.sz);
+    });
+    x.globalAlpha=1; x.globalCompositeOperation='source-over';
+    // polvo oscuro sobre los brazos
+    g.dust.forEach(d=>{ const a=d.ang+rot;
+      x.fillStyle='rgba(10,6,4,0.32)';
+      x.beginPath(); x.arc(Math.cos(a)*d.r, Math.sin(a)*d.r*g.tilt, d.sz, 0, 6.283); x.fill(); });
+    // núcleo
+    const core=x.createRadialGradient(0,0,0,0,0,g.size*0.22);
+    core.addColorStop(0,'#fffdf5'); core.addColorStop(0.35,g.coreCol); core.addColorStop(1,'transparent');
+    x.fillStyle=core; x.beginPath(); x.ellipse(0,0,g.size*0.22,g.size*0.22*g.tilt*1.4,0,0,6.283); x.fill();
+    x.restore();
+    // etiqueta
+    x.font='700 10px "Space Mono",monospace'; x.textAlign='center';
+    x.fillStyle=g.label; x.globalAlpha=0.8;
+    x.fillText((g.id==='hk23'?'✦ ':'')+g.name, g.x, g.y+g.size*g.tilt+22); x.globalAlpha=1;
+  }
+
+  // ── vista planeta: planeta girando + estación + agentes alienígenas en tránsito ──
+  let shuttles=Array.from({length:8},(_,i)=>({ p:Math.random(), dir:i%2?1:-1, sp:0.0014+Math.random()*0.002, off:(i-4)*14 }));
+  function drawPlanetView(t){
+    // estrellas
+    for(let i=0;i<90;i++){ x.globalAlpha=0.3+0.5*Math.abs(Math.sin(t*0.001+i));
+      x.fillStyle='#cdd6ee'; x.fillRect((i*131)%W,(i*71)%H,1,1); } x.globalAlpha=1;
+    const pcx=W*0.36, pcy=H*0.54, pR=Math.min(W,H)*0.30;
+    // planeta con bandas que derivan (rotación real)
+    const pg=x.createRadialGradient(pcx-pR*0.35,pcy-pR*0.35,pR*0.1,pcx,pcy,pR);
+    pg.addColorStop(0,'rgba(255,255,255,0.30)'); pg.addColorStop(0.4,'#2E6BFFD8'); pg.addColorStop(0.85,'#12306688'); pg.addColorStop(1,'#0a1a3844');
+    x.fillStyle=pg; x.beginPath(); x.arc(pcx,pcy,pR,0,6.283); x.fill();
+    x.save(); x.beginPath(); x.arc(pcx,pcy,pR,0,6.283); x.clip();
+    for(let b=0;b<7;b++){ const by=pcy-pR+(b+0.5)*(pR*2/7);
+      const drift=((t*0.02+b*140)%(pR*3))-pR*1.5;
+      x.beginPath(); x.ellipse(pcx+drift,by,pR*1.2,pR*0.12,0,0,6.283);
+      x.fillStyle=b%2?'rgba(0,0,0,0.16)':'rgba(255,255,255,0.08)'; x.fill(); }
+    const tg=x.createLinearGradient(pcx-pR,pcy,pcx+pR,pcy);
+    tg.addColorStop(0,'rgba(0,0,0,0)'); tg.addColorStop(0.65,'rgba(0,0,0,0)'); tg.addColorStop(1,'rgba(0,0,0,0.6)');
+    x.fillStyle=tg; x.fillRect(pcx-pR,pcy-pR,pR*2,pR*2);
+    x.restore();
+    x.strokeStyle='rgba(120,160,255,0.5)'; x.lineWidth=1.5;
+    x.beginPath(); x.arc(pcx,pcy,pR,0,6.283); x.stroke();
+    // estación espacial orbitando
+    const sa=t*0.00035, sx=pcx+Math.cos(sa)*pR*1.75, sy=pcy+Math.sin(sa)*pR*0.85;
+    x.save(); x.translate(sx,sy); x.rotate(t*0.0008);
+    x.strokeStyle='#AAFF00'; x.lineWidth=2;
+    x.beginPath(); x.arc(0,0,20,0,6.283); x.stroke();
+    x.beginPath(); x.arc(0,0,9,0,6.283); x.stroke();
+    for(let k=0;k<4;k++){ const a=k*Math.PI/2;
+      x.beginPath(); x.moveTo(Math.cos(a)*9,Math.sin(a)*9); x.lineTo(Math.cos(a)*20,Math.sin(a)*20); x.stroke(); }
+    for(let k=0;k<8;k++){ const a=k/8*6.283;
+      x.fillStyle=Math.sin(t*0.008+k)>0?'#fff':'#AAFF00';
+      x.beginPath(); x.arc(Math.cos(a)*20,Math.sin(a)*20,1.6,0,6.283); x.fill(); }
+    x.restore();
+    x.font='9px "Space Mono",monospace'; x.fillStyle='rgba(170,255,0,0.7)'; x.textAlign='center';
+    x.fillText('ESTACIÓN KNOWHERE-2', sx, sy-30);
+    // agentes alienígenas: naves entrando y saliendo planeta ⇄ estación
+    shuttles.forEach(s=>{
+      s.p+=s.sp*s.dir;
+      if(s.p>1||s.p<0){ s.dir*=-1; s.p=Math.max(0,Math.min(1,s.p)); }
+      const px0=pcx+ (pR*0.7)*Math.cos(s.off), py0=pcy+(pR*0.7)*Math.sin(s.off)*0.6;
+      const mx=(px0+sx)/2+s.off*2, my=(py0+sy)/2-40; // curva
+      const u=s.p, iu=1-u;
+      const qx=iu*iu*px0+2*iu*u*mx+u*u*sx, qy=iu*iu*py0+2*iu*u*my+u*u*sy;
+      x.strokeStyle='rgba(0,240,255,0.18)'; x.lineWidth=1;
+      x.beginPath(); x.moveTo(px0,py0); x.quadraticCurveTo(mx,my,sx,sy); x.stroke();
+      x.fillStyle=s.dir>0?'#00F0FF':'#FFD200';
+      x.beginPath(); x.arc(qx,qy,2.6,0,6.283); x.fill();
+      x.globalAlpha=0.4; x.beginPath(); x.arc(qx,qy,5,0,6.283); x.fill(); x.globalAlpha=1;
+    });
+    x.font='10px "Space Mono",monospace'; x.fillStyle='rgba(140,160,200,0.5)'; x.textAlign='left';
+    x.fillText('◈ AGENTES ALIENÍGENAS EN TRÁNSITO — PLANETA ⇄ ESTACIÓN · TODO EN MOVIMIENTO', 24, H-46);
+  }
+
+  // ── ZOOM de perspectiva: alejate hasta el universo entero ──
+  let Z=1;
+  const setZ=(v)=>{ Z=Math.max(0.22, Math.min(3, v)); };
+  cv.addEventListener('wheel',e=>{ if(view!=='galaxias') return; e.preventDefault();
+    setZ(Z*(e.deltaY<0?1.12:0.89)); },{passive:false});
+  document.getElementById('cos-zi').onclick=()=>setZ(Z*1.3);
+  document.getElementById('cos-zo').onclick=()=>setZ(Z*0.75);
+  document.getElementById('cos-far').onclick=()=>{ setView('galaxias'); setZ(0.34); };
+
+  function loop(t){
+    if(!ov.classList.contains('open')){ raf=null; return; }
+    x.fillStyle='#000104'; x.fillRect(0,0,W,H);
+    // deep field siempre de fondo (escala suave con el zoom)
+    deep.forEach(d=>{ x.save();
+      const zx=(d.x-W/2)*Math.sqrt(Z)+W/2, zy=(d.y-H/2)*Math.sqrt(Z)+H/2;
+      x.translate(zx,zy); x.rotate(d.a);
+      x.globalAlpha=d.al; x.fillStyle=d.hue;
+      x.beginPath(); x.ellipse(0,0,d.r,d.r*d.e,0,0,6.283); x.fill(); x.restore(); });
+    x.globalAlpha=1;
+    if(view==='galaxias'){
+      x.save(); x.translate(W/2,H/2); x.scale(Z,Z); x.translate(-W/2,-H/2);
+      gals.forEach(g=>drawSpiral(g,t));
+      x.restore();
+      if(Z<0.5){ x.font='10px "Space Mono",monospace'; x.textAlign='center';
+        x.fillStyle='rgba(140,160,220,0.5)';
+        x.fillText('EL UNIVERSO ENTERO — CADA MANCHA ES OTRA GALAXIA ESPERANDO SER CREADA', W/2, H-70); }
+    }
+    else drawPlanetView(t);
+    raf=requestAnimationFrame(loop);
+  }
+
+  function setView(v){ view=v;
+    document.querySelectorAll('.cos-btn').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+    document.getElementById('cos-title').textContent = v==='galaxias' ? '🔭 COSMOS · DEEP FIELD' : '🔭 COSMOS · ÓRBITA PLANETARIA';
+    document.getElementById('cos-hint').textContent = v==='galaxias'
+      ? 'CLIC EN TU GALAXIA PARA ENTRAR · LAS VECINAS TIENEN OTRAS COSAS · 1/2 CAMBIA LA VISTA'
+      : 'EL PLANETA GIRA · LA ESTACIÓN ORBITA · LOS AGENTES VAN Y VIENEN · 1/2 CAMBIA LA VISTA';
+  }
+  document.querySelectorAll('.cos-btn').forEach(b=>b.onclick=()=>setView(b.dataset.v));
+
+  const COS={ open(v){ ov.classList.add('open'); fit(); makeDeep(); makeGalaxies(); renderSwitch(); setView(v||'galaxias');
+      if(!raf) raf=requestAnimationFrame(loop); log('cosmos','vista desde lejos'); },
+    close(){ ov.classList.remove('open'); } };
+  window.CosmosView=COS;
+  document.getElementById('cos-x').onclick=()=>COS.close();
+  addEventListener('resize',()=>{ if(ov.classList.contains('open')){ fit(); makeDeep(); makeGalaxies(); } });
+  addEventListener('keydown',e=>{
+    if(!ov.classList.contains('open')) return;
+    if(e.key==='x'||e.key==='X'||e.key==='Escape') COS.close();
+    if(e.key==='1') setView('galaxias'); if(e.key==='2') setView('planeta');
+  }, true);
+  // entrar a una galaxia (clic o chip): la tuya → mapa; una vecina → su mundo distinto
+  function enterGal(g){
+    if(!g||g.id==='andromeda') return;
+    COS.close();
+    if(g.id==='hk23'){ (window.WarpJump||((cb)=>cb()))(()=>{ if(typeof goTo==='function') goTo('map'); }, '#FF3A1F'); }
+    else if(g.sis && window.hkOpenGalaxy){ (window.WarpJump||((cb)=>cb()))(()=>window.hkOpenGalaxy(g.sis.name), g.sis.color); }
+  }
+  cv.addEventListener('click',e=>{
+    if(view!=='galaxias') return;
+    // coordenadas del mundo con el zoom aplicado
+    const wx=(e.clientX-W/2)/Z+W/2, wy=(e.clientY-H/2)/Z+H/2;
+    enterGal(gals.find(g=>Math.hypot(g.x-wx,g.y-wy)<g.size*0.9));
+  });
+  // ── SWITCHER: saltá de universo en universo con un toque ──
+  function renderSwitch(){
+    const row=document.getElementById('cos-switch'); if(!row||!gals) return;
+    row.innerHTML='';
+    gals.filter(g=>g.id!=='andromeda').forEach(g=>{
+      const b=document.createElement('button'); b.className='cos-btn';
+      b.textContent=(g.id==='hk23'?'✦ ':'✧ ')+(g.sis?g.sis.name:g.name.split(' — ')[0]);
+      b.style.color=g.label; b.style.borderColor=g.label+'44';
+      b.onclick=()=>enterGal(g);
+      row.appendChild(b);
+    });
+  }
+  // ── CREAR GALAXIA sin salir del cosmos: nace en el cielo al instante ──
+  document.getElementById('cos-new').onclick=()=>{
+    if(!window.hkPrompt||!window.hkGalaxia){ return; }
+    window.hkPrompt('Nombrá la nueva galaxia del universo','ej. GALAXIA MADRE-2', (n)=>{
+      // sembrar sin saltar al mapa: usamos la siembra global y refrescamos el cielo
+      const seed=window.hkSembrar||null;
+      if(seed) seed(n); else window.hkGalaxia();
+      setTimeout(()=>{ makeGalaxies(); renderSwitch(); }, 150);
+    });
+  };
+
+  // ── accesos: tecla V, dock 🔭, comando cosmos/vista ──
+  addEventListener('keydown',e=>{
+    if(/INPUT|TEXTAREA|SELECT/.test((document.activeElement||{}).tagName||'')) return;
+    if((e.key==='v'||e.key==='V') && !ov.classList.contains('open')) COS.open();
+  });
+  const dock=document.getElementById('hk-dock');
+  if(dock){ const b=document.createElement('button'); b.className='dk'; b.textContent='🔭 COSMOS';
+    b.style.setProperty('--dc','#8899ff'); b.style.color='#8899ffCC';
+    b.onclick=()=>COS.open(); dock.insertBefore(b, dock.firstChild); }
+  const cmd=document.getElementById('ag-cmd');
+  if(cmd) cmd.addEventListener('keydown',e=>{
+    if(e.key!=='Enter') return; const s=(cmd.value||'').trim().toLowerCase();
+    if(/^(cosmos|vista|lejos|deep ?field)$/.test(s)){ e.stopImmediatePropagation(); e.preventDefault(); cmd.value=''; COS.open(); }
+    else if(/^(planeta|orbita|órbita)$/.test(s)){ e.stopImmediatePropagation(); e.preventDefault(); cmd.value=''; COS.open('planeta'); }
+  }, true);
 })();
 </script>
 </body>
