@@ -2,7 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="HK23"/>
+<meta name="theme-color" content="#080808"/>
+<link rel="apple-touch-icon" href="./apple-touch-icon.png"/>
 <title>HK23 — HEYOKA UNIVERSE</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
@@ -8630,6 +8635,83 @@ var qrcode = function() {
     wrap.appendChild(row); pane.appendChild(wrap);
   }
 })();
+</script>
+
+<!-- ═══════════ CAPA IPHONE — el universo entero, táctil ═══════════ -->
+<style id="mobile-layer">
+  @supports (height: 100dvh) { body { height: 100dvh; } }
+  @media (max-width: 820px), (pointer: coarse) {
+    /* nav del mapa: una línea deslizable, nunca tapa el mapa */
+    .map-ui { padding: 12px 12px calc(env(safe-area-inset-top, 0px)); flex-wrap: nowrap; }
+    .map-nav { overflow-x: auto; flex-wrap: nowrap; max-width: 72vw; scrollbar-width: none;
+      -webkit-overflow-scrolling: touch; }
+    .map-nav::-webkit-scrollbar { display: none; }
+    .nav-btn { flex-shrink: 0; padding: 8px 10px; }
+    /* dock: tira deslizable con safe-area */
+    #hk-dock { bottom: calc(10px + env(safe-area-inset-bottom, 0px)); max-width: 96vw;
+      flex-wrap: nowrap; overflow-x: auto; justify-content: flex-start; scrollbar-width: none;
+      -webkit-overflow-scrolling: touch; }
+    #hk-dock::-webkit-scrollbar { display: none; }
+    .dk { flex-shrink: 0; padding: 9px 11px; font-size: 9px; }
+    /* botones flotantes: sobre el dock, con safe-area */
+    #me-launch { bottom: calc(58px + env(safe-area-inset-bottom, 0px)); }
+    #ag-launch { bottom: calc(100px + env(safe-area-inset-bottom, 0px)); }
+    #sc-corner { display: none !important; } /* sin hover no sirve — el ⌨ del dock abre la leyenda */
+    #gate-badge { top: calc(56px + env(safe-area-inset-top, 0px)); right: 12px; font-size: 7px; padding: 6px 9px; }
+    #collectibles-counter { bottom: calc(58px + env(safe-area-inset-bottom, 0px)); right: 14px; }
+    .zone-body { padding: 16px; }
+    .hkov-card { max-height: 86dvh; padding: 20px 16px 16px; }
+    #cw-lib, #cw-mkt { inset: 96px 0 0 0; padding: 16px 14px 110px; }
+    #cw-top { flex-wrap: wrap; row-gap: 6px; padding: 10px 12px; }
+    #cw-coin { width: 150px; height: 150px; margin: 0 auto; }
+    .cwl-hero { gap: 16px; }
+    #cos-ui { flex-wrap: wrap; row-gap: 6px; padding-top: calc(10px + env(safe-area-inset-top, 0px)); }
+    #cos-switch { bottom: calc(58px + env(safe-area-inset-bottom, 0px)); }
+    #lab-bar { top: calc(96px + env(safe-area-inset-top, 0px)); max-width: 94vw; overflow-x: auto; flex-wrap: nowrap; }
+    #lab-hint { display: none; }
+    #st-market { left: 12px; right: 12px; width: auto; top: auto; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); max-height: 46dvh; }
+    #br-feed { display: none; } /* el feed tapa media pantalla en el teléfono */
+    .br-door { width: 84px; height: 210px; }
+    #piece-pop { bottom: calc(150px + env(safe-area-inset-bottom, 0px)); }
+    #def-caption { bottom: calc(150px + env(safe-area-inset-bottom, 0px)); }
+  }
+  /* drag táctil sin que la página scrollee */
+  body.lab-on #lab-canvas, .media-layer.m-pip, #cos-cv { touch-action: none; }
+</style>
+<script>
+// ═══ TÁCTIL: pinch-zoom en el cosmos + tamaño de entidades sin rueda ═══
+addEventListener('DOMContentLoaded', function(){
+  const coarse = matchMedia('(pointer: coarse)').matches || ('ontouchstart' in window);
+  // pinch en el cosmos → mismo zoom que la rueda
+  const cos=document.getElementById('cos-cv');
+  if(cos){
+    let d0=null;
+    cos.addEventListener('touchstart',e=>{ if(e.touches.length===2)
+      d0=Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY); },{passive:true});
+    cos.addEventListener('touchmove',e=>{
+      if(e.touches.length===2&&d0){
+        const d1=Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
+        // reusa la rueda: delta negativo = acercar
+        cos.dispatchEvent(new WheelEvent('wheel',{deltaY: d1>d0?-40:40, cancelable:true}));
+        d0=d1; e.preventDefault();
+      }
+    },{passive:false});
+    cos.addEventListener('touchend',()=>{ d0=null; },{passive:true});
+  }
+  // LAB en táctil: botones ⊕/⊖ para la última entidad tocada (la rueda no existe)
+  if(coarse){
+    const bar=document.getElementById('lab-bar');
+    if(bar){
+      const mk=(txt,dy)=>{ const b=document.createElement('button'); b.className='lb'; b.textContent=txt;
+        b.onclick=()=>{ const c=document.getElementById('lab-canvas');
+          if(c&&c._lastTouch) c.dispatchEvent(new WheelEvent('wheel',{clientX:c._lastTouch.x, clientY:c._lastTouch.y, deltaY:dy, cancelable:true})); };
+        bar.insertBefore(b, bar.lastElementChild); };
+      mk('⊕ AGRANDAR',-60); mk('⊖ ACHICAR',60);
+      const c=document.getElementById('lab-canvas');
+      if(c) c.addEventListener('pointerdown',e=>{ c._lastTouch={x:e.clientX,y:e.clientY}; },{passive:true});
+    }
+  }
+});
 </script>
 
 <script>
