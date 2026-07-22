@@ -8479,6 +8479,7 @@ var qrcode = function() {
     ['K','Backrooms',          ()=>{ if(window.hkBackrooms) window.hkBackrooms(); }],
     ['V','Cosmos · vista lejana', ()=>{}],
     ['L','Entity Lab',            ()=>{}],
+    ['F','Fusión: 🔊 parlantes · 🎚 tornamesa · 〰 onda', ()=>{ if(window.Fusion) window.Fusion.next(); }],
   ];
   const KEYMAP={ '1':'map','2':'arte','3':'lore','4':'viceos','5':'systems','6':'flow','7':'agents' };
   // leyenda estilo clásico — se abre con ?
@@ -8486,14 +8487,20 @@ var qrcode = function() {
   leg.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:620;'+
     'background:rgba(6,6,8,.97);border:1px solid #1E1E1E;border-radius:3px;padding:20px 24px;display:none;'+
     "font-family:'Space Mono',monospace;backdrop-filter:blur(10px);min-width:280px;";
-  leg.innerHTML='<div style="font-size:10px;letter-spacing:4px;color:#555;margin-bottom:14px">SHORTCUTS DEL UNIVERSO</div>'+
-    KEYS.map(([k,l])=>'<div style="display:flex;gap:12px;align-items:center;margin-bottom:6px">'+
+  leg.innerHTML='<div style="font-size:10px;letter-spacing:4px;color:#555;margin-bottom:14px">SHORTCUTS DEL UNIVERSO — TOCÁ PARA EJECUTAR</div>'+
+    KEYS.map(([k,l],i)=>'<div data-ki="'+i+'" style="display:flex;gap:12px;align-items:center;margin-bottom:6px;cursor:pointer;padding:3px 6px;border-radius:2px" '+
+      'onmouseover="this.style.background=\'#141414\'" onmouseout="this.style.background=\'transparent\'">'+
       '<span style="border:1px solid #2A2A2A;border-radius:2px;padding:2px 7px;font-size:9px;color:#F0EDE8;min-width:18px;text-align:center">'+k+'</span>'+
       '<span style="font-size:9px;letter-spacing:1px;color:#777">'+l+'</span></div>').join('')+
     '<div style="display:flex;gap:12px;align-items:center;margin-bottom:6px"><span style="border:1px solid #2A2A2A;border-radius:2px;padding:2px 7px;font-size:9px;color:#F0EDE8">1-7</span><span style="font-size:9px;letter-spacing:1px;color:#777">Mapa y zonas</span></div>'+
     '<div style="display:flex;gap:12px;align-items:center"><span style="border:1px solid #2A2A2A;border-radius:2px;padding:2px 7px;font-size:9px;color:#F0EDE8">X / ESC</span><span style="font-size:9px;letter-spacing:1px;color:#777">Volver / cerrar</span></div>'+
     '<div style="font-size:8px;letter-spacing:2px;color:#333;margin-top:14px">? PARA CERRAR</div>';
   document.body.appendChild(leg);
+  // filas tocables: en iPhone (o sin foco de teclado) el shortcut se ejecuta con un tap
+  leg.querySelectorAll('[data-ki]').forEach(row=>row.onclick=()=>{
+    leg.style.display='none';
+    const fn=KEYS[+row.dataset.ki][2]; if(fn) fn();
+  });
   addEventListener('keydown',e=>{
     if(/INPUT|TEXTAREA|SELECT/.test((document.activeElement||{}).tagName||'')) return;
     if(e.key==='?'){ leg.style.display=leg.style.display==='none'?'block':'none'; return; }
@@ -8837,6 +8844,7 @@ addEventListener('DOMContentLoaded', function(){
   function loop(t){
     x.clearRect(0,0,W,H);
     if(labOn||photoMode){
+      if(waveMode) waveTick(t);
       ents.forEach(e=>{
         if(photoMode&&e.tx!=null){ e.x+=(e.tx-e.x)*.1; e.y+=(e.ty-e.y)*.1; }
         else if(e!==grabbed){ e.x+=e.vx; e.y+=e.vy;
@@ -8994,6 +9002,84 @@ addEventListener('DOMContentLoaded', function(){
     stop(){ clearInterval(this.timer); this.timer=null; disperse(); }
   };
   window.CryptoSwarm=Swarm;
+
+  // ═══ FUSIÓN (la F clásica): las entidades forman figuras — parlantes · tornamesa · onda ═══
+  let waveMode=false;
+  function waveTick(t){
+    // la onda late más fuerte si hay un video/música sonando en el media engine
+    const playing=(window.MediaEngine&&window.MediaEngine.layers&&window.MediaEngine.layers.length>0);
+    const base=H*0.10, amp=base*(playing?1.9:0.8);
+    const beat=playing? (1+0.35*Math.sin(t*0.006)) : 1;
+    ents.forEach((e,i)=>{
+      if(e.tx==null) return;
+      const u=i/ents.length;
+      e.ty = H*0.5 + Math.sin(u*Math.PI*6 + t*0.0035)*amp*beat*Math.sin(u*Math.PI);
+    });
+  }
+  function shapePts(kind){
+    const pts=[], P=(x0,y0,c)=>pts.push({x:x0,y:y0,c});
+    const cx=W/2, cy=H/2, S=Math.min(W,H);
+    if(kind==='parlantes'){
+      // dos cajas gigantes con woofer + tweeter, estilo muro de sonido
+      [[-0.26,0],[0.26,0]].forEach(([ox])=>{
+        const bx=cx+ox*W, bw=S*0.22, bh=S*0.34;
+        for(let k=0;k<=40;k++){ const u=k/40; // marco
+          P(bx-bw/2+u*bw, cy-bh/2, '#C9CDD6'); P(bx-bw/2+u*bw, cy+bh/2, '#C9CDD6'); }
+        for(let k=0;k<=26;k++){ const u=k/26;
+          P(bx-bw/2, cy-bh/2+u*bh, '#C9CDD6'); P(bx+bw/2, cy-bh/2+u*bh, '#C9CDD6'); }
+        for(let k=0;k<36;k++){ const a=k/36*6.283; // woofer
+          P(bx+Math.cos(a)*bw*0.34, cy+bh*0.14+Math.sin(a)*bw*0.34, '#FF3A1F'); }
+        for(let k=0;k<20;k++){ const a=k/20*6.283; // cono interior
+          P(bx+Math.cos(a)*bw*0.16, cy+bh*0.14+Math.sin(a)*bw*0.16, '#FFD200'); }
+        for(let k=0;k<16;k++){ const a=k/16*6.283; // tweeter
+          P(bx+Math.cos(a)*bw*0.12, cy-bh*0.26+Math.sin(a)*bw*0.12, '#00F0FF'); }
+      });
+    } else if(kind==='tornamesa'){
+      const px=cx-S*0.05, py=cy, R=S*0.26;
+      for(let k=0;k<=48;k++){ const u=k/48; // base
+        P(cx-S*0.36+u*S*0.72, py+R*0.95, '#8a6a3a'); P(cx-S*0.36+u*S*0.72, py-R*0.95, '#8a6a3a'); }
+      for(let k=0;k<=20;k++){ const u=k/20;
+        P(cx-S*0.36, py-R*0.95+u*R*1.9, '#8a6a3a'); P(cx+S*0.36, py-R*0.95+u*R*1.9, '#8a6a3a'); }
+      for(let k=0;k<64;k++){ const a=k/64*6.283; // plato (vinilo)
+        P(px+Math.cos(a)*R, py+Math.sin(a)*R*0.92, '#1a1a1a'); }
+      for(let k=0;k<40;k++){ const a=k/40*6.283;
+        P(px+Math.cos(a)*R*0.66, py+Math.sin(a)*R*0.60, '#333333'); }
+      for(let k=0;k<22;k++){ const a=k/22*6.283; // etiqueta dorada
+        P(px+Math.cos(a)*R*0.22, py+Math.sin(a)*R*0.20, '#FFD200'); }
+      P(px,py,'#F0EDE8');
+      const ax=cx+S*0.30, ay=cy-R*0.75; // brazo
+      for(let k=0;k<=16;k++){ const u=k/16;
+        P(ax+ (px+R*0.5-ax)*u, ay + (py-R*0.2-ay)*u, '#C9CDD6'); }
+      for(let k=0;k<10;k++){ const a=k/10*6.283; P(ax+Math.cos(a)*7, ay+Math.sin(a)*7, '#FF3A1F'); }
+    } else { // onda: fila de puntos a lo ancho (waveTick los hace bailar)
+      const N=140;
+      for(let k=0;k<N;k++){ const u=k/(N-1);
+        const col=['#00F0FF','#B84DFF','#FF3A1F','#FFD200'][Math.floor(u*4)%4];
+        P(W*0.04+u*W*0.92, H*0.5, col); }
+    }
+    return pts;
+  }
+  const FIGS=['parlantes','tornamesa','onda','off'];
+  const Fusion={ i:-1,
+    set(kind){
+      if(kind==='off'){ waveMode=false; disperse(); toast('〰 FUSIÓN APAGADA'); return; }
+      if(!labOn) setLab(true);
+      const pts=shapePts(kind);
+      while(ents.length<pts.length) spawn(30);
+      ents.forEach((e,i)=>{ if(!e._r0) e._r0=e.r; e.r=3;
+        const p=pts[i%pts.length]; e.tx=p.x; e.ty=p.y; e.pc=p.c; });
+      photoMode=true; waveMode=(kind==='onda');
+      toast(kind==='parlantes'?'🔊 PARLANTES GIGANTES — MURO DE SONIDO'
+           :kind==='tornamesa'?'🎚 TORNAMESA — EL VINILO DEL UNIVERSO'
+           :'〰 ONDA DE AUDIO — LATE CON TU VIDEO');
+      log('lab','fusión: '+kind);
+    },
+    next(){ this.i=(this.i+1)%FIGS.length; this.set(FIGS[this.i]); } };
+  window.Fusion=Fusion;
+  // botón en la barra del LAB
+  (function(){ const bar=document.getElementById('lab-bar');
+    if(bar){ const b=document.createElement('button'); b.className='lb'; b.textContent='🔊 FUSIÓN';
+      b.onclick=()=>Fusion.next(); bar.insertBefore(b, bar.firstChild); } })();
 
   // ── LORE overlay ──
   document.getElementById('lb-lore').onclick=()=>{
