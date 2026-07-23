@@ -1,6 +1,6 @@
 {
-  "generated": "2026-07-22T11:12:25.350Z",
-  "date": "2026-07-22",
+  "generated": "2026-07-23T11:13:35.656Z",
+  "date": "2026-07-23",
   "worlds": [
     {
       "id": "hk23-universe",
@@ -62,9 +62,9 @@
   },
   "featured": "chile-goldmine",
   "commits24h": [
-    "b6d3d67 Entity Lab, Cosmos JWST, Knowhere, crypto world, biomes, blueprints, warp (#5)"
+    "696b5d8 iPhone layer: touch-first universe + home-screen app (#6)"
   ],
-  "weekCommitCount": 8,
+  "weekCommitCount": 9,
   "actions": [
     "Reactivar 8 mundo(s) sin push en 30d: CHILE GOLDMINE, VICEGOLFER COMMAND CENTER, CRYPTOVICE HONEYSCAM, UNO AL DIA SOPROLE, AFFILIATE GROWTH AGENT, ATLAS X, HK23 VICE OS ECOSYSTEM, HOW TO USE CLAUDE",
     "Ningún mundo está LIVE — conectar VERCEL_TOKEN o desplegar uno",
@@ -72,6 +72,7 @@
     "Repartir links ?ref= de la semana a los referidos"
   ],
   "reports": [
+    "2026-07-23.md",
     "2026-07-22.md",
     "2026-07-21.md",
     "2026-07-20.md",
