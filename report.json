@@ -1,6 +1,6 @@
 {
-  "generated": "2026-07-23T11:13:35.656Z",
-  "date": "2026-07-23",
+  "generated": "2026-07-24T11:05:38.687Z",
+  "date": "2026-07-24",
   "worlds": [
     {
       "id": "hk23-universe",
@@ -62,9 +62,11 @@
   },
   "featured": "chile-goldmine",
   "commits24h": [
-    "696b5d8 iPhone layer: touch-first universe + home-screen app (#6)"
+    "1668d54 Biblioteca: HARD TRUTHS joins as its own collection (9 volumes + Reflection 01) (#8)",
+    "8b9f0a7 FUSIÓN + shortcuts tocables + coleccionables persistentes + favoritos + EL TALLER (página viva) (#7)",
+    "8f8e6d7 oracle: reporte diario 2026-07-23"
   ],
-  "weekCommitCount": 9,
+  "weekCommitCount": 10,
   "actions": [
     "Reactivar 8 mundo(s) sin push en 30d: CHILE GOLDMINE, VICEGOLFER COMMAND CENTER, CRYPTOVICE HONEYSCAM, UNO AL DIA SOPROLE, AFFILIATE GROWTH AGENT, ATLAS X, HK23 VICE OS ECOSYSTEM, HOW TO USE CLAUDE",
     "Ningún mundo está LIVE — conectar VERCEL_TOKEN o desplegar uno",
@@ -72,6 +74,7 @@
     "Repartir links ?ref= de la semana a los referidos"
   ],
   "reports": [
+    "2026-07-24.md",
     "2026-07-23.md",
     "2026-07-22.md",
     "2026-07-21.md",
