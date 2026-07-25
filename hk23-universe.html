@@ -3618,6 +3618,11 @@ document.addEventListener('keydown', e => {
     const affirmation = document.getElementById('affirmation-overlay');
     if (fractal.style.opacity === '1') { closeFractalUniverse(); return; }
     if (affirmation.style.opacity === '1') { closeAffirmation(); return; }
+    // si hay un mundo abierto encima (MVB, TALLER, CRYPTO, COSMOS, un overlay…),
+    // ESC/X le pertenece a ese mundo: cerrarlo NO debe además mover la pantalla base
+    if (document.querySelector('#mvb.open, #taller.open, .hkov.open') ||
+        ['cw','cosmos'].some(id => { const el = document.getElementById(id);
+          return el && el.style.display && el.style.display !== 'none'; })) return;
     if (currentScreen !== 'portal' && currentScreen !== 'map') goTo('map');
     else if (currentScreen === 'map') goTo('portal');
   }
@@ -10162,8 +10167,8 @@ addEventListener('DOMContentLoaded', function(){
 <style id="mvb-style">
   #mvb{ position:fixed; inset:0; z-index:772; display:none; background:#05060C; overflow:hidden;
     font-family:'Space Mono',monospace; }
-  #mvb.open{ display:block; }
-  #mvb-top{ position:absolute; top:0; left:0; right:0; z-index:6; display:flex; align-items:center; gap:10px;
+  #mvb.open{ display:flex; flex-direction:column; }
+  #mvb-top{ display:flex; align-items:center; gap:10px;
     padding:14px 18px; border-bottom:1px solid #10182A; background:rgba(5,6,12,.94); flex-wrap:wrap; }
   #mvb-title{ font-size:11px; letter-spacing:4px; color:#FF3AC8; white-space:nowrap; }
   #mvb-title span{ color:#3A3A5A; }
@@ -10172,13 +10177,16 @@ addEventListener('DOMContentLoaded', function(){
   #mvb-q::placeholder{ color:#3A4460; }
   #mvb-x{ font-size:9px; letter-spacing:3px; color:#000; background:#FF3AC8; border:none; border-radius:2px;
     padding:8px 14px; cursor:pointer; }
-  #mvb-cats{ position:absolute; top:58px; left:0; right:0; z-index:6; display:flex; gap:6px; flex-wrap:wrap;
+  #mvb-cats{ display:flex; gap:6px; flex-wrap:wrap;
     padding:10px 18px; background:rgba(5,6,12,.9); border-bottom:1px solid #10182A; }
   .mvb-cat{ font-family:'Space Mono',monospace; font-size:8px; letter-spacing:2px; padding:7px 12px;
     border-radius:2px; cursor:pointer; background:transparent; border:1px solid var(--cc,#2A2A2A);
     color:var(--cc,#888); transition:all .15s; }
   .mvb-cat.on{ background:var(--cc); color:#000; font-weight:700; box-shadow:0 0 18px var(--cc); }
-  #mvb-body{ position:absolute; inset:110px 0 0 0; display:flex; }
+  /* las barras miden lo que miden (se envuelven en iPhone) y el cuerpo toma el resto:
+     nada de offsets fijos que se solapen con el mapa */
+  #mvb-head{ flex:none; z-index:6; }
+  #mvb-body{ flex:1; min-height:0; display:flex; }
   #mvb-mapwrap{ flex:1.1; position:relative; border-right:1px solid #10182A; min-width:0; }
   #mvb-map{ position:absolute; inset:0; width:100%; height:100%; cursor:pointer; }
   #mvb-maplabel{ position:absolute; left:14px; bottom:12px; font-size:8px; letter-spacing:3px; color:#2E3A56; pointer-events:none; }
@@ -10232,12 +10240,14 @@ addEventListener('DOMContentLoaded', function(){
 </style>
 
 <div id="mvb">
+  <div id="mvb-head">
   <div id="mvb-top">
     <div id="mvb-title">🌃 MVB <span>· LA NOCHE EN VIVO — LO QUE ESTÁ SONANDO AHORA</span></div>
     <input id="mvb-q" placeholder="buscar… ej: electronica, techno, sushi, rooftop" autocomplete="off">
     <button id="mvb-x">✕ SALIR (X)</button>
   </div>
   <div id="mvb-cats"></div>
+  </div>
   <div id="mvb-body">
     <div id="mvb-mapwrap">
       <canvas id="mvb-map"></canvas>
@@ -10265,6 +10275,9 @@ addEventListener('DOMContentLoaded', function(){
 (function(){
   const $=id=>document.getElementById(id);
   const log=(k,d)=>{ (window.hkLog||function(){})(k,d); };
+  // NADA que venga de afuera (Supabase, mvb-eventos.json, el propio usuario) entra crudo al DOM
+  const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   const SUPA={ url:'https://qhklngvzdmwsbopbkiff.supabase.co',
     key:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFoa2xuZ3Z6ZG13c2JvcGJraWZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3OTEwOTYsImV4cCI6MjA5NzM2NzA5Nn0.ttdBrxCF6Wl6I8yKOICfTq7WyPylMmSmdKGUb176BCs' };
   const HEAD={ apikey:SUPA.key, Authorization:'Bearer '+SUPA.key, 'Content-Type':'application/json' };
@@ -10361,11 +10374,39 @@ addEventListener('DOMContentLoaded', function(){
     { id:'puerta', name:'PUERTA NEGRA',  rol:'PRODUCTORA',          contact:'@puerta.negra',  events:['jazz-sotano','rock-fabrica','matine'], demo:true },
     { id:'clara',  name:'MESA VIP CLARA',rol:'RESERVAS & VIP',      contact:'@mesa.clara',    events:['omakase','trattoria','sunset'], demo:true }
   ];
-  // eventos reales del momento: mvb-eventos.json pisa el seed (mismo esquema, dedupe por id)
+  // ═══ LA LEY DEL MOTOR (igual que en crypto) ═══
+  // Ningún evento se muestra sin lo mínimo: dónde, cuándo, QUIÉN TOCA y su porqué.
+  // Si el agente no puede explicarlo, no existe.
+  function sane(ev){
+    if(!ev||!ev.id||!ev.name) return null;
+    const cat=CATS[ev.cat]?ev.cat:'fiesta';                          // categoría inválida → no desaparece
+    const px=Number.isFinite(+ev.px)?+ev.px:.30+((''+ev.id).length%7)*.09;  // sin coordenadas → igual entra al mapa
+    const py=Number.isFinite(+ev.py)?+ev.py:.28+((''+ev.name).length%6)*.10;
+    const lineup=Array.isArray(ev.lineup)?ev.lineup.filter(Boolean):[];
+    const why=Array.isArray(ev.why)?ev.why.filter(Boolean):[];
+    if(!lineup.length||!why.length) return null;                     // la ley: sin quién toca y sin porqué, no se publica
+    return { ...ev, cat, px, py, lineup, why,
+      venue:ev.venue||'POR CONFIRMAR', zona:ev.zona||'—', when:ev.when||'FECHA POR CONFIRMAR',
+      price:ev.price||'—', fire:Number.isFinite(+ev.fire)?+ev.fire:50,
+      tags:Array.isArray(ev.tags)?ev.tags.filter(Boolean):[] };
+  }
+  EVENTS=EVENTS.map(sane).filter(Boolean);
+  // eventos reales del momento: mvb-eventos.json pisa el seed (merge por campo, dedupe por id)
   fetch('./mvb-eventos.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(j=>{
     if(!j) return;
-    if(j.events&&j.events.length){ const m=new Map(EVENTS.map(e=>[e.id,e])); j.events.forEach(e=>m.set(e.id,e)); EVENTS=[...m.values()]; }
-    if(j.sellers&&j.sellers.length){ const m=new Map(SELLERS.map(s=>[s.id,s])); j.sellers.forEach(s=>m.set(s.id,s)); SELLERS=[...m.values()]; }
+    if(Array.isArray(j.events)&&j.events.length){
+      const m=new Map(EVENTS.map(e=>[e.id,e])); let dropped=0;
+      j.events.forEach(e=>{ if(!e||!e.id) return;
+        const merged=sane({ ...(m.get(e.id)||{}), ...e });           // merge, no reemplazo: campos ausentes se conservan
+        if(merged) m.set(e.id,merged); else { m.delete(e.id); dropped++; } });
+      EVENTS=[...m.values()];
+      if(dropped) log('mvb', dropped+' evento(s) del json sin quién toca o sin porqué — la ley los deja afuera');
+    }
+    if(Array.isArray(j.sellers)&&j.sellers.length){
+      const m=new Map(SELLERS.map(s=>[s.id,s]));
+      j.sellers.forEach(s=>{ if(s&&s.id) m.set(s.id,{ ...(m.get(s.id)||{}), ...s }); });
+      SELLERS=[...m.values()];
+    }
     if($('mvb').classList.contains('open')){ renderList(); }
   }).catch(()=>{});
 
@@ -10391,11 +10432,23 @@ addEventListener('DOMContentLoaded', function(){
 
   $('mvb-q').addEventListener('input',()=>{ query=$('mvb-q').value.trim().toLowerCase(); renderList(); });
 
+  // sinónimos: "club de musica electronica" tiene que encontrar los clubs de electrónica
+  const SYN={ club:['club','nightclub','disco','boliche','antro'],
+              fiesta:['fiesta','party','fiestas'], resto:['resto','restaurante','restorán','restoran','comida','cena'],
+              live:['live','en vivo','vivo','concierto','banda','show'],
+              rooftop:['rooftop','terraza','azotea'] };
+  const STOP=new Set(['de','del','la','el','los','las','un','una','y','en','para','con','a','al','que','musica','música','tipo','lugar','lugares','quiero','buscar']);
   function matches(ev){
     if(!activeCats.has(ev.cat)) return false;
     if(!query) return true;
-    const hay=[ev.name,ev.venue,ev.zona,ev.when,...(ev.lineup||[]),...(ev.tags||[])].join(' ').toLowerCase();
-    return query.split(/\s+/).every(w=>hay.includes(w));
+    const c=CATS[ev.cat]||{};
+    const hay=[ev.name,ev.venue,ev.zona,ev.when,ev.cat,c.label,...(SYN[ev.cat]||[]),
+      ...(ev.lineup||[]),...(ev.tags||[])].join(' ')
+      .toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    const words=query.normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+      .split(/\s+/).filter(w=>w&&!STOP.has(w));     // las palabras de relleno no matan la búsqueda
+    if(!words.length) return true;
+    return words.every(w=>hay.includes(w));
   }
   const filtered=()=>EVENTS.filter(matches).sort((a,b)=>(b.fire||0)-(a.fire||0));
 
@@ -10405,17 +10458,17 @@ addEventListener('DOMContentLoaded', function(){
     $('mvb-list-h').textContent='🔥 EVENTOS DEL MOMENTO — '+evs.length+(query?' PARA «'+query.toUpperCase()+'»':'');
     box.innerHTML=evs.map(ev=>{
       const c=CATS[ev.cat]||CATS.fiesta;
-      return '<div class="mvb-ev'+(ev.id===selectedId?' hot':'')+'" id="mvbev-'+ev.id+'" style="--ec:'+c.col+'">'+
+      return '<div class="mvb-ev'+(ev.id===selectedId?' hot':'')+'" id="mvbev-'+esc(ev.id)+'" style="--ec:'+c.col+'">'+
         '<div class="mvb-ev-top"><span class="mvb-ico">'+c.ico+'</span>'+
-          '<span class="mvb-name">'+ev.name+'</span>'+
-          '<span class="mvb-fire">🔥 '+(ev.fire||0)+'% MOMENTO</span></div>'+
-        '<div class="mvb-meta"><b>'+ev.venue+'</b> · '+ev.zona+' &nbsp;|&nbsp; '+ev.when+' &nbsp;|&nbsp; '+ev.price+'</div>'+
-        '<div class="mvb-line"><span>QUIÉN TOCA:</span> '+(ev.lineup||[]).join(' · ')+'</div>'+
-        '<div class="mvb-tags">'+(ev.tags||[]).map(t=>'<span class="mvb-tag">'+t.toUpperCase()+'</span>').join('')+'</div>'+
-        '<ul class="mvb-why">'+(ev.why||[]).map(w=>'<li>'+w+'</li>').join('')+'</ul>'+
+          '<span class="mvb-name">'+esc(ev.name)+'</span>'+
+          '<span class="mvb-fire">🔥 '+esc(ev.fire)+'% MOMENTO</span></div>'+
+        '<div class="mvb-meta"><b>'+esc(ev.venue)+'</b> · '+esc(ev.zona)+' &nbsp;|&nbsp; '+esc(ev.when)+' &nbsp;|&nbsp; '+esc(ev.price)+'</div>'+
+        '<div class="mvb-line"><span>QUIÉN TOCA:</span> '+ev.lineup.map(esc).join(' · ')+'</div>'+
+        '<div class="mvb-tags">'+ev.tags.map(t=>'<span class="mvb-tag">'+esc(String(t).toUpperCase())+'</span>').join('')+'</div>'+
+        '<ul class="mvb-why">'+ev.why.map(w=>'<li>'+esc(w)+'</li>').join('')+'</ul>'+
         '<div class="mvb-btns">'+
-          '<button class="mvb-btn" data-map="'+ev.id+'">📍 VER EN MAPA</button>'+
-          '<button class="mvb-btn buy" data-sell="'+ev.id+'">🎟 CONTACTAR VENDEDOR</button>'+
+          '<button class="mvb-btn" data-map="'+esc(ev.id)+'">📍 VER EN MAPA</button>'+
+          '<button class="mvb-btn buy" data-sell="'+esc(ev.id)+'">🎟 CONTACTAR VENDEDOR</button>'+
         '</div></div>';
     }).join('')||'<div style="font-size:9px;color:#3A4460;letter-spacing:2px;padding:20px 0">NADA CON ESE FILTRO — PROBÁ OTRA BÚSQUEDA U OTRA CATEGORÍA.</div>';
     box.querySelectorAll('[data-map]').forEach(b=>b.onclick=()=>{ selectedId=b.dataset.map; renderList(); });
@@ -10424,12 +10477,16 @@ addEventListener('DOMContentLoaded', function(){
 
   // ── CONECTOR: el agente que te enchufa con la gente que vende las entradas ──
   let realSellers=null;
+  const localSellers=()=>{ try{ return JSON.parse(localStorage.getItem('hk23_sellers'))||[]; }catch(e){ return []; } };
   async function fetchRealSellers(){
     if(realSellers!==null) return;
     try{
       const r=await fetch(SUPA.url+'/rest/v1/universe_sellers?select=id,name,rol,contact,events&order=created_at.desc&limit=40',{headers:HEAD});
       realSellers=r.ok?await r.json():[];
     }catch(e){ realSellers=[]; }
+    // los registrados en modo local también son vendedores: se muestran acá aunque Supabase no esté
+    const ids=new Set(realSellers.map(s=>s.id));
+    localSellers().forEach(s=>{ if(!ids.has(s.id)) realSellers.push({...s, local:true}); });
   }
   async function openConector(evId){
     const ev=EVENTS.find(e=>e.id===evId); if(!ev) return;
@@ -10439,20 +10496,23 @@ addEventListener('DOMContentLoaded', function(){
     const box=$('mvb-sellers');
     box.innerHTML='<div class="mvb-scanline">◈ CONECTOR buscando vendedores integrados a la página…</div>';
     await fetchRealSellers();
-    const isReal=s=>Array.isArray(s.events)?s.events.includes(evId):true;
-    const reals=(realSellers||[]).filter(s=>isReal({events:(()=>{try{return JSON.parse(s.events)}catch(e){return null}})()||s.events}));
+    const evList=s=>{ if(Array.isArray(s.events)) return s.events;
+      try{ const p=JSON.parse(s.events); return Array.isArray(p)?p:null; }catch(e){ return null; } };
+    const reals=(realSellers||[]).filter(s=>{ const l=evList(s); return !l||l.includes(evId); });
     const demos=SELLERS.filter(s=>s.events.includes(evId));
     const rows=[...reals.map(s=>({...s,demo:false})), ...demos];
     box.innerHTML=rows.map(s=>{
       const contact=(s.contact||'').trim();
-      const href=contact.startsWith('@')?'https://instagram.com/'+contact.slice(1)
+      // el destino se arma con partes seguras: nunca se inyecta el texto crudo en el href
+      const href=contact.startsWith('@')?'https://instagram.com/'+encodeURIComponent(contact.slice(1).replace(/[^\w.]/g,''))
         :/^\+?[\d\s-]{8,}$/.test(contact)?'https://wa.me/'+contact.replace(/\D/g,'')
-        :contact.startsWith('http')?contact:'#';
+        :/^https?:\/\//i.test(contact)?encodeURI(contact):'#';
+      const badge=s.demo?'<span class="mvb-demo">DEMO</span>':(s.local?'<span class="mvb-demo" style="background:#00F0FF">LOCAL</span>':'');
       return '<div class="mvb-seller"><span class="sd"></span>'+
-        '<span class="sn"><b>'+s.name+' '+(s.demo?'<span class="mvb-demo">DEMO</span>':'')+'</b><i>'+(s.rol||'VENDEDOR/A')+' · '+contact+'</i></span>'+
-        '<a href="'+href+'" target="_blank" rel="noopener">ESCRIBILE →</a></div>';
+        '<span class="sn"><b>'+esc(s.name)+' '+badge+'</b><i>'+esc(s.rol||'VENDEDOR/A')+' · '+esc(contact)+'</i></span>'+
+        '<a href="'+esc(href)+'" target="_blank" rel="noopener noreferrer">ESCRIBILE →</a></div>';
     }).join('')||'<div class="mvb-scanline">Todavía no hay vendedores para este evento — sé el primero abajo.</div>';
-    if(!reals.length) box.innerHTML+='<div style="font-size:8px;color:#3A4460;line-height:1.8;margin-top:6px">Los DEMO muestran el formato. Los vendedores reales se registran acá mismo y aparecen para todos (tabla <b>universe_sellers</b> del Supabase).</div>';
+    if(!reals.filter(s=>!s.local).length) box.innerHTML+='<div style="font-size:8px;color:#3A4460;line-height:1.8;margin-top:6px">Los DEMO muestran el formato; los LOCAL viven solo en este dispositivo. Para que un vendedor aparezca para todos, corré el SQL de <b>universe_sellers</b> en tu Supabase.</div>';
     con.scrollIntoView({behavior:'smooth',block:'nearest'});
     log('conector', 'buscó vendedores para '+ev.name);
   }
@@ -10467,7 +10527,7 @@ addEventListener('DOMContentLoaded', function(){
     try{ const loc=JSON.parse(localStorage.getItem('hk23_sellers'))||[]; loc.push(row); localStorage.setItem('hk23_sellers',JSON.stringify(loc)); }catch(e){}
     $('mvb-sf-name').value=''; $('mvb-sf-contact').value=''; $('mvb-sellform').classList.remove('open');
     realSellers=null;
-    $('mvb-sellers').innerHTML='<div class="mvb-scanline" style="color:#AAFF00">✓ '+row.name+' registrado '+(ok?'en el universo — visible para todos.':'en modo local — corré el SQL de universe_sellers para hacerlo global.')+'</div>';
+    $('mvb-sellers').innerHTML='<div class="mvb-scanline" style="color:#AAFF00">✓ '+esc(row.name)+' registrado '+(ok?'en el universo — visible para todos.':'en este dispositivo — ya aparece en la lista; corré el SQL de universe_sellers para que lo vean todos.')+'</div>';
     log('conector','nuevo vendedor: '+row.name+(ok?' (global)':' (local)'));
   };
 
@@ -10476,7 +10536,9 @@ addEventListener('DOMContentLoaded', function(){
   function drawMap(t){
     const w=cv.clientWidth, h=cv.clientHeight;
     if(!w||!h) return;
-    if(cv.width!==w*2){ cv.width=w*2; cv.height=h*2; }
+    // re-ajuste ante CUALQUIER cambio (alto o ancho): si no, los pins dibujados
+    // y sus zonas de toque se separan al rotar/abrir el teclado
+    if(cv.width!==w*2||cv.height!==h*2){ cv.width=w*2; cv.height=h*2; }
     const X=x=>x*w*2, Y=y=>y*h*2;
     ctx.clearRect(0,0,cv.width,cv.height);
     // trama urbana
