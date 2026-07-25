@@ -58,3 +58,31 @@ create policy universe_presence_update
   on universe_presence for update
   to anon, authenticated
   using (true) with check (true);
+
+-- ═══ MUNDO MVB / CONECTOR — vendedores de entradas integrados a la página ═══
+-- Corré este bloque para que la gente pueda registrarse como vendedor/a desde el
+-- panel CONECTOR y aparezca para todos. Sin la tabla, el registro queda en modo local.
+
+create table if not exists universe_sellers (
+  id         text primary key,
+  name       text,
+  rol        text,
+  contact    text,
+  events     text,
+  created_at timestamptz
+);
+
+alter table universe_sellers enable row level security;
+
+drop policy if exists universe_sellers_read   on universe_sellers;
+drop policy if exists universe_sellers_insert on universe_sellers;
+
+create policy universe_sellers_read
+  on universe_sellers for select
+  to anon, authenticated
+  using (true);
+
+create policy universe_sellers_insert
+  on universe_sellers for insert
+  to anon, authenticated
+  with check (true);
