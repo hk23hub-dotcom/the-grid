@@ -11406,6 +11406,56 @@ addEventListener('DOMContentLoaded', function(){
   @media(prefers-reduced-motion:reduce){
     #iu *, #inq *, #inq-land *, #pl-panel *{ animation:none !important; transition:none !important; }
   }
+  /* ── LA PLATINA — consola de DJ, late con el beat ── */
+  #fq-deck{ position:absolute; left:2.6%; bottom:3%; z-index:9; display:none; align-items:center; gap:18px;
+    padding:14px 20px; border-radius:14px; background:linear-gradient(180deg,#141013,#0B0809);
+    border:1px solid #2A211C; box-shadow:0 10px 40px rgba(0,0,0,.6), inset 0 1px 0 #3A2E26; font-family:"Space Mono",monospace; }
+  .fq-knob-wrap{ display:flex; flex-direction:column; align-items:center; gap:7px; }
+  #fq-knob{ width:66px; height:66px; border-radius:50%; cursor:grab; position:relative; border:2px solid #3A2E24;
+    background:radial-gradient(circle at 38% 32%, #4A3C30, #1A130E 72%); box-shadow:inset 0 2px 6px rgba(0,0,0,.7), 0 0 22px rgba(255,138,0,.12);
+    transform:rotate(var(--kang,0deg)); transition:box-shadow .2s; }
+  #fq-knob:active{ cursor:grabbing; }
+  #fq-knob:focus-visible{ outline:2px solid #FF8A00; outline-offset:3px; }
+  .fq-knob-dot{ position:absolute; top:6px; left:50%; width:4px; height:16px; margin-left:-2px; border-radius:2px;
+    background:#FF8A00; box-shadow:0 0 8px #FF8A00; }
+  .fq-knob-lbl{ text-align:center; line-height:1.2; } .fq-knob-lbl b{ font-size:17px; color:#FFB347; font-variant-numeric:tabular-nums; }
+  .fq-knob-lbl i{ display:block; font-size:7px; letter-spacing:3px; color:#6A5A4C; font-style:normal; }
+  .fq-beats{ display:flex; gap:6px; } .fq-beats span{ width:11px; height:26px; border-radius:2px; background:#241C16; transition:.06s; }
+  .fq-beats span.down{ background:#2E241A; }
+  .fq-beats span.hit{ background:#FF8A00; box-shadow:0 0 12px #FF8A00; }
+  .fq-beats span.down.hit{ background:#FFD200; box-shadow:0 0 14px #FFD200; }
+  .fq-ctrls{ display:flex; gap:6px; } .fq-b{ font-family:"Space Mono",monospace; font-size:10px; letter-spacing:1px;
+    padding:9px 11px; border-radius:6px; cursor:pointer; background:#1C1611; border:1px solid #33281F; color:#B89A80; }
+  .fq-b:hover{ border-color:#FF8A00; color:#FFB347; } .fq-b.on{ background:#FF8A00; border-color:#FF8A00; color:#140E08; font-weight:700; }
+  .fq-b:focus-visible{ outline:2px solid #FF8A00; outline-offset:2px; }
+  .fq-fader-wrap{ display:flex; flex-direction:column; gap:6px; min-width:150px; }
+  #fq-fader{ width:100%; accent-color:#FF8A00; }
+  .fq-fader-lbl{ font-size:8px; letter-spacing:1.5px; color:#6A5A4C; } .fq-fader-lbl b{ color:#FFB347; }
+  @media(max-width:860px){ #fq-deck{ left:0; right:0; bottom:0; border-radius:14px 14px 0 0; justify-content:center; flex-wrap:wrap; gap:12px; } }
+  /* ── EL PANEL — tablero de estado ── */
+  #fq-panel{ position:absolute; inset:0; z-index:12; display:none; background:rgba(5,7,14,.9); }
+  #fq-panel.open{ display:flex; align-items:center; justify-content:center; padding:22px; }
+  .fq-card{ width:min(680px,96%); max-height:86%; overflow-y:auto; background:#0B0E15; border:1px solid #1E2A38;
+    border-radius:12px; padding:26px 28px; position:relative; box-shadow:0 20px 60px rgba(0,0,0,.6); }
+  .fq-x{ position:absolute; top:14px; right:14px; background:transparent; border:1px solid #24303E; color:#8894A8;
+    font-family:"Space Mono",monospace; font-size:11px; padding:5px 9px; border-radius:6px; cursor:pointer; }
+  .fq-x:focus-visible{ outline:2px solid #9FE8FF; outline-offset:2px; }
+  .fq-eyebrow{ font-family:"Space Mono",monospace; font-size:8px; letter-spacing:3px; color:#FF8A00; margin-bottom:9px; }
+  .fq-title{ font-family:"Space Mono",monospace; font-size:24px; font-weight:700; color:#E6E4DE; margin:0 0 18px; letter-spacing:-.5px; }
+  .fq-kpis{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:20px; }
+  .fq-kpi{ background:#0F131C; border:1px solid #1A2432; border-radius:8px; padding:12px 10px; text-align:center; }
+  .fq-kpi .v{ font-family:"Space Mono",monospace; font-size:22px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .fq-kpi .k{ font-family:"Space Mono",monospace; font-size:7px; letter-spacing:1.5px; color:#6E7E96; margin-top:4px; }
+  .fq-row{ display:flex; align-items:center; gap:12px; padding:12px 4px; border-bottom:1px solid #131C28; }
+  .fq-pill{ font-family:"Space Mono",monospace; font-size:7px; letter-spacing:1.5px; font-weight:700; color:#05070E;
+    padding:4px 8px; border-radius:4px; white-space:nowrap; }
+  .fq-rt{ flex:1; min-width:0; } .fq-rt b{ display:block; font-family:"Space Mono",monospace; font-size:12px; color:#E6E4DE; }
+  .fq-rt i{ display:block; font-family:"Space Mono",monospace; font-size:9.5px; color:#7E8CA4; font-style:normal; margin-top:3px; word-break:break-all; }
+  .fq-act{ font-family:"Space Mono",monospace; font-size:8px; letter-spacing:1.5px; padding:7px 11px; border-radius:6px;
+    cursor:pointer; background:transparent; border:1px solid var(--sv,#5FA8D3); color:var(--sv,#5FA8D3); white-space:nowrap; }
+  .fq-act:hover{ background:var(--sv,#5FA8D3); color:#05070E; } .fq-act:focus-visible{ outline:2px solid #9FE8FF; outline-offset:2px; }
+  .fq-sql{ display:none; font-family:"Space Mono",monospace; font-size:9px; line-height:1.9; color:#7E8CA4;
+    margin-top:14px; padding:12px; background:#0F131C; border:1px solid #1A2432; border-radius:8px; } .fq-sql.open{ display:block; }
   #iu-norb{ display:flex; gap:4px; flex-wrap:wrap; margin-bottom:7px; }
   .iu-orbchip{ font-family:"Space Mono",monospace; font-size:7.5px; letter-spacing:1.5px; padding:5px 8px;
     border-radius:1px; cursor:pointer; background:transparent; border:1px solid var(--oc,#2A2A2A); color:var(--oc,#888); opacity:.5; }
@@ -11481,6 +11531,8 @@ addEventListener('DOMContentLoaded', function(){
     <button id="iu-enter">ENTRAR A SU UNIVERSO</button>
   </div>
   <div id="pl-panel"><div class="plp-card"><button class="plp-x" id="plp-x">✕</button><div class="plp-eyebrow" id="plp-eyebrow">PLANETA</div><h2 class="plp-title" id="plp-title">—</h2><div class="plp-desc" id="plp-desc"></div><div class="plp-list" id="plp-list"></div></div></div>
+<div id="fq-deck" aria-label="Platina"><div class="fq-knob-wrap"><button id="fq-knob" aria-label="Perilla de tempo, arrastrá o usá flechas"><span class="fq-knob-dot"></span></button><div class="fq-knob-lbl"><b id="fq-bpm">124.0</b><i>BPM</i></div></div><div class="fq-beats" id="fq-beats"><span></span><span></span><span></span><span></span></div><div class="fq-ctrls"><button id="fq-play" class="fq-b on" aria-label="Frenar el plato">❚❚</button><button id="fq-tap" class="fq-b">TAP</button><button id="fq-reset" class="fq-b">0%</button></div><div class="fq-fader-wrap"><input id="fq-fader" type="range" min="-8" max="8" step="0.1" value="0" aria-label="Pitch"><div class="fq-fader-lbl">PITCH <b id="fq-pitch-v">+0.0%</b> · BASE <b id="fq-base">124</b></div></div></div>
+<div id="fq-panel"><div class="fq-card"><button class="fq-x" id="fq-close" aria-label="Cerrar">✕</button><div class="fq-eyebrow">◆ PANEL DE CONTROL · SOLO JEAN CHRISTOPHE</div><h2 class="fq-title">ESTADO DE SU UNIVERSO</h2><div class="fq-kpis" id="fq-kpis"></div><div class="fq-rows" id="fq-rows"></div><div class="fq-sql" id="fq-sql">Para que todo sea global corré en tu Supabase el bloque de <b>universe_galaxies</b>, <b>universe_products</b> y <b>universe_events</b> de <b>supabase-schema.sql</b>. Mientras tanto lo tuyo se guarda en este dispositivo, marcado LOCAL.</div></div></div>
 <div id="iu-world">
     <canvas id="iu-cv"></canvas>
     <nav id="iu-reg" aria-label="Sus mundos"><div class="iu-reg-h" id="iu-reg-h">SUS MUNDOS</div><div id="iu-reg-list"></div></nav>
@@ -11736,11 +11788,223 @@ addEventListener('DOMContentLoaded', function(){
   const REDUCE=matchMedia('(prefers-reduced-motion:reduce)').matches;
   function draw(t){
     if(!fit()){ raf=requestAnimationFrame(draw); return; }
-    if(REDUCE){ drawOrbital(9000); raf=null; return; }        // un cuadro fijo, sin movimiento
-    drawOrbital(t||0);
+    tick(t||0); paintBeats();
+    if(REDUCE){ drawOrbital(9000); raf=null; return; }
+    drawOrbital((TEMPO.beats||0)*3200);   // el mundo gira al tempo
     raf=requestAnimationFrame(draw);
   }
   function nodeAt(px,py){ return null; }   // la red posiciona los planetas; no hay nodos sueltos
+
+  // ── LA PLATINA: el universo gira al tempo que él elija ──
+  // No es un widget al costado: el BPM es el reloj del mundo. Todo deriva de él.
+  const TEMPO={ bpm:124, base:124, pitch:0, playing:true, beats:0, last:null, speed:1 };
+  try{ const s=JSON.parse(localStorage.getItem('hk23_freq_tempo')||'null');
+    if(s){ TEMPO.base=s.base||124; TEMPO.pitch=s.pitch||0; TEMPO.playing=s.playing!==false; } }catch(e){}
+  const bpmNow=()=>TEMPO.base*(1+TEMPO.pitch/100);
+  function saveTempo(){ try{ localStorage.setItem('hk23_freq_tempo',
+    JSON.stringify({base:TEMPO.base,pitch:TEMPO.pitch,playing:TEMPO.playing})); }catch(e){} }
+
+  // el reloj: acumula compases reales, con arranque y frenado de plato
+  function tick(t){
+    if(TEMPO.last==null){ TEMPO.last=t; return; }
+    let dt=Math.min(120,t-TEMPO.last); TEMPO.last=t;
+    const target=TEMPO.playing?1:0;
+    TEMPO.speed += (target-TEMPO.speed) * (1-Math.exp(-dt/(TEMPO.playing?260:420))); // inercia del plato
+    TEMPO.bpm=bpmNow();
+    TEMPO.beats += (TEMPO.bpm/60000)*dt*TEMPO.speed;
+  }
+  const beatPhase=()=>TEMPO.beats-Math.floor(TEMPO.beats);       // 0..1 dentro del pulso
+  const barBeat=()=>Math.floor(TEMPO.beats)%4;                    // qué tiempo del compás
+  const swing=()=>Math.pow(1-beatPhase(),3);                      // golpe que decae
+
+  // ── la perilla: se arrastra para girar, como el pitch de una bandeja ──
+  function knob(){
+    const k=$('fq-knob'); if(!k) return;
+    const paint=()=>{
+      const a=(-140+280*((TEMPO.base-60)/(200-60)))*Math.PI/180;
+      k.style.setProperty('--kang',(a*180/Math.PI)+'deg');
+      $('fq-bpm').textContent=bpmNow().toFixed(1);
+      $('fq-pitch-v').textContent=(TEMPO.pitch>=0?'+':'')+TEMPO.pitch.toFixed(1)+'%';
+      const f=$('fq-fader'); if(f) f.value=TEMPO.pitch;
+      $('fq-base').textContent=Math.round(TEMPO.base);
+    };
+    let drag=null;
+    const down=e=>{ const p=e.touches&&e.touches[0]?e.touches[0]:e;
+      drag={y:p.clientY, b:TEMPO.base}; e.preventDefault(); };
+    const move=e=>{ if(!drag) return; const p=e.touches&&e.touches[0]?e.touches[0]:e;
+      TEMPO.base=Math.max(60,Math.min(200, drag.b + (drag.y-p.clientY)*0.45));
+      paint(); saveTempo(); e.preventDefault(); };
+    const up=()=>{ drag=null; };
+    k.addEventListener('mousedown',down); addEventListener('mousemove',move); addEventListener('mouseup',up);
+    k.addEventListener('touchstart',down,{passive:false}); addEventListener('touchmove',move,{passive:false});
+    addEventListener('touchend',up);
+    k.addEventListener('keydown',e=>{                               // también con teclado
+      const d=(e.key==='ArrowUp'||e.key==='ArrowRight')?1:(e.key==='ArrowDown'||e.key==='ArrowLeft')?-1:0;
+      if(!d) return; e.preventDefault();
+      TEMPO.base=Math.max(60,Math.min(200,TEMPO.base+d*(e.shiftKey?5:1))); paint(); saveTempo();
+      announce(Math.round(TEMPO.base)+' BPM'); });
+    const f=$('fq-fader');
+    if(f) f.addEventListener('input',()=>{ TEMPO.pitch=+f.value; paint(); saveTempo(); });
+    const rst=$('fq-reset');
+    if(rst) rst.onclick=()=>{ TEMPO.pitch=0; paint(); saveTempo(); announce('Pitch al cero'); };
+    const pl=$('fq-play');
+    if(pl) pl.onclick=()=>{ TEMPO.playing=!TEMPO.playing; saveTempo();
+      pl.textContent=TEMPO.playing?'❚❚':'▶'; pl.setAttribute('aria-label',TEMPO.playing?'Frenar el plato':'Soltar el plato');
+      pl.classList.toggle('on',TEMPO.playing);
+      announce(TEMPO.playing?'Plato girando':'Plato frenado'); };
+    const tapB=$('fq-tap'); let taps=[];
+    if(tapB) tapB.onclick=()=>{                                     // tap tempo, como en cualquier bandeja
+      const now=(typeof performance!=='undefined'?performance.now():0);
+      taps=taps.filter(x=>now-x<2400); taps.push(now);
+      if(taps.length>=2){ const gaps=[]; for(let i=1;i<taps.length;i++) gaps.push(taps[i]-taps[i-1]);
+        const avg=gaps.reduce((a,b)=>a+b,0)/gaps.length;
+        TEMPO.base=Math.max(60,Math.min(200, 60000/avg)); paint(); saveTempo();
+        announce(Math.round(TEMPO.base)+' BPM'); } };
+    paint();
+    if(pl){ pl.textContent=TEMPO.playing?'❚❚':'▶'; pl.classList.toggle('on',TEMPO.playing); }
+  }
+
+  // ── los 4 tiempos del compás, dibujados en el deck ──
+  function paintBeats(){
+    const b=$('fq-beats'); if(!b) return;
+    const cur=barBeat(), on=beatPhase()<0.16;
+    [...b.children].forEach((d,i)=>{
+      d.classList.toggle('hit', i===cur && on && TEMPO.speed>0.05);
+      d.classList.toggle('down', i===0);
+    });
+  }
+
+  // ── EL PANEL: el séptimo cuerpo, solo para él. Estado real de su universo. ──
+  const PANEL_K='__panel';
+  function drawPanelBody(t,CX,CY,RX,RY){
+    if(!canEdit()) return null;                            // solo él y el dueño lo ven
+    const a=2.62 + t*0.0000090, k=0.28, rx=RX*k, ry=RY*k;
+    const x=CX+Math.cos(a)*rx, y=CY+Math.sin(a)*ry;
+    const depth=(Math.sin(a)+1)/2, s=(0.72+0.44*depth), r=Math.max(8,W*0.0072)*s;
+    // estación hexagonal: se distingue de los seis planetas a simple vista
+    cx2.save(); cx2.translate(x,y); cx2.rotate(t*0.00012);
+    cx2.beginPath();
+    for(let i=0;i<6;i++){ const th=i/6*TAU; i?cx2.lineTo(Math.cos(th)*r,Math.sin(th)*r):cx2.moveTo(r,0); }
+    cx2.closePath();
+    cx2.fillStyle='#0B1220'; cx2.fill();
+    cx2.strokeStyle=hoverPl===PANEL_K?'#9FE8FF':'#5FA8D3'; cx2.lineWidth=Math.max(1.2,W*0.0012); cx2.stroke();
+    cx2.beginPath(); cx2.arc(0,0,r*0.34,0,TAU); cx2.fillStyle='#9FE8FF'; cx2.fill();
+    cx2.restore();
+    const st=stateOf();
+    if(st.faltan){                                          // marca de aviso si hay algo pendiente
+      cx2.beginPath(); cx2.arc(x+r*0.9,y-r*0.9,Math.max(3,r*0.28),0,TAU);
+      cx2.fillStyle='#FF6B00'; cx2.fill();
+    }
+    const LS=Math.max(11,W*0.0072);
+    cx2.textAlign='center';
+    cx2.font='700 '+(LS*0.95)+'px "Space Mono",ui-monospace,monospace';
+    cx2.fillStyle='rgba(3,4,14,.80)'; cx2.fillText('PANEL', x+2, y+r+LS*1.8);
+    cx2.fillStyle='#9FE8FF'; cx2.fillText('PANEL', x, y+r+LS*1.7);
+    cx2.textAlign='left';
+    PLHIT.push({ k:PANEL_K, x, y, r:Math.max(r*2.4, Math.max(32,W*0.021)) });
+    return {x,y};
+  }
+
+  // ── el estado, calculado de verdad ──
+  let supaState={ galaxies:null, products:null, events:null, checked:false };
+  async function probeSupa(){
+    const one=async(tb)=>{ try{ const r=await fetch(SUPA.url+'/rest/v1/'+tb+'?select=*&limit=1',{headers:HEAD});
+      return r.ok; }catch(e){ return false; } };
+    supaState.galaxies=await one('universe_galaxies');
+    supaState.products=await one('universe_products');
+    supaState.events=await one('universe_events');
+    supaState.checked=true;
+  }
+  function stateOf(){
+    const byCat={}; nodes.forEach(n=>{ const k=(n.cat&&ORBK[n.cat])?n.cat:'sets'; (byCat[k]=byCat[k]||[]).push(n); });
+    const vacios=ORB.filter(o=>!(byCat[o.k]||[]).length);
+    const sinLink=nodes.filter(n=>!safeUrl(n.link));
+    const prods=(typeof prodsOf==='function'? prodsOf((T&&T.slug)||'') : []);
+    const ags=(T&&T.agents)||[];
+    return { byCat, vacios, sinLink, prods, ags,
+      total:nodes.length, bio:!!((T&&T.bio)||'').trim(),
+      faltan: vacios.length>0 || !((T&&T.bio)||'').trim() || !prods.length };
+  }
+
+  const PILL={ ok:['#4FE0A8','LISTO'], warn:['#FFC24D','A MEDIAS'], no:['#FF6B00','FALTA'], loc:['#5FA8D3','LOCAL'] };
+  function row(estado, titulo, detalle, accion){
+    const [col,txt]=PILL[estado];
+    return '<div class="fq-row" style="--sv:'+col+'">'+
+      '<span class="fq-pill" style="background:'+col+'">'+txt+'</span>'+
+      '<span class="fq-rt"><b>'+esc(titulo)+'</b><i>'+esc(detalle)+'</i></span>'+
+      (accion?'<button class="fq-act" data-act="'+esc(accion.id)+'">'+esc(accion.label)+'</button>':'')+
+      '</div>';
+  }
+  function openPanel(){
+    const P=$('fq-panel'); const st=stateOf();
+    // resumen antes que el detalle
+    $('fq-kpis').innerHTML=[
+      ['ITEMS', st.total, st.total?'#EAF2FF':'#FF6B00'],
+      ['PLANETAS CON ALGO', (6-st.vacios.length)+'/6', st.vacios.length?'#FFC24D':'#4FE0A8'],
+      ['PRODUCTOS', st.prods.length, st.prods.length?'#EAF2FF':'#FFC24D'],
+      ['AGENTES', st.ags.length, st.ags.length?'#EAF2FF':'#FFC24D']
+    ].map(([k,v,c])=>'<div class="fq-kpi"><div class="v" style="color:'+c+'">'+esc(String(v))+'</div>'+
+      '<div class="k">'+esc(k)+'</div></div>').join('');
+
+    const R=[];
+    // — lo que está andando —
+    R.push(row('ok','Su universo está publicado','Entra con su código y ve todo lo suyo.',null));
+    R.push(row('ok','Puede construirlo solo','＋ NUEVO OBJETO, elegir planeta, nombre, bajada y link.',
+      {id:'edit',label:'EDITAR'}));
+    R.push(row(st.bio?'ok':'no','Su historia', st.bio? 'Escrita.' : 'Vacía: quien entra no sabe quién es.',
+      {id:'bio',label:st.bio?'CAMBIAR':'ESCRIBIR'}));
+    R.push(row('ok','Sonido', 'Cada planeta suena su nota. Arranca apagado a propósito.',
+      {id:'sound',label:'PROBAR'}));
+    R.push(row('ok','Su link público', location.origin+location.pathname+'?g='+((T&&T.slug)||''),
+      {id:'copy',label:'COPIAR'}));
+
+    // — lo que falta —
+    st.vacios.forEach(o=>R.push(row('no','Planeta '+o.t+' vacío', o.desc+' — todavía no cargó nada acá.',
+      {id:'go:'+o.k,label:'CARGAR'})));
+    if(st.sinLink.length) R.push(row('warn', st.sinLink.length+' item(s) sin link',
+      'Se ven pero no llevan a ningún lado: '+st.sinLink.slice(0,3).map(n=>n.label).join(', ')+'.',
+      {id:'edit',label:'ARREGLAR'}));
+    if(!st.prods.length) R.push(row('warn','Sin productos a la venta',
+      'Sus plugins y música pueden publicarse con precio desde el panel del dueño.',null));
+
+    // — conexión real —
+    const sup=[['universe_galaxies',supaState.galaxies,'su universo y sus items'],
+               ['universe_products',supaState.products,'sus productos'],
+               ['universe_events',supaState.events,'los eventos del mundo MVB']];
+    sup.forEach(([tb,ok,que])=>{
+      if(ok===null) R.push(row('warn','Conexión '+tb,'Comprobando…',null));
+      else R.push(row(ok?'ok':'loc', tb,
+        ok? 'Global: '+que+' se guardan para todos.'
+          : 'Modo local: '+que+' viven solo en este dispositivo. Falta correr su SQL.',
+        ok?null:{id:'sql',label:'CÓMO'}));
+    });
+
+    $('fq-rows').innerHTML=R.join('');
+    $('fq-rows').querySelectorAll('[data-act]').forEach(b=>b.onclick=()=>panelAct(b.dataset.act));
+    P.classList.add('open');
+    lastFocus=document.activeElement;
+    const card=P.querySelector('.fq-card');
+    card.setAttribute('tabindex','-1'); setTimeout(()=>card.focus(),20);
+    announce('Panel de control. '+st.total+' items, '+st.vacios.length+' planetas vacíos.');
+    log('inquilino','abrió el panel de control');
+    if(!supaState.checked) probeSupa().then(()=>{ if(P.classList.contains('open')) openPanel(); });
+  }
+  function closeFqPanel(){ const P=$('fq-panel'); if(!P.classList.contains('open')) return;
+    P.classList.remove('open'); if(lastFocus&&lastFocus.focus) lastFocus.focus(); lastFocus=null; }
+  $('fq-close')&&($('fq-close').onclick=closeFqPanel);
+  $('fq-panel')&&$('fq-panel').addEventListener('click',e=>{ if(e.target.id==='fq-panel') closeFqPanel(); });
+  addEventListener('keydown',e=>{ if((e.key==='x'||e.key==='X'||e.key==='Escape')&&$('fq-panel').classList.contains('open')){ e.stopImmediatePropagation(); closeFqPanel(); } }, true);
+  function panelAct(id){
+    if(id==='edit'){ closeFqPanel(); setEdit(true); return; }
+    if(id==='bio'){ closeFqPanel(); $('iu-bio-edit').click(); return; }
+    if(id==='sound'){ setAudio(true); voice(220,2.4,0.12); return; }
+    if(id==='copy'){ const u=location.origin+location.pathname+'?g='+((T&&T.slug)||'');
+      try{ navigator.clipboard.writeText(u); }catch(e){}
+      announce('Link copiado'); return; }
+    if(id==='sql'){ $('fq-sql').classList.toggle('open'); return; }
+    if(id.startsWith('go:')){ const k=id.slice(3); closeFqPanel(); setEdit(true);
+      newCat=k; paintOrbs(); $('iu-nnew').click(); $('iu-nlabel').focus(); return; }
+  }
 
   // ── EL DISCO: el portal y el mapa son el mismo lugar, solo que más cerca ──
   // Seis anillos, un planeta en cada uno. El centro es él: la estrella y el cuerpo que la recibe.
@@ -11833,7 +12097,7 @@ addEventListener('DOMContentLoaded', function(){
     // los seis anillos, de adentro hacia afuera
     const geo=ORB.map((o,i)=>({ o, i, g:ring(cx2,CX,CY,RX,RY,i,t, 0.30-i*0.026, (0.30-i*0.026)*0.6) }));
 
-    core(cx2,CX,CY,RX,RY,t,1);
+    core(cx2,CX,CY,RX,RY,t,1+swing()*0.06);   // el núcleo late en el golpe
 
     // un planeta por anillo, recorriendo su órbita
     PLHIT.length=0; const LBL=[];
@@ -11859,6 +12123,8 @@ addEventListener('DOMContentLoaded', function(){
       PLHIT.push({ k:o.k, x, y, r:Math.max(r*2.1, Math.max(32,W*0.021)) });
     });
 
+    drawPanelBody(t,CX,CY,RX,RY);   // el séptimo cuerpo: su panel de control
+
     // etiquetas resueltas para no pisarse
     const LS=Math.max(11,W*0.0072), GAP=LS*4.4;
     LBL.sort((a,b)=>a.y-b.y).forEach((l,i)=>{ for(let j=0;j<i;j++){
@@ -11881,6 +12147,7 @@ addEventListener('DOMContentLoaded', function(){
     const roN=$('iu-ro-n');
     if(roN && roN.textContent!==String(nodes.length).padStart(2,'0')) roN.textContent=String(nodes.length).padStart(2,'0');
   }
+  window.__PLHIT=PLHIT;
   function planetHit(px,py,rw,rh){
     const sx=cv.width/rw, sy=cv.height/rh;
     let best=null,bd=1e9;
@@ -11974,7 +12241,7 @@ addEventListener('DOMContentLoaded', function(){
       if(window.__freqRipple) window.__freqRipple(p.x*(cv.width/p.rw), p.y*(cv.height/p.rh));
       if(k){ if(editing&&canEdit()){ newCat=k; paintOrbs();
           const m=$('iu-msg'); if(m){ m.style.color='#8894A8'; m.textContent='Órbita '+ORBK[k].t+' elegida — ＋ NUEVO OBJETO para sumar algo acá.'; } }
-        else openPlanet(k); return; }
+        else if(k==="__panel") openPanel(); else openPlanet(k); return; }
       if(!editing) return;
     }
     const n=skin()? null : nodeAt(p.x,p.y);
@@ -12184,6 +12451,8 @@ addEventListener('DOMContentLoaded', function(){
     $('iu-portal').classList.add('gone'); $('iu-world').classList.add('on');
     $('iu-title').innerHTML=esc(T&&T.name||'')+'<small>'+esc((T&&T.sub)||'SU UNIVERSO')+'</small>';
     paintSide(); if(!raf) raf=requestAnimationFrame(draw);
+    const dk=$('fq-deck'); if(dk) dk.style.display=canEdit()?'flex':'none';
+    if(canEdit()&&!knob._done){ knob(); knob._done=true; }
     if(T&&T.bg&&window.MediaEngine&&window.MediaEngine.add){ try{ window.MediaEngine.add(T.bg); }catch(e){} }
   };
   function close(){ $('iu').classList.remove('open'); if(raf){ cancelAnimationFrame(raf); raf=null; } }
