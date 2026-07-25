@@ -10731,5 +10731,457 @@ addEventListener('DOMContentLoaded', function(){
 })();
 </script>
 
+<!-- ═══════════ INQUILINOS — galaxias de usuarios dentro de la tuya (galaxia + landing + productos) ═══════════ -->
+<style id="inq-style">
+  /* ── galaxia del inquilino ── */
+  #inq{ position:fixed; inset:0; z-index:775; display:none; flex-direction:column; overflow:hidden;
+    background:#04050A; font-family:'Space Mono',monospace; }
+  #inq.open{ display:flex; }
+  #inq-head{ flex:none; display:flex; align-items:center; gap:10px; padding:14px 18px; flex-wrap:wrap;
+    border-bottom:1px solid var(--iq-line,#1A1A2A); background:rgba(4,5,10,.94); }
+  #inq-name{ font-size:12px; letter-spacing:4px; color:var(--iq,#B84DFF); }
+  #inq-name small{ display:block; font-size:7px; letter-spacing:3px; color:#3A3A5A; margin-top:3px; }
+  #inq-x{ margin-left:auto; font-size:9px; letter-spacing:3px; color:#000; background:var(--iq,#B84DFF);
+    border:none; border-radius:2px; padding:8px 14px; cursor:pointer; }
+  #inq-body{ flex:1; min-height:0; display:flex; }
+  #inq-canvaswrap{ flex:1.2; position:relative; min-width:0; border-right:1px solid var(--iq-line,#1A1A2A); }
+  #inq-cv{ position:absolute; inset:0; width:100%; height:100%; }
+  #inq-side{ flex:1; max-width:420px; overflow-y:auto; padding:18px; scrollbar-width:thin; }
+  .iq-h{ font-size:8px; letter-spacing:4px; color:#3A3A5A; margin:16px 0 10px; }
+  .iq-h:first-child{ margin-top:0; }
+  .iq-bio{ font-size:11px; line-height:1.8; color:#B8C0D8; margin-bottom:14px; white-space:pre-wrap; }
+  .iq-ag{ display:flex; align-items:center; gap:9px; padding:9px 11px; border:1px solid var(--iq-line,#1A1A2A);
+    border-radius:2px; margin-bottom:6px; background:#080910; cursor:pointer; }
+  .iq-ag:hover{ border-color:var(--iq,#B84DFF); }
+  .iq-ag .d{ width:6px; height:6px; border-radius:50%; background:var(--iq,#B84DFF); animation:pulse 2s infinite; flex-shrink:0; }
+  .iq-ag b{ font-size:10px; color:#E8ECF8; flex:1; }
+  .iq-ag i{ font-size:7px; letter-spacing:2px; color:#4A5470; font-style:normal; }
+  .iq-prod{ border:1px solid var(--iq-line,#1A1A2A); border-left:3px solid var(--iq,#B84DFF); border-radius:2px;
+    background:#080910; padding:12px 14px; margin-bottom:8px; }
+  .iq-prod .pt{ font-size:11px; font-weight:700; color:#E8ECF8; margin-bottom:3px; }
+  .iq-prod .pk{ font-size:7px; letter-spacing:2px; color:var(--iq,#B84DFF); margin-bottom:5px; }
+  .iq-prod .pd{ font-size:9.5px; line-height:1.7; color:#7A86A8; margin-bottom:8px; }
+  .iq-prod a{ font-size:8px; letter-spacing:2px; color:#000; background:var(--iq,#B84DFF); padding:6px 10px;
+    border-radius:2px; text-decoration:none; display:inline-block; }
+  .iq-empty{ font-size:9px; color:#3A3A5A; line-height:1.8; }
+  /* ── landing pública ── */
+  #inq-land{ position:fixed; inset:0; z-index:960; display:none; overflow-y:auto; background:#050508;
+    font-family:'Space Mono',monospace; }
+  #inq-land.open{ display:block; }
+  .il-wrap{ max-width:920px; margin:0 auto; padding:70px 24px 90px; }
+  .il-eyebrow{ font-size:8px; letter-spacing:6px; color:var(--iq,#B84DFF); margin-bottom:14px; }
+  .il-title{ font-family:'Anton',Impact,sans-serif; font-size:clamp(40px,9vw,86px); line-height:.95;
+    letter-spacing:-1px; color:#F2F4FA; margin-bottom:8px; }
+  .il-sub{ font-size:11px; letter-spacing:3px; color:#5A6480; margin-bottom:26px; }
+  .il-bio{ font-size:13px; line-height:1.9; color:#C4CCE0; max-width:640px; margin-bottom:34px; white-space:pre-wrap; }
+  .il-sec{ font-size:8px; letter-spacing:5px; color:#3A4460; border-bottom:1px solid #14141F;
+    padding-bottom:8px; margin:44px 0 18px; }
+  .il-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:12px; }
+  .il-card{ border:1px solid #14141F; border-radius:3px; background:#08080D; padding:18px; }
+  .il-card .k{ font-size:7px; letter-spacing:2px; color:var(--iq,#B84DFF); margin-bottom:6px; }
+  .il-card .t{ font-size:14px; font-weight:700; color:#F2F4FA; margin-bottom:6px; }
+  .il-card .d{ font-size:10px; line-height:1.75; color:#7A86A8; margin-bottom:12px; }
+  .il-card a{ font-size:8px; letter-spacing:2px; color:#000; background:var(--iq,#B84DFF); padding:7px 11px;
+    border-radius:2px; text-decoration:none; display:inline-block; }
+  .il-links{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+  .il-links a{ font-size:9px; letter-spacing:2px; color:#9AA6C8; border:1px solid #1A1A28; padding:8px 13px;
+    border-radius:2px; text-decoration:none; }
+  .il-links a:hover{ border-color:var(--iq,#B84DFF); color:var(--iq,#B84DFF); }
+  .il-cta{ margin-top:44px; border-top:1px solid #14141F; padding-top:26px; display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  .il-cta button{ font-family:'Space Mono',monospace; font-size:9px; letter-spacing:3px; padding:12px 20px;
+    border-radius:2px; cursor:pointer; border:none; background:var(--iq,#B84DFF); color:#000; font-weight:700; }
+  .il-cta .ghost{ background:transparent; border:1px solid #22222E; color:#7A86A8; }
+  .il-foot{ margin-top:40px; font-size:8px; letter-spacing:2px; color:#2A2A38; line-height:2; }
+  .il-foot a{ color:#4A5470; }
+  /* ── panel del dueño ── */
+  #inq-admin{ position:fixed; inset:0; z-index:965; display:none; overflow-y:auto; background:rgba(3,3,6,.97);
+    font-family:'Space Mono',monospace; }
+  #inq-admin.open{ display:block; }
+  .ia-wrap{ max-width:760px; margin:0 auto; padding:40px 22px 80px; }
+  .ia-t{ font-size:11px; letter-spacing:4px; color:#FFD200; margin-bottom:6px; }
+  .ia-s{ font-size:9px; color:#4A5470; line-height:1.8; margin-bottom:22px; }
+  .ia-card{ border:1px solid #1A1A28; border-radius:2px; background:#08080D; padding:16px; margin-bottom:10px; }
+  .ia-card .n{ font-size:12px; font-weight:700; color:#F2F4FA; margin-bottom:4px; }
+  .ia-card .m{ font-size:8px; letter-spacing:1px; color:#4A5470; line-height:1.8; margin-bottom:10px; }
+  #inq-admin input, #inq-admin textarea, #inq-admin select{ width:100%; background:#0A0A12; border:1px solid #1E1E2C;
+    border-radius:2px; color:#EAF0FF; font-family:'Space Mono',monospace; font-size:10px; padding:8px 10px;
+    margin-bottom:6px; letter-spacing:1px; }
+  .ia-btn{ font-family:'Space Mono',monospace; font-size:8px; letter-spacing:2px; padding:7px 11px; border-radius:2px;
+    cursor:pointer; border:1px solid #22222E; background:transparent; color:#9AA6C8; margin-right:5px; }
+  .ia-btn.go{ background:#FFD200; border-color:#FFD200; color:#000; font-weight:700; }
+  .ia-btn.off{ border-color:#FF3A1F55; color:#FF3A1F; }
+  .ia-row{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-bottom:8px; }
+  .ia-chip{ font-size:7px; letter-spacing:2px; padding:5px 9px; border-radius:2px; cursor:pointer;
+    border:1px solid #22222E; background:transparent; color:#7A86A8; }
+  .ia-chip.on{ background:#FFD200; border-color:#FFD200; color:#000; font-weight:700; }
+  .ia-msg{ font-size:9px; line-height:1.8; margin-top:8px; }
+  @media(max-width:860px){
+    #inq-body{ flex-direction:column; }
+    #inq-canvaswrap{ flex:none; height:32vh; border-right:none; border-bottom:1px solid var(--iq-line,#1A1A2A); }
+    #inq-side{ max-width:none; }
+  }
+</style>
+
+<div id="inq">
+  <div id="inq-head">
+    <div id="inq-name">GALAXIA<small>INQUILINO</small></div>
+    <button class="mvb-btn" id="inq-land-btn" style="border-color:#22222E">🌐 SU LANDING</button>
+    <button id="inq-x">✕ VOLVER (X)</button>
+  </div>
+  <div id="inq-body">
+    <div id="inq-canvaswrap"><canvas id="inq-cv"></canvas></div>
+    <div id="inq-side">
+      <div class="iq-h">◈ QUIÉN ES</div>
+      <div class="iq-bio" id="inq-bio"></div>
+      <div class="iq-h">◈ AGENTES PRESTADOS — CORREN EN EL UNIVERSO MADRE</div>
+      <div id="inq-agents"></div>
+      <div class="iq-h">◈ SUS PRODUCTOS</div>
+      <div id="inq-prods"></div>
+    </div>
+  </div>
+</div>
+
+<div id="inq-land"><div class="il-wrap">
+  <div class="il-eyebrow" id="il-eyebrow">GALAXIA INQUILINA · HK23 UNIVERSE</div>
+  <h1 class="il-title" id="il-title">—</h1>
+  <div class="il-sub" id="il-sub"></div>
+  <div class="il-bio" id="il-bio"></div>
+  <div class="il-links" id="il-links"></div>
+  <div class="il-sec">◈ PRODUCTOS Y PLUGINS</div>
+  <div class="il-grid" id="il-prods"></div>
+  <div class="il-cta">
+    <button id="il-enter">◈ ENTRAR A LA GALAXIA →</button>
+    <button class="ghost" id="il-back">← VOLVER AL UNIVERSO</button>
+  </div>
+  <div class="il-foot" id="il-foot"></div>
+</div></div>
+
+<div id="inq-admin"><div class="ia-wrap">
+  <div class="ia-t">◈ INQUILINOS — GALAXIAS DENTRO DE LA TUYA</div>
+  <div class="ia-s">Cada inquilino entra por TU puerta con su código, vive en su propia galaxia y usa TUS agentes — nunca una copia. Podés prestarle agentes, apagarle el acceso o borrarlo cuando quieras.</div>
+  <div id="ia-list"></div>
+  <div class="ia-card">
+    <div class="n">＋ NUEVO INQUILINO</div>
+    <input id="ia-name" placeholder="nombre visible · ej. MVB · JEAN CHRISTOPHE" autocomplete="off">
+    <input id="ia-slug" placeholder="slug para su link · ej. jean-christophe" autocomplete="off">
+    <input id="ia-code" placeholder="su código de entrada · ej. MVB-JC" autocomplete="off">
+    <input id="ia-sub" placeholder="bajada · ej. plugins, sets y noche" autocomplete="off">
+    <textarea id="ia-bio" rows="3" placeholder="quién es (lo escribís vos o él después)"></textarea>
+    <input id="ia-links" placeholder="links · ej. instagram=https://... , tienda=https://..." autocomplete="off">
+    <input id="ia-bg" placeholder="fondo de su galaxia · pegá un link (opcional)" autocomplete="off">
+    <div class="ia-row" id="ia-colors"></div>
+    <div class="ia-row" id="ia-forms"></div>
+    <div class="ia-row" id="ia-agents"></div>
+    <button class="ia-btn go" id="ia-create">CREAR SU GALAXIA →</button>
+    <div class="ia-msg" id="ia-msg"></div>
+  </div>
+  <div class="ia-card">
+    <div class="n">＋ PRODUCTO / PLUGIN DE UN INQUILINO</div>
+    <select id="ip-owner"></select>
+    <input id="ip-name" placeholder="nombre del producto" autocomplete="off">
+    <input id="ip-kind" placeholder="tipo · ej. PLUGIN / AGENTE / PRESET / SERVICIO" autocomplete="off">
+    <input id="ip-desc" placeholder="qué hace, en una línea" autocomplete="off">
+    <input id="ip-url" placeholder="link de compra o de descarga" autocomplete="off">
+    <button class="ia-btn go" id="ip-create">PUBLICAR PRODUCTO →</button>
+    <div class="ia-msg" id="ip-msg"></div>
+  </div>
+  <button class="ia-btn" id="ia-close">✕ CERRAR</button>
+</div></div>
+
+<script>
+// ═══ INQUILINOS — galaxias de usuarios que viven DENTRO del universo madre ═══
+(function(){
+  const $=id=>document.getElementById(id);
+  const log=(k,d)=>{ (window.hkLog||function(){})(k,d); };
+  const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  const safeUrl=u=>/^https?:\/\//i.test(u||'')?encodeURI(u):'';
+  const tier=()=>{ try{ return JSON.parse(localStorage.getItem('hk23_tier'))||'visita'; }catch(e){ return 'visita'; } };
+  const SUPA={ url:'https://qhklngvzdmwsbopbkiff.supabase.co',
+    key:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFoa2xuZ3Z6ZG13c2JvcGJraWZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3OTEwOTYsImV4cCI6MjA5NzM2NzA5Nn0.ttdBrxCF6Wl6I8yKOICfTq7WyPylMmSmdKGUb176BCs' };
+  const HEAD={ apikey:SUPA.key, Authorization:'Bearer '+SUPA.key, 'Content-Type':'application/json' };
+
+  // agentes que el dueño puede prestar — corren en ESTA página, no se copian
+  const AGENTS={
+    atlas:    { n:'ATLAS',    d:'control: QR, ideas, fondos, comandos', fn:()=>{ const p=$('ag-panel'); if(p) p.classList.add('open'); } },
+    oracle:   { n:'ORACLE',   d:'reporte de estado y acciones',        fn:()=>{ if(window.hkOracle) window.hkOracle(); } },
+    curator:  { n:'CURATOR',  d:'nada existe sin misión',              fn:()=>{ const p=$('ag-panel'); if(p) p.classList.add('open');
+                                                                          const t=document.querySelector('.ag-tab[data-pane="curator"]'); if(t) t.click(); } },
+    conector: { n:'CONECTOR', d:'la noche: eventos y vendedores',      fn:()=>{ if(window.MVB) window.MVB.open(); } },
+    media:    { n:'MEDIA ENGINE', d:'fondos vivos desde cualquier link', fn:()=>{ const p=$('me-panel'); if(p) p.classList.add('open'); } },
+    biblio:   { n:'BIBLIOTECA', d:'libros, guías y productos',         fn:()=>{ if(window.hkBiblioteca) window.hkBiblioteca(); } }
+  };
+  const COLORS=['#B84DFF','#00F0FF','#FF3AC8','#AAFF00','#FFD200','#FF3A1F'];
+  const FORMS=['espiral','nebulosa','asteroides','cometa','estacion'];
+  const FORM_ICO={espiral:'✧',nebulosa:'☁',asteroides:'☄',cometa:'💫',estacion:'🛰'};
+
+  // ── datos: Supabase manda, el dispositivo respalda ──
+  const localTen=()=>{ try{ return JSON.parse(localStorage.getItem('hk23_inquilinos'))||[]; }catch(e){ return []; } };
+  const localProd=()=>{ try{ return JSON.parse(localStorage.getItem('hk23_inq_productos'))||[]; }catch(e){ return []; } };
+  const norm=t=>({ ...t,
+    agents: Array.isArray(t.agents)?t.agents:(()=>{ try{ return JSON.parse(t.agents)||[]; }catch(e){ return []; } })(),
+    links:  Array.isArray(t.links) ?t.links :(()=>{ try{ return JSON.parse(t.links)||[];  }catch(e){ return []; } })() });
+  // semilla: el primer inquilino, listo para que lo completes desde el panel
+  const SEED=[{ slug:'jean-christophe', name:'MVB · JEAN CHRISTOPHE', code:'MVB-JC',
+    sub:'galaxia inquilina — plugins, productos y noche', bio:'', color:'#00F0FF', form:'nebulosa',
+    bg:'', agents:['atlas','oracle','conector','media'], tier:'referido', active:true, seed:true }];
+  let TEN=[], PROD=[];
+  async function load(){
+    let rt=[], rp=[];
+    try{ const r=await fetch(SUPA.url+'/rest/v1/universe_galaxies?select=*&order=created_at.desc&limit=60',{headers:HEAD});
+      if(r.ok) rt=await r.json(); }catch(e){}
+    try{ const r=await fetch(SUPA.url+'/rest/v1/universe_products?select=*&order=created_at.desc&limit=200',{headers:HEAD});
+      if(r.ok) rp=await r.json(); }catch(e){}
+    const m=new Map(SEED.map(t=>[t.slug,t]));
+    [...localTen().map(t=>({...t,local:true})), ...rt].forEach(t=>{ if(t&&t.slug) m.set(t.slug, norm({...(m.get(t.slug)||{}), ...t})); });
+    TEN=[...m.values()];
+    const pm=new Map();
+    [...localProd().map(p=>({...p,local:true})), ...rp].forEach(p=>{ if(p&&p.id) pm.set(p.id,p); });
+    PROD=[...pm.values()];
+  }
+  const prodsOf=slug=>PROD.filter(p=>p.owner===slug);
+  const bySlug=s=>TEN.find(t=>t.slug===s);
+  const byCode=c=>TEN.find(t=>(t.code||'').toUpperCase()===String(c||'').toUpperCase()&&t.active!==false);
+
+  // ── la galaxia del inquilino ──
+  let cur=null, raf=null;
+  const cv=$('inq-cv'), ctx=cv.getContext('2d');
+  function draw(t){
+    if(!cur) return;
+    const w=cv.clientWidth, h=cv.clientHeight; if(!w||!h) return;
+    if(cv.width!==w*2||cv.height!==h*2){ cv.width=w*2; cv.height=h*2; }
+    const W=w*2, H=h*2, col=cur.color||'#B84DFF';
+    ctx.clearRect(0,0,W,H);
+    ctx.globalCompositeOperation='lighter';
+    const cx=W/2, cy=H/2, rot=t/9000;
+    if(cur.form==='asteroides'){
+      for(let i=0;i<130;i++){ const a=i*2.399+rot*2, r=(0.1+((i*37)%100)/100*0.36)*Math.min(W,H);
+        ctx.beginPath(); ctx.arc(cx+Math.cos(a)*r, cy+Math.sin(a)*r*0.82, 1+((i*13)%5)/2, 0, 7);
+        ctx.fillStyle=col+'99'; ctx.fill(); }
+    } else if(cur.form==='nebulosa'){
+      for(let i=0;i<44;i++){ const a=i*0.71+rot, r=(0.06+i/44*0.34)*Math.min(W,H);
+        const g=ctx.createRadialGradient(cx+Math.cos(a)*r, cy+Math.sin(a)*r*0.8, 0, cx+Math.cos(a)*r, cy+Math.sin(a)*r*0.8, 60+i);
+        g.addColorStop(0,col+'44'); g.addColorStop(1,'transparent');
+        ctx.fillStyle=g; ctx.fillRect(0,0,W,H); }
+    } else if(cur.form==='estacion'){
+      ctx.strokeStyle=col+'88'; ctx.lineWidth=3;
+      for(let k=1;k<=3;k++){ ctx.beginPath(); ctx.ellipse(cx,cy,Math.min(W,H)*0.1*k,Math.min(W,H)*0.035*k,rot*k,0,7); ctx.stroke(); }
+      ctx.fillStyle=col; ctx.beginPath(); ctx.arc(cx,cy,16,0,7); ctx.fill();
+    } else { // espiral / cometa
+      const arms=cur.form==='cometa'?1:3;
+      for(let a=0;a<arms;a++) for(let i=0;i<200;i++){
+        const th=i/200*5.6+a*(6.28/arms)+rot, r=Math.pow(i/200,0.72)*Math.min(W,H)*0.42;
+        ctx.beginPath(); ctx.arc(cx+Math.cos(th)*r, cy+Math.sin(th)*r*0.72, 1.6-i/200, 0, 7);
+        ctx.fillStyle=col+'AA'; ctx.fill(); }
+    }
+    ctx.globalCompositeOperation='source-over';
+    ctx.font='700 15px "Space Mono",monospace'; ctx.fillStyle=col+'66'; ctx.textAlign='center';
+    ctx.fillText((FORM_ICO[cur.form]||'✧')+' '+String(cur.form||'').toUpperCase(), cx, H-26);
+  }
+  function loop(t){ if(!$('inq').classList.contains('open')){ raf=null; return; } draw(t||0); raf=requestAnimationFrame(loop); }
+
+  function paintGal(){
+    if(!cur) return;
+    document.documentElement.style.setProperty('--iq',cur.color||'#B84DFF');
+    $('inq').style.setProperty('--iq',cur.color||'#B84DFF');
+    $('inq').style.setProperty('--iq-line',(cur.color||'#B84DFF')+'28');
+    $('inq-name').innerHTML=esc(cur.name)+'<small>'+esc(cur.sub||'GALAXIA INQUILINA')+'</small>';
+    $('inq-bio').textContent=cur.bio||'Su historia todavía no está escrita. Escribila vos desde ◈ INQUILINOS, o pedísela a él.';
+    const ab=$('inq-agents');
+    ab.innerHTML=(cur.agents||[]).filter(k=>AGENTS[k]).map(k=>
+      '<div class="iq-ag" data-ag="'+esc(k)+'"><span class="d"></span><b>'+esc(AGENTS[k].n)+'</b><i>'+esc(AGENTS[k].d)+'</i></div>').join('')
+      ||'<div class="iq-empty">Todavía no le prestaste ningún agente.</div>';
+    ab.querySelectorAll('[data-ag]').forEach(el=>el.onclick=()=>{
+      const a=AGENTS[el.dataset.ag]; if(!a) return;
+      log('inquilino', cur.slug+' usó '+a.n); $('inq').classList.remove('open'); a.fn(); });
+    const pb=$('inq-prods'); const ps=prodsOf(cur.slug);
+    pb.innerHTML=ps.map(p=>'<div class="iq-prod"><div class="pk">'+esc((p.kind||'PRODUCTO').toUpperCase())+'</div>'+
+      '<div class="pt">'+esc(p.name)+'</div><div class="pd">'+esc(p.desc||'')+'</div>'+
+      (safeUrl(p.url)?'<a href="'+esc(safeUrl(p.url))+'" target="_blank" rel="noopener noreferrer">VER →</a>':'')+'</div>').join('')
+      ||'<div class="iq-empty">Sus productos van acá. Cargalos desde ◈ INQUILINOS.</div>';
+    if(cur.bg&&window.MediaEngine&&window.MediaEngine.add){ try{ window.MediaEngine.add(cur.bg); }catch(e){} }
+  }
+  function openGal(slug){
+    const t=bySlug(slug); if(!t) return false;
+    if(t.active===false){ (window.hkLog||function(){})('inquilino','acceso cerrado: '+slug); return false; }
+    cur=t; $('inq-land').classList.remove('open'); $('inq').classList.add('open');
+    paintGal(); if(!raf) raf=requestAnimationFrame(loop);
+    log('inquilino','entró a la galaxia de '+t.name); return true;
+  }
+  $('inq-x').onclick=()=>$('inq').classList.remove('open');
+  $('inq-land-btn').onclick=()=>{ if(cur) openLand(cur.slug); };
+
+  // ── su landing pública: la misma data, cara de página propia ──
+  function openLand(slug){
+    const t=bySlug(slug); if(!t) return false;
+    cur=t;
+    const L=$('inq-land');
+    L.style.setProperty('--iq',t.color||'#B84DFF');
+    $('il-eyebrow').textContent='GALAXIA INQUILINA · HK23 UNIVERSE';
+    $('il-title').textContent=t.name;
+    $('il-sub').textContent=t.sub||'';
+    $('il-bio').textContent=t.bio||'';
+    $('il-links').innerHTML=(t.links||[]).map(l=>{ const u=safeUrl(l.url); return u?
+      '<a href="'+esc(u)+'" target="_blank" rel="noopener noreferrer">'+esc((l.label||'LINK').toUpperCase())+' →</a>':''; }).join('');
+    const ps=prodsOf(slug);
+    $('il-prods').innerHTML=ps.map(p=>'<div class="il-card"><div class="k">'+esc((p.kind||'PRODUCTO').toUpperCase())+'</div>'+
+      '<div class="t">'+esc(p.name)+'</div><div class="d">'+esc(p.desc||'')+'</div>'+
+      (safeUrl(p.url)?'<a href="'+esc(safeUrl(p.url))+'" target="_blank" rel="noopener noreferrer">VER →</a>':'')+'</div>').join('')
+      ||'<div class="iq-empty">Sus productos se publican desde el universo madre.</div>';
+    $('il-foot').innerHTML='Esta galaxia vive dentro de <b>HK23 UNIVERSE</b> — sus agentes corren en el universo madre.<br>Su link: <a href="?g='+esc(slug)+'">?g='+esc(slug)+'</a>';
+    L.classList.add('open');
+    log('inquilino','landing de '+t.name); return true;
+  }
+  $('il-enter').onclick=()=>{ if(!cur) return;
+    if(tier()==='visita'){ $('inq-land').classList.remove('open');
+      const g=$('ov-gate'); if(g) g.classList.add('open'); return; }
+    openGal(cur.slug); };
+  $('il-back').onclick=()=>$('inq-land').classList.remove('open');
+
+  // ── panel del dueño ──
+  let newColor=COLORS[0], newForm='nebulosa', newAgents=new Set(['atlas','oracle']);
+  function chips(box, items, isOn, onPick, label){
+    box.innerHTML='';
+    items.forEach(v=>{ const b=document.createElement('button'); b.className='ia-chip'+(isOn(v)?' on':'');
+      b.textContent=label(v); b.onclick=()=>{ onPick(v); }; box.appendChild(b); });
+  }
+  function paintNew(){
+    chips($('ia-colors'),COLORS,v=>v===newColor,v=>{ newColor=v; paintNew(); },v=>'●');
+    [...$('ia-colors').children].forEach((b,i)=>{ b.style.color=COLORS[i]; b.style.fontSize='13px'; });
+    chips($('ia-forms'),FORMS,v=>v===newForm,v=>{ newForm=v; paintNew(); },v=>FORM_ICO[v]+' '+v.toUpperCase());
+    chips($('ia-agents'),Object.keys(AGENTS),v=>newAgents.has(v),
+      v=>{ newAgents.has(v)?newAgents.delete(v):newAgents.add(v); paintNew(); }, v=>AGENTS[v].n);
+  }
+  function paintAdmin(){
+    const list=$('ia-list');
+    list.innerHTML=TEN.map(t=>{
+      const ps=prodsOf(t.slug).length;
+      return '<div class="ia-card"><div class="n" style="color:'+esc(t.color||'#fff')+'">'+esc(t.name)+
+        (t.local?' <span class="mvb-demo" style="background:#00F0FF">LOCAL</span>':'')+
+        (t.seed?' <span class="mvb-demo">SEMILLA</span>':'')+'</div>'+
+        '<div class="m">código <b>'+esc(t.code||'—')+'</b> · link <b>?g='+esc(t.slug)+'</b> · '+
+        (t.agents||[]).length+' agentes · '+ps+' productos · '+(t.active===false?'CERRADO':'ABIERTO')+'</div>'+
+        '<button class="ia-btn" data-open="'+esc(t.slug)+'">◈ SU GALAXIA</button>'+
+        '<button class="ia-btn" data-land="'+esc(t.slug)+'">🌐 SU LANDING</button>'+
+        '<button class="ia-btn" data-copy="'+esc(t.slug)+'">⧉ COPIAR SU LINK</button>'+
+        (t.seed?'':'<button class="ia-btn '+(t.active===false?'go':'off')+'" data-toggle="'+esc(t.slug)+'">'+
+          (t.active===false?'REABRIR':'CERRAR ACCESO')+'</button>')+'</div>';
+    }).join('');
+    list.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{ $('inq-admin').classList.remove('open'); openGal(b.dataset.open); });
+    list.querySelectorAll('[data-land]').forEach(b=>b.onclick=()=>{ $('inq-admin').classList.remove('open'); openLand(b.dataset.land); });
+    list.querySelectorAll('[data-copy]').forEach(b=>b.onclick=()=>{
+      const url=location.origin+location.pathname+'?g='+b.dataset.copy;
+      try{ navigator.clipboard.writeText(url); }catch(e){}
+      b.textContent='✓ COPIADO'; setTimeout(()=>b.textContent='⧉ COPIAR SU LINK',1400); });
+    list.querySelectorAll('[data-toggle]').forEach(b=>b.onclick=async()=>{
+      const t=bySlug(b.dataset.toggle); if(!t) return;
+      t.active=t.active===false; await save(t); paintAdmin();
+      log('inquilino',(t.active?'reabrió':'cerró')+' el acceso de '+t.name); });
+    const sel=$('ip-owner');
+    sel.innerHTML=TEN.map(t=>'<option value="'+esc(t.slug)+'">'+esc(t.name)+'</option>').join('');
+  }
+  async function save(t){
+    const row={ slug:t.slug, name:t.name, code:t.code, sub:t.sub||'', bio:t.bio||'', color:t.color, form:t.form,
+      bg:t.bg||'', tier:t.tier||'referido', active:t.active!==false,
+      agents:JSON.stringify(t.agents||[]), links:JSON.stringify(t.links||[]), created_at:t.created_at||new Date().toISOString() };
+    let ok=false;
+    try{ const r=await fetch(SUPA.url+'/rest/v1/universe_galaxies',{method:'POST',
+      headers:{...HEAD, Prefer:'resolution=merge-duplicates'}, body:JSON.stringify(row)}); ok=r.ok; }catch(e){}
+    try{ const loc=localTen().filter(x=>x.slug!==t.slug); loc.push(t); localStorage.setItem('hk23_inquilinos',JSON.stringify(loc)); }catch(e){}
+    return ok;
+  }
+  $('ia-create').onclick=async()=>{
+    const v=id=>($(id).value||'').trim();
+    const msg=$('ia-msg');
+    const name=v('ia-name'), slug=v('ia-slug').toLowerCase().replace(/[^a-z0-9-]+/g,'-').replace(/^-|-$/g,''), code=v('ia-code').toUpperCase();
+    if(!name||!slug||!code){ msg.style.color='#FF3A1F'; msg.textContent='Necesito al menos nombre, slug y código de entrada.'; return; }
+    if(bySlug(slug)&&!bySlug(slug).seed){ msg.style.color='#FF3A1F'; msg.textContent='Ya existe un inquilino con ese slug.'; return; }
+    const links=v('ia-links').split(',').map(s=>s.trim()).filter(Boolean).map(pair=>{
+      const i=pair.indexOf('='); return i<0?null:{ label:pair.slice(0,i).trim(), url:pair.slice(i+1).trim() }; }).filter(Boolean);
+    const t={ slug, name:name.toUpperCase(), code, sub:v('ia-sub'), bio:v('ia-bio'), color:newColor, form:newForm,
+      bg:v('ia-bg'), agents:[...newAgents], links, tier:'referido', active:true, created_at:new Date().toISOString() };
+    const ok=await save(t);
+    TEN=[t, ...TEN.filter(x=>x.slug!==slug)];
+    ['name','slug','code','sub','bio','links','bg'].forEach(k=>{ const el=$('ia-'+k); if(el) el.value=''; });
+    msg.style.color='#AAFF00';
+    msg.textContent='✓ '+t.name+' creado '+(ok?'en el universo — su link ya funciona para todos.':'en este dispositivo. Corré el SQL de universe_galaxies para que lo vean todos.');
+    paintAdmin();
+    log('inquilino','creado: '+t.name+' ('+slug+')');
+  };
+  $('ip-create').onclick=async()=>{
+    const v=id=>($(id).value||'').trim(); const msg=$('ip-msg');
+    const owner=$('ip-owner').value, name=v('ip-name');
+    if(!owner||!name){ msg.style.color='#FF3A1F'; msg.textContent='Elegí el inquilino y poné al menos el nombre del producto.'; return; }
+    const p={ id:'p'+Math.random().toString(36).slice(2,10), owner, name:name.toUpperCase(),
+      kind:v('ip-kind')||'PRODUCTO', desc:v('ip-desc'), url:v('ip-url'), created_at:new Date().toISOString() };
+    let ok=false;
+    try{ const r=await fetch(SUPA.url+'/rest/v1/universe_products',{method:'POST',headers:HEAD,body:JSON.stringify(p)}); ok=r.ok; }catch(e){}
+    try{ const loc=localProd(); loc.push(p); localStorage.setItem('hk23_inq_productos',JSON.stringify(loc)); }catch(e){}
+    PROD=[p,...PROD];
+    ['name','kind','desc','url'].forEach(k=>{ const el=$('ip-'+k); if(el) el.value=''; });
+    msg.style.color='#AAFF00';
+    msg.textContent='✓ '+p.name+' publicado '+(ok?'— visible en su galaxia, su landing y tu Biblioteca.':'en este dispositivo. Corré el SQL de universe_products para publicarlo a todos.');
+    paintAdmin();
+    log('inquilino','producto de '+owner+': '+p.name);
+  };
+  $('ia-close').onclick=()=>$('inq-admin').classList.remove('open');
+
+  async function openAdmin(){
+    if(tier()!=='socio'){ (window.hkLog||function(){})('inquilino','panel pedido sin ser dueño');
+      const g=$('ov-gate'); if(g) g.classList.add('open'); return; }
+    await load(); paintNew(); paintAdmin(); $('inq-admin').classList.add('open');
+  }
+  window.Inquilinos={ open:openAdmin, galaxy:openGal, landing:openLand, list:()=>TEN, products:()=>PROD };
+
+  // ── el código del inquilino abre SU galaxia, por tu puerta ──
+  const ge=$('gate-enter');
+  if(ge){ const prev=ge.onclick;
+    ge.onclick=async(e)=>{
+      const c=($('gate-code').value||'').trim().toUpperCase();
+      if(!TEN.length) await load();
+      const t=byCode(c);
+      if(t){
+        try{ localStorage.setItem('hk23_tier',JSON.stringify(t.tier||'referido')); }catch(e2){}
+        const g=$('ov-gate'); if(g) g.classList.remove('open');
+        $('gate-code').value='';
+        const b=$('gate-badge'); if(b) b.textContent='◈ '+t.name;
+        log('inquilino','entró con su código: '+t.name);
+        openGal(t.slug); return;
+      }
+      if(prev) prev.call(ge,e);
+    };
+  }
+
+  // ── dock, hotkey y comandos ──
+  const dock=$('hk-dock');
+  if(dock){ const b=document.createElement('button'); b.className='dk'; b.textContent='◈ INQUILINOS';
+    b.style.setProperty('--dc','#B84DFF'); b.style.color='#B84DFFCC';
+    b.onclick=()=>openAdmin(); dock.insertBefore(b, dock.children[3]||null); }
+  addEventListener('keydown',e=>{
+    if(/INPUT|TEXTAREA|SELECT/.test((document.activeElement||{}).tagName||'')) return;
+    if((e.key==='u'||e.key==='U')) openAdmin();
+    if((e.key==='x'||e.key==='X'||e.key==='Escape')){
+      ['inq','inq-land','inq-admin'].forEach(id=>{ const el=$(id); if(el) el.classList.remove('open'); });
+    }
+  });
+  const cmd=$('ag-cmd');
+  if(cmd) cmd.addEventListener('keydown',e=>{
+    if(e.key!=='Enter') return; const s=(cmd.value||'').trim().toLowerCase();
+    if(/^(inquilinos?|usuarios?|galaxias? de)$/.test(s)){ e.stopImmediatePropagation(); e.preventDefault(); cmd.value=''; openAdmin(); }
+    else if(/^(landing|inquilino) /.test(s)){ const slug=s.split(/\s+/).slice(1).join('-');
+      e.stopImmediatePropagation(); e.preventDefault(); cmd.value='';
+      load().then(()=>{ if(!openLand(slug)) (window.hkLog||function(){})('inquilino','no existe: '+slug); }); }
+  }, true);
+
+  // ── ?g=slug abre su landing directo (el link que le pasás) ──
+  load().then(()=>{
+    const g=new URLSearchParams(location.search).get('g');
+    if(g){ setTimeout(()=>{
+      const p=document.getElementById('portal-screen'); if(p) p.style.display='none';
+      openLand(g.toLowerCase()); }, 700); }
+  });
+})();
+</script>
+
 </body>
 </html>
