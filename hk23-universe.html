@@ -11183,5 +11183,133 @@ addEventListener('DOMContentLoaded', function(){
 })();
 </script>
 
+<!-- ═══════════ FABLE FX — entrada pixelada + fondo de entidades-fachada ═══════════ -->
+<style id="fable-style">
+  #fable-bg{ position:fixed; inset:0; z-index:6; pointer-events:none; display:none;
+    mix-blend-mode:screen; opacity:.55; }
+  #fable-bg.on{ display:block; }
+  #fable-intro{ position:fixed; inset:0; z-index:99998; pointer-events:none; display:none; }
+  #fable-intro.on{ display:block; }
+</style>
+<canvas id="fable-bg"></canvas>
+<canvas id="fable-intro"></canvas>
+
+<script>
+// ═══ FABLE FX — recrea la fachada de entidades + el barrido pixelado a velocidad Fable ═══
+(function(){
+  const $=id=>document.getElementById(id);
+  const log=(k,d)=>{ (window.hkLog||function(){})(k,d); };
+  const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+  // violeta → cian → blanco, la barra del slider Ultracode
+  function col(v){ v=v<0?0:v>1?1:v; let r,g,b;
+    if(v<0.5){ const t=v/0.5; r=184+(59-184)*t; g=77+(224-77)*t; b=255; }
+    else { const t=(v-0.5)/0.5; r=59+(255-59)*t; g=224+(255-224)*t; b=255; }
+    return 'rgb('+(r|0)+','+(g|0)+','+(b|0)+')'; }
+  const hash=(x,y,z)=>{ const h=Math.sin(x*127.1+y*311.7+z*74.7)*43758.5453; return h-Math.floor(h); };
+  const now=()=>{ try{ return performance.now(); }catch(e){ return 0; } };
+
+  // ── FONDO: entidades-pixel formando la fachada teselada con shimmer diagonal ──
+  const bg=$('fable-bg'), bx=bg.getContext('2d');
+  let bgOn=false, bgRaf=null, bgT0=0, W=0, H=0;
+  const CELL=15, GAP=2, SPEED=1.2, BAND=170, DIAG=0.62;
+  function fitBg(){ W=bg.width=Math.ceil(innerWidth); H=bg.height=Math.ceil(innerHeight); }
+  function bgFrame(){
+    const el=now()-bgT0;
+    bx.clearRect(0,0,W,H);                                        // transparente: el universo queda NEGRO
+    bx.globalCompositeOperation='lighter';
+    const step=CELL, cols=Math.ceil(W/step), rows=Math.ceil(H/step);
+    const sweep=((el*SPEED)%(W+H*DIAG+BAND)), flick=Math.floor(el*0.05);
+    for(let gy=0; gy<rows; gy++) for(let gx=0; gx<cols; gx++){
+      const cx=gx*step, cy=gy*step, dd=sweep-(cx+cy*DIAG);
+      let b=0; if(dd>0&&dd<BAND) b=1-dd/BAND;
+      // ventanas teal de la fachada: sólo unas pocas celdas, respirando
+      if(hash(gx,gy,7)>0.955){ bx.globalAlpha=0.12+0.10*Math.sin(el*0.002+gx*0.5+gy*0.3);
+        bx.fillStyle='#12E4C6'; bx.fillRect(cx,cy,step-GAP,step-GAP); }
+      // brillos ambiente: puntitos dispersos, no todo el campo (si no, lava a gris)
+      let amb=0; if(hash(gx,gy,2)>0.986) amb=0.18+0.12*Math.sin(el*0.003+gx+gy);
+      const rnd=hash(gx,gy,flick);
+      const v=b>0?b*(rnd<0.82?1:0.25):0, tot=Math.max(v,amb);
+      if(tot<0.04) continue;
+      bx.globalAlpha=Math.min(0.95,tot);
+      bx.fillStyle=(b>0)?col(0.35+0.65*b):'#B84DFF';
+      bx.fillRect(cx,cy,step-GAP,step-GAP);
+    }
+    bx.globalAlpha=1; bx.globalCompositeOperation='source-over';
+    bgRaf=requestAnimationFrame(bgFrame);
+  }
+  function setBg(on){
+    bgOn=on; bg.classList.toggle('on',on);
+    try{ localStorage.setItem('hk23_fablefx', on?'1':'0'); }catch(e){}
+    if(on){ fitBg(); bgT0=now(); if(reduce){ bgFrame(); cancelAnimationFrame(bgRaf); }
+      else if(!bgRaf) bgRaf=requestAnimationFrame(bgFrame);
+      log('fable','fondo de entidades ON'); }
+    else { if(bgRaf){ cancelAnimationFrame(bgRaf); bgRaf=null; } bx.clearRect(0,0,W,H); log('fable','fondo OFF'); }
+  }
+  addEventListener('resize',()=>{ if(bgOn) fitBg(); });
+
+  // ── INTRO: barrido pixelado desde negro que revela el universo (velocidad Fable) ──
+  const iv=$('fable-intro'), ix=iv.getContext('2d');
+  let introBusy=false;
+  function playIntro(done){
+    if(introBusy){ done&&done(); return; }
+    if(reduce){ done&&done(); return; }
+    introBusy=true;
+    const IW=iv.width=Math.ceil(innerWidth), IH=iv.height=Math.ceil(innerHeight);
+    iv.classList.add('on');
+    const step=18, cols=Math.ceil(IW/step), rows=Math.ceil(IH/step);
+    const DUR=1050, span=IW+IH*DIAG, t0=now(); let revealed=false;
+    function fr(){
+      const el=now()-t0, front=(el/DUR)*(span+BAND), flick=Math.floor(el*0.08);
+      ix.clearRect(0,0,IW,IH);
+      for(let gy=0; gy<rows; gy++) for(let gx=0; gx<cols; gx++){
+        const cx=gx*step, cy=gy*step, dd=front-(cx+cy*DIAG);
+        if(dd>BAND) continue;                                   // ya revelado → transparente
+        if(dd<=0){ ix.fillStyle='#050608'; ix.fillRect(cx,cy,step,step); continue; } // todavía tapado
+        const grain=hash(gx,gy,7), spark=hash(gx,gy,flick);     // banda: disuelve con grano
+        if(grain<dd/BAND){ if(spark<0.5){ ix.fillStyle=col(0.5+0.5*(1-dd/BAND));
+          ix.fillRect(cx,cy,step-2,step-2); } }
+        else { ix.fillStyle='#050608'; ix.fillRect(cx,cy,step,step); }
+      }
+      if(!revealed && front>span*0.42){ revealed=true; done&&done(); } // revelo el mapa a mitad del barrido
+      if(front<span+BAND){ requestAnimationFrame(fr); }
+      else { iv.classList.remove('on'); ix.clearRect(0,0,IW,IH); introBusy=false; }
+    }
+    requestAnimationFrame(fr);
+  }
+
+  window.FableFX={ bg:setBg, toggle:()=>setBg(!bgOn), intro:playIntro, isOn:()=>bgOn };
+
+  // ── ENTRADA: la tecla ENTER del portal dispara el barrido antes del mapa ──
+  function introEnabled(){ try{ return localStorage.getItem('hk23_intro')!=='0'; }catch(e){ return true; } }
+  const eb=document.querySelector('.enter-btn');
+  if(eb) eb.addEventListener('click',e=>{
+    if(!introEnabled()||reduce) return;                         // sin intro → flujo normal
+    e.stopPropagation(); e.preventDefault();
+    playIntro(()=>{ if(typeof goTo==='function') goTo('map'); });
+  }, true);
+
+  // ── dock, comandos y hotkey ──
+  const dock=$('hk-dock');
+  if(dock){ const b=document.createElement('button'); b.className='dk'; b.textContent='▚ FABLE';
+    b.style.setProperty('--dc','#B84DFF'); b.style.color='#B84DFFCC';
+    b.onclick=()=>setBg(!bgOn); dock.insertBefore(b, dock.children[4]||null); }
+  addEventListener('keydown',e=>{
+    if(/INPUT|TEXTAREA|SELECT/.test((document.activeElement||{}).tagName||'')) return;
+    if(e.key==='h'||e.key==='H') setBg(!bgOn);
+  });
+  const cmd=$('ag-cmd');
+  if(cmd) cmd.addEventListener('keydown',e=>{
+    if(e.key!=='Enter') return; const s=(cmd.value||'').trim().toLowerCase();
+    if(/^(fable|fachada|fondo)( on| off)?$/.test(s)){ e.stopImmediatePropagation(); e.preventDefault();
+      cmd.value=''; setBg(/off$/.test(s)?false:/on$/.test(s)?true:!bgOn); }
+    else if(/^(intro|entrada)$/.test(s)){ e.stopImmediatePropagation(); e.preventDefault(); cmd.value=''; playIntro(); }
+  }, true);
+
+  // restaurar preferencia del fondo
+  try{ if(localStorage.getItem('hk23_fablefx')==='1') setBg(true); }catch(e){}
+})();
+</script>
+
 </body>
 </html>
