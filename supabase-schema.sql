@@ -189,3 +189,6 @@ create policy universe_products_insert
   on universe_products for insert
   to anon, authenticated
   with check (true);
+
+-- El universo del inquilino guarda SUS nodos (los crea él mismo desde adentro).
+alter table universe_galaxies add column if not exists nodes text;

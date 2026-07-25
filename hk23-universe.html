@@ -10862,10 +10862,10 @@ addEventListener('DOMContentLoaded', function(){
   <div id="ia-list"></div>
   <div class="ia-card">
     <div class="n">＋ NUEVO INQUILINO</div>
-    <input id="ia-name" placeholder="nombre visible · ej. MVB · JEAN CHRISTOPHE" autocomplete="off">
-    <input id="ia-slug" placeholder="slug para su link · ej. jean-christophe" autocomplete="off">
+    <input id="ia-name" placeholder="nombre del universo · ej. FREQUENCY UNIVERSE" autocomplete="off">
+    <input id="ia-slug" placeholder="slug para su link · ej. frequency" autocomplete="off">
     <input id="ia-code" placeholder="su código de entrada · ej. MVB-JC" autocomplete="off">
-    <input id="ia-sub" placeholder="bajada · ej. plugins, sets y noche" autocomplete="off">
+    <input id="ia-sub" placeholder="de quién es · ej. jean christophe · plugins y noche" autocomplete="off">
     <textarea id="ia-bio" rows="3" placeholder="quién es (lo escribís vos o él después)"></textarea>
     <input id="ia-links" placeholder="links · ej. instagram=https://... , tienda=https://..." autocomplete="off">
     <input id="ia-bg" placeholder="fondo de su galaxia · pegá un link (opcional)" autocomplete="off">
@@ -10911,6 +10911,7 @@ addEventListener('DOMContentLoaded', function(){
     media:    { n:'MEDIA ENGINE', d:'fondos vivos desde cualquier link', fn:()=>{ const p=$('me-panel'); if(p) p.classList.add('open'); } },
     biblio:   { n:'BIBLIOTECA', d:'libros, guías y productos',         fn:()=>{ if(window.hkBiblioteca) window.hkBiblioteca(); } }
   };
+  window.__INQ_AGENTS=AGENTS;   // el universo del inquilino usa el mismo catálogo
   const COLORS=['#B84DFF','#00F0FF','#FF3AC8','#AAFF00','#FFD200','#FF3A1F'];
   const FORMS=['espiral','nebulosa','asteroides','cometa','estacion'];
   const FORM_ICO={espiral:'✧',nebulosa:'☁',asteroides:'☄',cometa:'💫',estacion:'🛰'};
@@ -10922,8 +10923,8 @@ addEventListener('DOMContentLoaded', function(){
     agents: Array.isArray(t.agents)?t.agents:(()=>{ try{ return JSON.parse(t.agents)||[]; }catch(e){ return []; } })(),
     links:  Array.isArray(t.links) ?t.links :(()=>{ try{ return JSON.parse(t.links)||[];  }catch(e){ return []; } })() });
   // semilla: el primer inquilino, listo para que lo completes desde el panel
-  const SEED=[{ slug:'jean-christophe', name:'MVB · JEAN CHRISTOPHE', code:'MVB-JC',
-    sub:'galaxia inquilina — plugins, productos y noche', bio:'', color:'#00F0FF', form:'nebulosa',
+  const SEED=[{ slug:'frequency', name:'FREQUENCY UNIVERSE', code:'MVB-JC',
+    sub:'jean christophe · plugins, sets y noche', bio:'', color:'#00F0FF', form:'nebulosa',
     bg:'', agents:['atlas','oracle','conector','media'], tier:'referido', active:true, seed:true }];
   let TEN=[], PROD=[];
   async function load(){
@@ -11004,6 +11005,9 @@ addEventListener('DOMContentLoaded', function(){
   function openGal(slug){
     const t=bySlug(slug); if(!t) return false;
     if(t.active===false){ (window.hkLog||function(){})('inquilino','acceso cerrado: '+slug); return false; }
+    // si está cargado el universo completo del inquilino, ese manda (portal + mapa propio + edición)
+    if(window.InqUniverse&&window.InqUniverse.open){ cur=t; $('inq-land').classList.remove('open');
+      $('inq').classList.remove('open'); return window.InqUniverse.open(t); }
     cur=t; $('inq-land').classList.remove('open'); $('inq').classList.add('open');
     paintGal(); if(!raf) raf=requestAnimationFrame(loop);
     log('inquilino','entró a la galaxia de '+t.name); return true;
@@ -11141,7 +11145,8 @@ addEventListener('DOMContentLoaded', function(){
       if(!TEN.length) await load();
       const t=byCode(c);
       if(t){
-        try{ localStorage.setItem('hk23_tier',JSON.stringify(t.tier||'referido')); }catch(e2){}
+        try{ localStorage.setItem('hk23_tier',JSON.stringify(t.tier||'referido'));
+             localStorage.setItem('hk23_inq_me', t.slug); }catch(e2){}  // entró con SU código: puede editar lo suyo
         const g=$('ov-gate'); if(g) g.classList.remove('open');
         $('gate-code').value='';
         const b=$('gate-badge'); if(b) b.textContent='◈ '+t.name;
@@ -11308,6 +11313,312 @@ addEventListener('DOMContentLoaded', function(){
 
   // restaurar preferencia del fondo
   try{ if(localStorage.getItem('hk23_fablefx')==='1') setBg(true); }catch(e){}
+})();
+</script>
+
+<!-- ═══════════ UNIVERSO DEL INQUILINO — portal propio, mapa propio, editable por él ═══════════ -->
+<style id="iu-style">
+  #iu{ position:fixed; inset:0; z-index:776; display:none; background:#04050A;
+    font-family:'Space Mono',monospace; overflow:hidden; }
+  #iu.open{ display:block; }
+  /* su portal */
+  #iu-portal{ position:absolute; inset:0; z-index:3; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:16px; text-align:center; padding:24px;
+    background:radial-gradient(900px 600px at 50% 45%, var(--iuc,#B84DFF)14, transparent 70%), #04050A; }
+  #iu-portal.gone{ display:none; }
+  #iu-pname{ font-family:'Anton',Impact,sans-serif; font-size:clamp(38px,9vw,92px); line-height:.92;
+    letter-spacing:-1px; color:#F2F4FA; text-wrap:balance; max-width:14ch; }
+  #iu-psub{ font-size:10px; letter-spacing:5px; color:var(--iuc,#B84DFF); }
+  #iu-pquote{ font-size:9px; letter-spacing:2px; color:#3A3A5A; max-width:46ch; line-height:2; margin-top:6px; }
+  #iu-enter{ margin-top:14px; font-family:'Space Mono',monospace; font-size:10px; letter-spacing:4px;
+    padding:14px 26px; border-radius:2px; cursor:pointer; border:1px solid var(--iuc,#B84DFF);
+    background:transparent; color:var(--iuc,#B84DFF); transition:.18s; }
+  #iu-enter:hover{ background:var(--iuc,#B84DFF); color:#000; }
+  /* su mapa */
+  #iu-world{ position:absolute; inset:0; z-index:2; display:none; }
+  #iu-world.on{ display:block; }
+  #iu-cv{ position:absolute; inset:0; width:100%; height:100%; }
+  #iu-top{ position:absolute; top:0; left:0; right:0; z-index:4; display:flex; align-items:center; gap:8px;
+    padding:13px 16px; flex-wrap:wrap; background:linear-gradient(180deg,rgba(4,5,10,.92),transparent); }
+  #iu-title{ font-size:11px; letter-spacing:4px; color:var(--iuc,#B84DFF); }
+  #iu-title small{ display:block; font-size:7px; letter-spacing:3px; color:#3A3A5A; margin-top:3px; }
+  .iu-b{ font-family:'Space Mono',monospace; font-size:8px; letter-spacing:2px; padding:7px 11px; border-radius:2px;
+    cursor:pointer; border:1px solid #22222E; background:rgba(8,9,16,.8); color:#9AA6C8; }
+  .iu-b:hover{ border-color:var(--iuc,#B84DFF); color:var(--iuc,#B84DFF); }
+  .iu-b.on{ background:var(--iuc,#B84DFF); border-color:var(--iuc,#B84DFF); color:#000; font-weight:700; }
+  .iu-b.x{ margin-left:auto; background:var(--iuc,#B84DFF); border-color:var(--iuc,#B84DFF); color:#000; font-weight:700; }
+  /* su panel lateral */
+  #iu-panel{ position:absolute; top:0; right:0; bottom:0; width:min(360px,86vw); z-index:5; overflow-y:auto;
+    background:rgba(6,7,13,.96); border-left:1px solid #1A1A2A; padding:56px 18px 24px;
+    transform:translateX(100%); transition:transform .25s ease; }
+  #iu-panel.on{ transform:translateX(0); }
+  .iu-h{ font-size:8px; letter-spacing:4px; color:#3A3A5A; margin:16px 0 9px; }
+  .iu-h:first-child{ margin-top:0; }
+  .iu-bio{ font-size:11px; line-height:1.8; color:#B8C0D8; white-space:pre-wrap; }
+  .iu-ag,.iu-pr{ border:1px solid #1A1A2A; border-radius:2px; background:#080910; padding:10px 12px; margin-bottom:6px; }
+  .iu-ag{ display:flex; align-items:center; gap:8px; cursor:pointer; }
+  .iu-ag:hover{ border-color:var(--iuc,#B84DFF); }
+  .iu-ag .d{ width:6px; height:6px; border-radius:50%; background:var(--iuc,#B84DFF); animation:pulse 2s infinite; }
+  .iu-ag b{ font-size:10px; color:#E8ECF8; flex:1; }
+  .iu-ag i{ font-size:7px; letter-spacing:1px; color:#4A5470; font-style:normal; }
+  .iu-pr .t{ font-size:11px; font-weight:700; color:#E8ECF8; }
+  .iu-pr .k{ font-size:7px; letter-spacing:2px; color:var(--iuc,#B84DFF); margin-bottom:3px; }
+  .iu-pr .d{ font-size:9.5px; color:#7A86A8; line-height:1.6; margin:4px 0 7px; }
+  .iu-pr a{ font-size:8px; letter-spacing:2px; color:#000; background:var(--iuc,#B84DFF); padding:5px 9px;
+    border-radius:2px; text-decoration:none; }
+  .iu-empty{ font-size:9px; color:#3A3A5A; line-height:1.8; }
+  /* editor */
+  #iu-edit{ position:absolute; left:0; bottom:0; right:0; z-index:6; display:none;
+    background:rgba(6,7,13,.97); border-top:1px solid var(--iuc,#B84DFF); padding:14px 16px 16px; }
+  #iu-edit.on{ display:block; }
+  #iu-edit .hint{ font-size:9px; letter-spacing:1px; color:var(--iuc,#B84DFF); margin-bottom:10px; line-height:1.7; }
+  #iu-edit input,#iu-edit textarea{ width:100%; background:#0A0A12; border:1px solid #1E1E2C; border-radius:2px;
+    color:#EAF0FF; font-family:'Space Mono',monospace; font-size:10px; padding:8px 10px; margin-bottom:6px; letter-spacing:1px; }
+  .iu-row{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+  .iu-cols{ display:flex; gap:5px; flex-wrap:wrap; margin-bottom:8px; }
+  .iu-col{ width:22px; height:22px; border-radius:50%; cursor:pointer; border:2px solid transparent; }
+  .iu-col.on{ border-color:#fff; }
+  #iu-msg{ font-size:9px; line-height:1.7; margin-top:7px; }
+  @media(max-width:640px){ #iu-panel{ width:100%; } }
+</style>
+
+<div id="iu">
+  <div id="iu-portal">
+    <div id="iu-psub">GALAXIA INQUILINA · HK23 UNIVERSE</div>
+    <div id="iu-pname">—</div>
+    <div id="iu-pquote"></div>
+    <button id="iu-enter">ENTRAR A SU UNIVERSO</button>
+  </div>
+  <div id="iu-world">
+    <canvas id="iu-cv"></canvas>
+    <div id="iu-top">
+      <div id="iu-title">—<small>SU UNIVERSO</small></div>
+      <button class="iu-b" id="iu-info">◈ SU FICHA</button>
+      <button class="iu-b" id="iu-editbtn">✎ EDITAR</button>
+      <button class="iu-b x" id="iu-x">✕ SALIR (X)</button>
+    </div>
+    <div id="iu-panel">
+      <div class="iu-h">◈ QUIÉN ES</div>
+      <div class="iu-bio" id="iu-bio"></div>
+      <div class="iu-h">◈ AGENTES PRESTADOS — CORREN EN EL UNIVERSO MADRE</div>
+      <div id="iu-agents"></div>
+      <div class="iu-h">◈ SUS PRODUCTOS</div>
+      <div id="iu-prods"></div>
+    </div>
+    <div id="iu-edit">
+      <div class="hint" id="iu-hint">MODO EDICIÓN — tocá el vacío para crear un nodo · tocá un nodo para editarlo · arrastralo para moverlo</div>
+      <input id="iu-nlabel" placeholder="nombre del nodo · ej. MIS SETS" autocomplete="off">
+      <input id="iu-nsub" placeholder="bajada · ej. mixes y grabaciones" autocomplete="off">
+      <input id="iu-nlink" placeholder="link (opcional) · https://…" autocomplete="off">
+      <div class="iu-cols" id="iu-ncols"></div>
+      <div class="iu-row">
+        <button class="iu-b on" id="iu-nsave">GUARDAR NODO</button>
+        <button class="iu-b" id="iu-ndel">BORRAR</button>
+        <button class="iu-b" id="iu-bio-edit">✎ SU BIO</button>
+        <button class="iu-b" id="iu-done">LISTO</button>
+      </div>
+      <div id="iu-msg"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══ UNIVERSO DEL INQUILINO — su portal, su mapa, editable por él mismo ═══
+(function(){
+  const $=id=>document.getElementById(id);
+  const log=(k,d)=>{ (window.hkLog||function(){})(k,d); };
+  const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  const safeUrl=u=>/^https?:\/\//i.test(u||'')?encodeURI(u):'';
+  const tier=()=>{ try{ return JSON.parse(localStorage.getItem('hk23_tier'))||'visita'; }catch(e){ return 'visita'; } };
+  const SUPA={ url:'https://qhklngvzdmwsbopbkiff.supabase.co',
+    key:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFoa2xuZ3Z6ZG13c2JvcGJraWZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3OTEwOTYsImV4cCI6MjA5NzM2NzA5Nn0.ttdBrxCF6Wl6I8yKOICfTq7WyPylMmSmdKGUb176BCs' };
+  const HEAD={ apikey:SUPA.key, Authorization:'Bearer '+SUPA.key, 'Content-Type':'application/json' };
+  const COLORS=['#B84DFF','#00F0FF','#FF3AC8','#AAFF00','#FFD200','#FF3A1F','#12E4C6'];
+
+  let T=null, nodes=[], editing=false, sel=null, drag=null, raf=null, newColor=COLORS[0];
+  const isOwner=()=>tier()==='socio';
+  const isHim=()=>{ try{ return localStorage.getItem('hk23_inq_me')===(T&&T.slug); }catch(e){ return false; } };
+  const canEdit=()=>!!T&&(isOwner()||isHim());
+
+  const AG=()=>{ try{ return window.__INQ_AGENTS||{}; }catch(e){ return {}; } };
+  const localTen=()=>{ try{ return JSON.parse(localStorage.getItem('hk23_inquilinos'))||[]; }catch(e){ return []; } };
+  const parseNodes=v=>{ if(Array.isArray(v)) return v; try{ const p=JSON.parse(v); return Array.isArray(p)?p:[]; }catch(e){ return []; } };
+
+  // ── su mapa: nodos propios orbitando su centro ──
+  const cv=$('iu-cv'), cx2=cv.getContext('2d');
+  let W=0,H=0;
+  function fit(){ const w=cv.clientWidth,h=cv.clientHeight; if(!w||!h) return false;
+    if(cv.width!==w*2||cv.height!==h*2){ cv.width=w*2; cv.height=h*2; } W=w*2; H=h*2; return true; }
+  function nodeAt(mx,my){                       // mx,my en px CSS
+    for(let i=nodes.length-1;i>=0;i--){ const n=nodes[i];
+      const dx=n.x*(W/2)-mx, dy=n.y*(H/2)-my, r=(n.r||26);
+      if(dx*dx+dy*dy < r*r) return n; }
+    return null; }
+  function draw(t){
+    if(!fit()){ raf=requestAnimationFrame(draw); return; }
+    const col=(T&&T.color)||'#B84DFF';
+    cx2.clearRect(0,0,W,H);
+    const ccx=W/2, ccy=H/2;
+    // halo del centro
+    const g=cx2.createRadialGradient(ccx,ccy,0,ccx,ccy,Math.min(W,H)*0.42);
+    g.addColorStop(0,col+'18'); g.addColorStop(1,'transparent');
+    cx2.fillStyle=g; cx2.fillRect(0,0,W,H);
+    // conexiones al centro
+    cx2.strokeStyle=col+'22'; cx2.lineWidth=1.5;
+    nodes.forEach(n=>{ cx2.beginPath(); cx2.moveTo(ccx,ccy); cx2.lineTo(n.x*W,n.y*H); cx2.stroke(); });
+    // núcleo
+    cx2.beginPath(); cx2.arc(ccx,ccy,30,0,7); cx2.fillStyle='#0A0B12'; cx2.fill();
+    cx2.strokeStyle=col; cx2.lineWidth=2; cx2.stroke();
+    cx2.font='700 15px "Space Mono",monospace'; cx2.fillStyle=col; cx2.textAlign='center';
+    cx2.fillText((T&&T.name||'').split(/[ ·]/)[0].slice(0,6), ccx, ccy+5);
+    // nodos
+    nodes.forEach((n,i)=>{
+      const x=n.x*W, y=n.y*H, r=(n.r||26)*2, pulse=1+Math.sin(t/700+i)*0.05;
+      const nc=n.color||col;
+      cx2.beginPath(); cx2.arc(x,y,r*1.7*pulse,0,7); cx2.fillStyle=nc+'12'; cx2.fill();
+      cx2.beginPath(); cx2.arc(x,y,r*pulse,0,7); cx2.fillStyle=nc; cx2.shadowColor=nc;
+      cx2.shadowBlur=(sel===n?34:16); cx2.fill(); cx2.shadowBlur=0;
+      if(sel===n){ cx2.beginPath(); cx2.arc(x,y,r*1.35,0,7); cx2.strokeStyle='#fff'; cx2.lineWidth=2; cx2.stroke(); }
+      cx2.font='700 17px "Space Mono",monospace'; cx2.fillStyle='#F0F3FA'; cx2.textAlign='center';
+      cx2.fillText(String(n.label||'').slice(0,22), x, y+r+26);
+      if(n.sub){ cx2.font='12px "Space Mono",monospace'; cx2.fillStyle=nc+'AA';
+        cx2.fillText(String(n.sub).slice(0,28), x, y+r+44); }
+    });
+    if(!nodes.length){
+      cx2.font='12px "Space Mono",monospace'; cx2.fillStyle='#3A3A5A'; cx2.textAlign='center';
+      cx2.fillText(canEdit()?'SU UNIVERSO ESTÁ VACÍO — TOCÁ ✎ EDITAR Y CREÁ EL PRIMER NODO'
+                           :'SU UNIVERSO TODAVÍA ESTÁ EN CONSTRUCCIÓN', ccx, ccy+Math.min(W,H)*0.3);
+    }
+    raf=requestAnimationFrame(draw);
+  }
+
+  // ── interacción: crear / seleccionar / arrastrar ──
+  function pos(e){ const r=cv.getBoundingClientRect();
+    const p=e.touches&&e.touches[0]?e.touches[0]:e;
+    return { x:p.clientX-r.left, y:p.clientY-r.top, rw:r.width, rh:r.height }; }
+  function down(e){
+    const p=pos(e), n=nodeAt(p.x,p.y);
+    if(n){ sel=n; fillForm(n); if(editing) drag={n, ox:p.x-n.x*p.rw, oy:p.y-n.y*p.rh};
+      else if(safeUrl(n.link)) window.open(safeUrl(n.link),'_blank','noopener'); return; }
+    if(editing && canEdit()){                       // vacío → nodo nuevo acá
+      const n2={ id:'n'+Math.random().toString(36).slice(2,8), label:'NUEVO', sub:'', link:'',
+        color:newColor, x:p.x/p.rw, y:p.y/p.rh, r:24 };
+      nodes.push(n2); sel=n2; fillForm(n2); $('iu-nlabel').focus();
+    } else { sel=null; }
+  }
+  function move(e){ if(!drag) return; const p=pos(e);
+    drag.n.x=Math.max(0.04,Math.min(0.96,(p.x-drag.ox)/p.rw));
+    drag.n.y=Math.max(0.06,Math.min(0.94,(p.y-drag.oy)/p.rh)); e.preventDefault(); }
+  function up(){ if(drag){ drag=null; persist(); } }
+  cv.addEventListener('mousedown',down); cv.addEventListener('mousemove',move); addEventListener('mouseup',up);
+  cv.addEventListener('touchstart',down,{passive:true}); cv.addEventListener('touchmove',move,{passive:false});
+  addEventListener('touchend',up);
+
+  function fillForm(n){ $('iu-nlabel').value=n.label||''; $('iu-nsub').value=n.sub||'';
+    $('iu-nlink').value=n.link||''; newColor=n.color||COLORS[0]; paintCols(); }
+  function paintCols(){ const b=$('iu-ncols'); b.innerHTML='';
+    COLORS.forEach(c=>{ const d=document.createElement('div'); d.className='iu-col'+(c===newColor?' on':'');
+      d.style.background=c; d.onclick=()=>{ newColor=c; if(sel) sel.color=c; paintCols(); }; b.appendChild(d); }); }
+
+  async function persist(){
+    if(!T) return false;
+    T.nodes=nodes;
+    let ok=false;
+    const row={ slug:T.slug, name:T.name, code:T.code, sub:T.sub||'', bio:T.bio||'', color:T.color, form:T.form,
+      bg:T.bg||'', tier:T.tier||'referido', active:T.active!==false,
+      agents:JSON.stringify(T.agents||[]), links:JSON.stringify(T.links||[]),
+      nodes:JSON.stringify(nodes), created_at:T.created_at||new Date().toISOString() };
+    try{ const r=await fetch(SUPA.url+'/rest/v1/universe_galaxies',{method:'POST',
+      headers:{...HEAD, Prefer:'resolution=merge-duplicates'}, body:JSON.stringify(row)}); ok=r.ok; }catch(e){}
+    try{ const loc=localTen().filter(x=>x.slug!==T.slug); loc.push(T); localStorage.setItem('hk23_inquilinos',JSON.stringify(loc)); }catch(e){}
+    const m=$('iu-msg'); if(m){ m.style.color=ok?'#AAFF00':'#FFB020';
+      m.textContent=ok?'✓ guardado en el universo — lo ve todo el mundo':'✓ guardado en este dispositivo (corré el SQL para que sea global)'; }
+    return ok;
+  }
+  $('iu-nsave').onclick=async()=>{
+    if(!sel){ const m=$('iu-msg'); m.style.color='#FF3A1F'; m.textContent='Tocá el vacío para crear un nodo, o uno existente para editarlo.'; return; }
+    sel.label=($('iu-nlabel').value||'NUEVO').toUpperCase().slice(0,22);
+    sel.sub=($('iu-nsub').value||'').slice(0,40); sel.link=($('iu-nlink').value||'').trim(); sel.color=newColor;
+    await persist(); log('inquilino','nodo guardado: '+sel.label); };
+  $('iu-ndel').onclick=async()=>{ if(!sel) return; const l=sel.label;
+    nodes=nodes.filter(n=>n!==sel); sel=null; ['nlabel','nsub','nlink'].forEach(k=>$('iu-'+k).value='');
+    await persist(); log('inquilino','nodo borrado: '+l); };
+  $('iu-bio-edit').onclick=()=>{ const cur=(T&&T.bio)||'';
+    (window.hkPrompt||function(a,b,cb){ cb(prompt(a,cur)||cur); })('Escribí su historia','quién es, qué hace',v=>{
+      if(v==null) return; T.bio=v; $('iu-bio').textContent=v; persist(); }); };
+  $('iu-done').onclick=()=>setEdit(false);
+
+  function setEdit(on){
+    if(on&&!canEdit()){ const m=$('iu-msg'); return; }
+    editing=on; $('iu-edit').classList.toggle('on',on); $('iu-editbtn').classList.toggle('on',on);
+    $('iu-editbtn').textContent=on?'✎ EDITANDO':'✎ EDITAR';
+    if(on){ paintCols(); log('inquilino','modo edición en '+(T&&T.slug)); }
+  }
+  $('iu-editbtn').onclick=()=>setEdit(!editing);
+  $('iu-info').onclick=()=>$('iu-panel').classList.toggle('on');
+
+  function paintSide(){
+    const col=(T&&T.color)||'#B84DFF';
+    $('iu').style.setProperty('--iuc',col);
+    $('iu-bio').textContent=(T&&T.bio)||(canEdit()?'Todavía no escribiste tu historia. Tocá ✎ EDITAR → ✎ SU BIO.':'Su historia está en camino.');
+    const ags=AG();
+    $('iu-agents').innerHTML=((T&&T.agents)||[]).filter(k=>ags[k]).map(k=>
+      '<div class="iu-ag" data-ag="'+esc(k)+'"><span class="d"></span><b>'+esc(ags[k].n)+'</b><i>'+esc(ags[k].d)+'</i></div>').join('')
+      ||'<div class="iu-empty">Todavía no tiene agentes prestados.</div>';
+    $('iu-agents').querySelectorAll('[data-ag]').forEach(el=>el.onclick=()=>{
+      const a=ags[el.dataset.ag]; if(!a) return; log('inquilino',(T&&T.slug)+' usó '+a.n);
+      $('iu').classList.remove('open'); a.fn(); });
+    const ps=(window.Inquilinos&&window.Inquilinos.products?window.Inquilinos.products():[]).filter(p=>p.owner===(T&&T.slug));
+    $('iu-prods').innerHTML=ps.map(p=>'<div class="iu-pr"><div class="k">'+esc((p.kind||'PRODUCTO').toUpperCase())+'</div>'+
+      '<div class="t">'+esc(p.name)+'</div><div class="d">'+esc(p.desc||'')+'</div>'+
+      (safeUrl(p.url)?'<a href="'+esc(safeUrl(p.url))+'" target="_blank" rel="noopener noreferrer">VER →</a>':'')+'</div>').join('')
+      ||'<div class="iu-empty">Sus productos se publican desde ◈ INQUILINOS.</div>';
+  }
+
+  function open(t){
+    if(!t) return false;
+    if(t.active===false){ log('inquilino','acceso cerrado: '+t.slug); return false; }
+    T=t; nodes=parseNodes(t.nodes);
+    $('iu').classList.add('open');
+    $('iu').style.setProperty('--iuc',t.color||'#B84DFF');
+    $('iu-pname').textContent=t.name||'—';
+    $('iu-psub').textContent=(t.sub||'GALAXIA INQUILINA')+' · HK23 UNIVERSE';
+    $('iu-pquote').textContent=t.bio? String(t.bio).slice(0,120) : 'Su universo vive dentro de HK23 — sus agentes corren en el universo madre.';
+    $('iu-portal').classList.remove('gone'); $('iu-world').classList.remove('on');
+    $('iu-panel').classList.remove('on'); setEdit(false);
+    $('iu-editbtn').style.display=canEdit()?'':'none';
+    log('inquilino','abrió el universo de '+t.name);
+    return true;
+  }
+  $('iu-enter').onclick=()=>{
+    $('iu-portal').classList.add('gone'); $('iu-world').classList.add('on');
+    $('iu-title').innerHTML=esc(T&&T.name||'')+'<small>'+esc((T&&T.sub)||'SU UNIVERSO')+'</small>';
+    paintSide(); if(!raf) raf=requestAnimationFrame(draw);
+    if(T&&T.bg&&window.MediaEngine&&window.MediaEngine.add){ try{ window.MediaEngine.add(T.bg); }catch(e){} }
+  };
+  function close(){ $('iu').classList.remove('open'); if(raf){ cancelAnimationFrame(raf); raf=null; } }
+  $('iu-x').onclick=close;
+  addEventListener('keydown',e=>{
+    if(/INPUT|TEXTAREA|SELECT/.test((document.activeElement||{}).tagName||'')) return;
+    if((e.key==='x'||e.key==='X'||e.key==='Escape')&&$('iu').classList.contains('open')) close();
+  });
+
+  window.InqUniverse={ open, close, nodes:()=>nodes, current:()=>T };
+
+  // ── reemplaza la vista de galaxia: todo lo que abría la galaxia ahora abre SU UNIVERSO ──
+  function hook(){
+    if(!window.Inquilinos||window.Inquilinos.__hooked) return;
+    const prev=window.Inquilinos.galaxy;
+    window.Inquilinos.galaxy=function(slug){
+      const t=(window.Inquilinos.list()||[]).find(x=>x.slug===slug);
+      if(t){ const old=document.getElementById('inq'); if(old) old.classList.remove('open');
+        return open(t); }
+      return prev?prev(slug):false;
+    };
+    window.Inquilinos.__hooked=true;
+  }
+  hook(); setTimeout(hook,1200);
 })();
 </script>
 
