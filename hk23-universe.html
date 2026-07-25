@@ -11373,6 +11373,22 @@ addEventListener('DOMContentLoaded', function(){
   #iu.espectro .iu-ag .d{ background:#4DD8FF; }
   #iu.espectro .iu-pr .k, #iu.espectro .iu-ag i{ color:#4DD8FF; }
   #iu.espectro .iu-pr a{ background:#4DD8FF; color:#03060A; border-radius:1px; }
+  #pl-panel{ position:absolute; inset:0; z-index:8; display:none; background:rgba(5,7,14,.86); }
+  #pl-panel.open{ display:flex; align-items:center; justify-content:center; padding:24px; }
+  .plp-card{ width:min(620px,94%); max-height:82%; overflow-y:auto; background:#070B12;
+    border:1px solid var(--pc,#17303E); border-left:3px solid var(--pc,#5FA8D3); border-radius:2px; padding:26px 28px; position:relative; }
+  .plp-x{ position:absolute; top:14px; right:14px; background:transparent; border:1px solid #1E2C3A;
+    color:#8894A8; font-family:"Space Mono",monospace; font-size:10px; padding:5px 9px; border-radius:2px; cursor:pointer; }
+  .plp-eyebrow{ font-family:"Space Mono",monospace; font-size:8px; letter-spacing:4px; color:var(--pc,#5FA8D3); margin-bottom:10px; }
+  .plp-title{ font-family:"Space Mono",monospace; font-size:30px; font-weight:700; letter-spacing:-1px;
+    color:#E6E4DE; margin:0 0 6px; }
+  .plp-desc{ font-family:"Space Mono",monospace; font-size:10px; letter-spacing:1px; color:#46566E; margin-bottom:20px; }
+  .plp-it{ display:flex; align-items:baseline; gap:12px; padding:13px 0; border-bottom:1px solid #101A24; }
+  .plp-it .n{ font-family:"Space Mono",monospace; font-size:13px; font-weight:700; color:#E6E4DE; }
+  .plp-it .s{ font-family:"Space Mono",monospace; font-size:10px; color:#46566E; margin-left:auto; text-align:right; }
+  .plp-it a{ font-family:"Space Mono",monospace; font-size:8px; letter-spacing:2px; color:#05070E;
+    background:var(--pc,#5FA8D3); padding:5px 9px; border-radius:2px; text-decoration:none; white-space:nowrap; }
+  .plp-empty{ font-family:"Space Mono",monospace; font-size:10px; line-height:1.9; color:#46566E; }
   #iu-norb{ display:flex; gap:4px; flex-wrap:wrap; margin-bottom:7px; }
   .iu-orbchip{ font-family:"Space Mono",monospace; font-size:7.5px; letter-spacing:1.5px; padding:5px 8px;
     border-radius:1px; cursor:pointer; background:transparent; border:1px solid var(--oc,#2A2A2A); color:var(--oc,#888); opacity:.5; }
@@ -11447,9 +11463,10 @@ addEventListener('DOMContentLoaded', function(){
     <div id="iu-pquote"></div>
     <button id="iu-enter">ENTRAR A SU UNIVERSO</button>
   </div>
-  <div id="iu-world">
+  <div id="pl-panel"><div class="plp-card"><button class="plp-x" id="plp-x">✕</button><div class="plp-eyebrow" id="plp-eyebrow">PLANETA</div><h2 class="plp-title" id="plp-title">—</h2><div class="plp-desc" id="plp-desc"></div><div class="plp-list" id="plp-list"></div></div></div>
+<div id="iu-world">
     <canvas id="iu-cv"></canvas>
-    <div id="iu-readout">SISTEMA ORBITAL · EL PERÍODO ES LA CADENCIA<br><b id="iu-ro-n">00</b> OBJETOS · <i id="iu-ro-sel">—</i></div>
+    <div id="iu-readout">SU SISTEMA · SEIS PLANETAS<br><b id="iu-ro-n">00</b> ITEMS · <i id="iu-ro-sel">—</i></div>
     <div id="iu-top">
       <div id="iu-title">—<small>SU UNIVERSO</small></div>
       <button class="iu-b" id="iu-info">◈ SU FICHA</button>
@@ -11528,12 +11545,12 @@ addEventListener('DOMContentLoaded', function(){
 
   // las seis órbitas: glifo, color, radio, cadencia (vueltas por minuto de simulación)
   const ORB=[
-    { k:'sets',     t:'SETS',     g:'◐', c:'#5FA8D3', a:0.50, w:0.000190, inc:-0.16, node:0.0,  cad:'semanal' },
-    { k:'photos',   t:'PHOTOS',   g:'▣', c:'#B9B4A9', a:0.34, w:0.000305, inc: 0.42, node:2.1,  cad:'constante' },
-    { k:'releases', t:'RELEASES', g:'◉', c:'#C9A227', a:0.68, w:0.000104, inc: 0.20, node:4.0,  cad:'mensual' },
-    { k:'clubs',    t:'CLUBS',    g:'⬢', c:'#C1543A', a:0.84, w:0.000082, inc:-0.44, node:1.1,  cad:'fin de semana' },
-    { k:'plugins',  t:'PLUGINS',  g:'⌘', c:'#8C7AB6', a:1.00, w:0.000051, inc: 0.30, node:5.2,  cad:'por versión' },
-    { k:'sellos',   t:'SELLOS',   g:'✦', c:'#5E9E7E', a:1.18, w:0.000031, inc:-0.24, node:3.3,  cad:'estructural' }
+    { k:'sets',     t:'SETS',     g:'◐', c:'#5FA8D3', a:0.42, rel:1, ph:0.00, inc:-0.16, node:0.0, desc:'sus sets grabados' },
+    { k:'photos',   t:'PHOTOS',   g:'▣', c:'#B9B4A9', a:0.60, rel:1, ph:1.05, inc: 0.34, node:2.1, desc:'su archivo de fotos' },
+    { k:'releases', t:'RELEASES', g:'◉', c:'#C9A227', a:0.78, rel:1, ph:2.09, inc: 0.20, node:4.0, desc:'la música que sacó' },
+    { k:'clubs',    t:'CLUBS',    g:'⬢', c:'#C1543A', a:0.96, rel:1, ph:3.14, inc:-0.34, node:1.1, desc:'donde pinchó' },
+    { k:'plugins',  t:'PLUGINS',  g:'⌘', c:'#8C7AB6', a:1.14, rel:1, ph:4.19, inc: 0.26, node:5.2, desc:'lo que programó él' },
+    { k:'sellos',   t:'SELLOS',   g:'✦', c:'#5E9E7E', a:1.32, rel:1, ph:5.24, inc:-0.20, node:3.3, desc:'sellos que lo editaron' }
   ];
   const ORBK=ORB.reduce((m,o)=>(m[o.k]=o,m),{});
   const catOf=n=>ORBK[(n&&n.cat)||'sets']||ORB[0];
@@ -11661,132 +11678,125 @@ addEventListener('DOMContentLoaded', function(){
         cx2.fillStyle=it.o.c+Math.round(hit*0.55*255).toString(16).padStart(2,'0'); cx2.fill(); });
     }
   }
-  let liveConj=null;
+  // ── el sistema: seis planetas, uno por cada cosa que él hace ──
+  // Un planeta no es un dato: es un destino. Tocás SETS y entrás a sus sets.
+  // Giran lento y parejo, sin cruces ni alineaciones — es su mundo, no un mercado.
+  const PL_SPEED=0.0000085;                                  // una vuelta lenta, calma
+  function planetAt(o,t,R,cx,cy){
+    const th=o.ph+t*PL_SPEED*o.rel;
+    return proj(rot3({x:Math.cos(th)*o.a, y:0, z:Math.sin(th)*o.a}, o.inc, o.node, 0), R,cx,cy);
+  }
+  // superficie: esfera con luz propia, terminador y atmósfera
+  function sphere3(g,x,y,r,col,glow){
+    const lg=g.createRadialGradient(x-r*0.34,y-r*0.36,r*0.06, x,y,r);
+    lg.addColorStop(0, mix(col,'#FFFFFF',0.55));
+    lg.addColorStop(0.42, col);
+    lg.addColorStop(0.88, mix(col,'#000000',0.62));
+    lg.addColorStop(1, mix(col,'#000000',0.80));
+    const at=g.createRadialGradient(x,y,r*0.92, x,y,r*1.5);   // atmósfera
+    at.addColorStop(0, col+'22'); at.addColorStop(1, col+'00');
+    g.fillStyle=at; g.beginPath(); g.arc(x,y,r*1.5,0,TAU); g.fill();
+    g.fillStyle=lg; g.beginPath(); g.arc(x,y,r,0,TAU); g.fill();
+    if(glow){ g.beginPath(); g.arc(x,y,r*1.06,0,TAU); hair(g,1.2,col+'66'); g.stroke(); }
+  }
+  function mix(a,b,k){
+    const p=c=>[parseInt(c.slice(1,3),16),parseInt(c.slice(3,5),16),parseInt(c.slice(5,7),16)];
+    const A=p(a), B=p(b);
+    return 'rgb('+A.map((v,i)=>Math.round(v+(B[i]-v)*k)).join(',')+')';
+  }
+  function rings(g,x,y,r,col,tilt){                          // el anillo del planeta SELLOS
+    for(let k=0;k<3;k++){ const rr=r*(1.55+k*0.20);
+      g.save(); g.translate(x,y); g.rotate(tilt); g.scale(1,0.26);
+      g.beginPath(); g.arc(0,0,rr,0,TAU); hair(g,1.4-k*0.3,col+(k?'44':'88')); g.stroke(); g.restore(); }
+  }
+  function moons(g,x,y,r,col,t,n){                           // las lunas del planeta PHOTOS
+    for(let k=0;k<n;k++){ const a=t*0.0006*(k+1.4)+k*2.4, rr=r*(2.0+k*0.5);
+      g.save(); g.translate(x,y); g.scale(1,0.42);
+      g.beginPath(); g.arc(0,0,rr,0,TAU); hair(g,0.6,col+'22'); g.stroke(); g.restore();
+      g.beginPath(); g.arc(x+Math.cos(a)*rr, y+Math.sin(a)*rr*0.42, Math.max(1.6,r*0.11),0,TAU);
+      g.fillStyle=col+'CC'; g.fill(); }
+  }
+
+  let hoverPl=null;
   function drawOrbital(t){
-    const cx0=W*0.40, cy0=H*0.48, R=Math.min(W*0.30,H*0.40);
+    const cx0=W*0.42, cy0=H*0.50, R=Math.min(W*0.30,H*0.38);
     cx2.fillStyle=D.vd; cx2.fillRect(0,0,W,H);
     hair(cx2,1,D.grid);
     for(let i=0;i<=26;i++){ const x=W*(i/26); cx2.beginPath(); cx2.moveTo(x,0); cx2.lineTo(x,H); cx2.stroke(); }
     for(let i=0;i<=14;i++){ const y=H*(i/14); cx2.beginPath(); cx2.moveTo(0,y); cx2.lineTo(W,y); cx2.stroke(); }
 
-    const IT=items(nodes);
-    const live=ORB.filter(o=>IT.some(x=>x.o.k===o.k));
+    const byCat={}; nodes.forEach(n=>{ const k=(n.cat&&ORBK[n.cat])?n.cat:'sets'; (byCat[k]=byCat[k]||[]).push(n); });
 
-    // ── las órbitas de cada categoría, cada una en su plano ──
-    live.forEach(o=>{
+    // órbitas
+    ORB.forEach(o=>{
       cx2.beginPath();
       for(let k=0;k<=120;k++){ const th=k/120*TAU;
-        const p=proj(rot3({x:Math.cos(th)*o.a,y:0,z:Math.sin(th)*o.a},o.inc,o.node,spin(t)),R,cx0,cy0);
+        const p=proj(rot3({x:Math.cos(th)*o.a,y:0,z:Math.sin(th)*o.a},o.inc,o.node,0),R,cx0,cy0);
         k?cx2.lineTo(p.x,p.y):cx2.moveTo(p.x,p.y); }
-      cx2.closePath(); hair(cx2,0.9,o.c+'2E'); cx2.stroke();
-      // el nombre de la órbita, montado sobre su propia elipse
-      const lp=proj(rot3({x:Math.cos(2.35)*o.a,y:0,z:Math.sin(2.35)*o.a},o.inc,o.node,spin(t)),R,cx0,cy0);
-      mono(cx2,o.t, lp.x, lp.y-7, Math.max(9,W*0.0052), o.c+'66','center');
+      cx2.closePath(); hair(cx2,0.8,o.c+((byCat[o.k]||[]).length?'26':'12')); cx2.stroke();
     });
 
-    // ── el centro: él ──
-    const pul=0.5+0.5*Math.sin(t/1100);
-    const gg=cx2.createRadialGradient(cx0,cy0,0,cx0,cy0,R*0.40);
-    gg.addColorStop(0,'rgba(230,228,222,'+(0.09+pul*0.03).toFixed(3)+')'); gg.addColorStop(1,'rgba(230,228,222,0)');
-    cx2.fillStyle=gg; cx2.fillRect(cx0-R*0.5,cy0-R*0.5,R,R);
-    cx2.beginPath(); cx2.arc(cx0,cy0,Math.max(9,W*0.0068)*(1+pul*0.05),0,TAU); hair(cx2,0.9,D.ice+'33'); cx2.stroke();
-    cx2.beginPath(); cx2.arc(cx0,cy0,Math.max(4,W*0.0032),0,TAU); cx2.fillStyle=D.ice; cx2.fill();
+    // él, en el centro
+    const pul=0.5+0.5*Math.sin(t/1400);
+    const gg=cx2.createRadialGradient(cx0,cy0,0,cx0,cy0,R*0.16);
+    gg.addColorStop(0,'rgba(230,228,222,'+(0.13+pul*0.04).toFixed(3)+')'); gg.addColorStop(0.5,'rgba(230,228,222,.02)'); gg.addColorStop(1,'rgba(230,228,222,0)');
+    cx2.fillStyle=gg; cx2.fillRect(cx0-R*0.2,cy0-R*0.2,R*0.4,R*0.4);
+    sphere3(cx2,cx0,cy0,Math.max(7,W*0.0060),'#E6E4DE',false);
 
-    // ── cruces vivos entre categorías ──
-    liveConj=null; let soon=null;
-    for(let i=0;i<IT.length;i++) for(let j=i+1;j<IT.length;j++){
-      if(IT[i].o.k===IT[j].o.k) continue;
-      const s=sep(IT[i],IT[j],t);
-      if(s<CONJ){ const k=1-s/CONJ; if(!liveConj||k>liveConj.k) liveConj={a:IT[i],b:IT[j],k}; }
-      const nx=nextConj(IT[i],IT[j],t);
-      if(nx!=null&&nx>800&&(!soon||nx<soon.ms)) soon={ms:nx,a:IT[i],b:IT[j]};
-    }
-    // hilos tenues entre órbitas que se están acercando
-    for(let i=0;i<IT.length;i++) for(let j=i+1;j<IT.length;j++){
-      if(IT[i].o.k===IT[j].o.k) continue;
-      const near=1-Math.min(1,sep(IT[i],IT[j],t)/0.75); if(near<0.12) continue;
-      const p1=posOf(IT[i],t,R,cx0,cy0), p2=posOf(IT[j],t,R,cx0,cy0);
-      hair(cx2,0.5+near*1.3,'rgba(230,228,222,'+(0.04+near*0.16).toFixed(3)+')');
-      cx2.beginPath(); cx2.moveTo(p1.x,p1.y); cx2.lineTo(p2.x,p2.y); cx2.stroke();
-    }
-
-    drawWaves(t,R,cx0,cy0,IT);
-    // ── los ítems ──
-    const drawn=IT.map(it=>({it,p:posOf(it,t,R,cx0,cy0)})).sort((a,b)=>b.p.z-a.p.z);
-    drawn.forEach(({it,p})=>{
-      const o=it.o, hot=sel===it.n, fade=0.42+0.58*(1-(p.z+1)/2);
-      cx2.beginPath();
-      for(let k=0;k<13;k++){ const q=posOf(it,t-k*2100,R,cx0,cy0); k?cx2.lineTo(q.x,q.y):cx2.moveTo(q.x,q.y); }
-      hair(cx2,1,'rgba('+(hot?'255,122,24':'220,232,240')+','+(0.13*fade).toFixed(3)+')'); cx2.stroke();
-      const r=Math.max(1.5,Math.max(3.6,W*0.0036)*Math.max(0.15,p.s));
-      cx2.beginPath(); cx2.arc(p.x,p.y,r*4.2,0,TAU); cx2.fillStyle=o.c+'12'; cx2.fill();
-      cx2.beginPath(); cx2.arc(p.x,p.y,r*2.0,0,TAU); hair(cx2,0.9,o.c+(hot?'CC':'55')); cx2.stroke();
-      cx2.beginPath(); cx2.arc(p.x,p.y,r,0,TAU); cx2.fillStyle=hot?D.hot:o.c;
-      cx2.globalAlpha=fade; cx2.fill(); cx2.globalAlpha=1;
-      const inX=liveConj&&(liveConj.a===it||liveConj.b===it);
-      if(hot||inX){
-        const S=Math.max(10,W*0.0064), lf=(it.i%2===1), lx=p.x+(lf?-1:1)*r*3.2, al=lf?'right':'left';
-        hair(cx2,0.7,hot?D.hot:(inX?D.hot+'88':o.c+'55'));
-        cx2.beginPath(); cx2.moveTo(p.x+(lf?-1:1)*r*1.6,p.y); cx2.lineTo(lx,p.y); cx2.stroke();
-        mono(cx2,String(it.n.label||'').slice(0,24).toUpperCase(), lx+(lf?-5:5), p.y-r*0.2, S*1.05, (hot||inX)?D.hot:D.ice, al);
-        mono(cx2,o.t, lx+(lf?-5:5), p.y+S*1.25, S*0.80, o.c+'BB', al);
-      }
+    // los seis planetas
+    PLHIT.length=0; const LBL=[];
+    const order=ORB.map(o=>({o,p:planetAt(o,t,R,cx0,cy0)})).sort((a,b)=>b.p.z-a.p.z);
+    order.forEach(({o,p})=>{
+      const list=byCat[o.k]||[], has=list.length>0;
+      const base=Math.max(9,W*0.0088)*(0.82+Math.min(0.5,list.length*0.07));
+      const r=base*Math.max(0.5,p.s), hov=hoverPl===o.k;
+      if(o.k==='sellos') rings(cx2,p.x,p.y,r,o.c,-0.42);
+      if(o.k==='photos') moons(cx2,p.x,p.y,r,o.c,t,3);
+      cx2.globalAlpha=has?1:0.42;
+      sphere3(cx2,p.x,p.y,r,o.c,hov||has);
+      cx2.globalAlpha=1;
+      if(hov){ cx2.beginPath(); cx2.arc(p.x,p.y,r*1.9,0,TAU); hair(cx2,1.4,D.ice+'66'); cx2.stroke(); }
+      LBL.push({ o, x:p.x, y:p.y+r, has, n:list.length });
+      PLHIT.push({ k:o.k, x:p.x, y:p.y, r:Math.max(r*2.2, Math.max(30,W*0.020)) });
     });
 
-    // ── panel: sus seis órbitas ──
-    const PX=W*0.745, S=Math.max(10,W*0.0070);
-    mono(cx2,'REGISTRO DE ÓRBITAS', PX, H*0.095, S*0.86, D.dim);
+    // las etiquetas, resueltas para que nunca se pisen
+    const LS=Math.max(11,W*0.0072), GAP=LS*4.4;
+    LBL.sort((a,b)=>a.y-b.y).forEach((l,i)=>{ for(let j=0;j<i;j++){
+      const q=LBL[j]; if(Math.abs(q.x-l.x)<LS*9 && Math.abs(q.y-l.y)<GAP) l.y=q.y+GAP; } });
+    cx2.textAlign='center';
+    LBL.forEach(l=>{
+      cx2.font='700 '+(LS*1.15)+'px "Space Mono",ui-monospace,monospace';
+      cx2.fillStyle=l.has?D.ice:D.dim; cx2.fillText(l.o.t, l.x, l.y+LS*1.9);
+      cx2.font='500 '+(LS*0.84)+'px "Space Mono",ui-monospace,monospace';
+      cx2.fillStyle=l.o.c+(l.has?'DD':'66');
+      cx2.fillText(l.has? String(l.n).padStart(2,'0')+' '+(l.n===1?'ITEM':'ITEMS') : 'VACÍO', l.x, l.y+LS*3.1); });
+    cx2.textAlign='left';
+    // cabecera y registro
+    const S=Math.max(10,W*0.0070), PX=W*0.755;
+    mono(cx2,'FREQUENCY · SU SISTEMA', W*0.045, H*0.068, S*0.86, D.dim);
+    mono(cx2,'SEIS PLANETAS · TOCÁ UNO PARA ENTRAR', W*0.045, H*0.105, S*0.86, D.soft);
+    mono(cx2,'SUS MUNDOS', PX, H*0.095, S*0.86, D.dim);
     hair(cx2,1,D.hair); cx2.beginPath(); cx2.moveTo(PX,H*0.115); cx2.lineTo(W*0.965,H*0.115); cx2.stroke();
+    cx2.textAlign='left';
     ORB.forEach((o,k)=>{
-      const y=H*0.115+(k+1)*Math.max(34,H*0.052), n=IT.filter(x=>x.o.k===o.k).length;
-      mono(cx2,o.g, PX, y, S*1.25, o.c+(n?'':'44'));
-      mono(cx2,o.t, PX+S*2.4, y, S*1.0, n?D.ice:D.dim);
-      mono(cx2,String(n).padStart(2,'0'), W*0.955, y, S*1.0, n?o.c:D.dim,'right');
-      mono(cx2,'cadencia '+o.cad, PX+S*2.4, y+S*1.25, S*0.80, D.dim);
+      const y=H*0.115+(k+1)*Math.max(34,H*0.052), list=byCat[o.k]||[];
+      mono(cx2,o.g, PX, y, S*1.25, o.c+(list.length?'':'55'));
+      mono(cx2,o.t, PX+S*2.4, y, S*1.0, list.length?D.ice:D.dim);
+      mono(cx2,String(list.length).padStart(2,'0'), W*0.955, y, S*1.0, list.length?o.c:D.dim,'right');
+      cx2.textAlign='left';
+      mono(cx2,o.desc, PX+S*2.4, y+S*1.25, S*0.80, D.dim);
     });
-
-    // ── el negocio: el cruce es el hecho ──
-    const BY=H*0.855;
-    hair(cx2,1,D.hair); cx2.beginPath(); cx2.moveTo(W*0.045,BY-H*0.040); cx2.lineTo(W*0.68,BY-H*0.040); cx2.stroke();
-    if(liveConj){
-      const key=(liveConj.a.n.id||liveConj.a.i)+'|'+(liveConj.b.n.id||liveConj.b.i);
-      if(drawOrbital._lastX!==key){ drawOrbital._lastX=key;        // el cruce se anuncia con su intervalo
-        voice(HZ[liveConj.a.o.k]||220, 3.0, 0.075);
-        setTimeout(()=>voice(HZ[liveConj.b.o.k]||220, 3.0, 0.075), 140); }
-      const p1=posOf(liveConj.a,t,R,cx0,cy0), p2=posOf(liveConj.b,t,R,cx0,cy0);
-      const mx=(p1.x+p2.x)/2, my=(p1.y+p2.y)/2, k=liveConj.k;
-      const gf=cx2.createRadialGradient(mx,my,0,mx,my,R*0.45*k);
-      gf.addColorStop(0,'rgba(255,107,0,'+(0.26*k).toFixed(3)+')'); gf.addColorStop(1,'rgba(255,107,0,0)');
-      cx2.fillStyle=gf; cx2.fillRect(mx-R*0.6,my-R*0.6,R*1.2,R*1.2);
-      hair(cx2,1.8,'rgba(255,107,0,'+(0.35+0.6*k).toFixed(2)+')');
-      cx2.beginPath(); cx2.moveTo(p1.x,p1.y); cx2.lineTo(p2.x,p2.y); cx2.stroke();
-      mono(cx2,'CRUCE ACTIVO', W*0.045, BY-H*0.082, S*0.86, D.hot);
-      mono(cx2, meaning(liveConj.a,liveConj.b), W*0.045, BY-H*0.052, S*1.15, D.ice);
-      cx2.font='700 '+(S*3.6)+'px "Space Mono",ui-monospace,monospace'; cx2.textAlign='left'; cx2.fillStyle=D.ice;
-      cx2.fillText(String(liveConj.a.n.label||'').toUpperCase()+'  ×  '+String(liveConj.b.n.label||'').toUpperCase(), W*0.045, BY+S*1.5);
-      mono(cx2, liveConj.a.o.t+' × '+liveConj.b.o.t+'   ·   LA VENTANA DURA LO QUE DURA LA ALINEACIÓN',
-        W*0.045, BY+S*3.3, S*0.84, D.soft);
-
-    } else { drawOrbital._lastX=null; }
-    if(!liveConj&&soon){
-      mono(cx2,'PRÓXIMO CRUCE', W*0.045, BY-H*0.082, S*0.86, D.dim);
-      mono(cx2, meaning(soon.a,soon.b), W*0.045, BY-H*0.052, S*1.15, D.soft);
-      cx2.font='700 '+(S*2.6)+'px "Space Mono",ui-monospace,monospace'; cx2.textAlign='left'; cx2.fillStyle=D.soft;
-      cx2.fillText(String(soon.a.n.label||'').toUpperCase()+'  ×  '+String(soon.b.n.label||'').toUpperCase(), W*0.045, BY+S*1.2);
-      mono(cx2,'EN '+clock(soon.ms)+'   ·   '+soon.a.o.t+' × '+soon.b.o.t, W*0.045, BY+S*2.9, S*0.84, D.dim);
-    } else if(!liveConj){
-      mono(cx2, canEdit()? '◆ CARGÁ SETS, RELEASES, PLUGINS, PHOTOS, CLUBS Y SELLOS — CADA UNO ENTRA EN SU ÓRBITA'
-                         : '◆ SISTEMA EN FORMACIÓN', W*0.045, BY, S, D.dim);
-    }
-
-    mono(cx2,'FREQUENCY · SISTEMA ORBITAL', W*0.045, H*0.068, S*0.86, D.dim);
-    mono(cx2, String(IT.length).padStart(2,'0')+' OBJETOS EN '+live.length+' ÓRBITAS   ·   EL PERÍODO ES LA CADENCIA   ·   EL CRUCE ES EL HECHO',
-      W*0.045, H*0.105, S*0.86, D.dim);
-
-    const ro=$('iu-ro-n'), rs=$('iu-ro-sel');
-    if(ro) ro.textContent=String(IT.length).padStart(2,'0');
-    if(rs){ const so=IT.find(x=>x.n===sel);
-      rs.textContent=so?(so.o.t+' · '+so.n.label):(liveConj?'CRUCE ACTIVO':'—'); }
+    const roN=$('iu-ro-n'), roS=$('iu-ro-sel');
+    if(roN) roN.textContent=String(nodes.length).padStart(2,'0');
+    if(roS) roS.textContent=hoverPl?ORBK[hoverPl].t:'TOCÁ UN PLANETA';
+  }
+  const PLHIT=[];
+  function planetHit(px,py,rw,rh){
+    const sx=cv.width/rw, sy=cv.height/rh;
+    let best=null,bd=1e9;
+    PLHIT.forEach(p=>{ const d=Math.hypot(p.x-px*sx,p.y-py*sy); if(d<p.r&&d<bd){ bd=d; best=p.k; } });
+    return best;
   }
 
   // ── su mapa: nodos propios orbitando su centro ──
@@ -11838,6 +11848,26 @@ addEventListener('DOMContentLoaded', function(){
     raf=requestAnimationFrame(draw);
   }
 
+  // ── entrar a un planeta: lo que hay adentro de esa parte de su música ──
+  function openPlanet(k){
+    const o=ORBK[k]; if(!o) return;
+    const list=nodes.filter(n=>((n.cat&&ORBK[n.cat])?n.cat:'sets')===k);
+    const P=$('pl-panel'); P.style.setProperty('--pc',o.c);
+    $('plp-eyebrow').textContent=o.g+'  PLANETA '+o.t;
+    $('plp-title').textContent=o.t;
+    $('plp-desc').textContent=o.desc+'  ·  '+list.length+(list.length===1?' item':' items');
+    $('plp-list').innerHTML=list.map(n=>{
+      const u=safeUrl(n.link);
+      return '<div class="plp-it"><span class="n">'+esc(n.label||'')+'</span>'+
+        (n.sub?'<span class="s">'+esc(n.sub)+'</span>':'<span class="s"></span>')+
+        (u?'<a href="'+esc(u)+'" target="_blank" rel="noopener noreferrer">ABRIR →</a>':'')+'</div>'; }).join('')
+      ||'<div class="plp-empty">Este planeta está vacío.'+(canEdit()?' Tocá ✎ EDITAR y sumale lo tuyo.':'')+'</div>';
+    P.classList.add('open');
+    voice(HZ[k]||220, 2.6, 0.10);                          // el planeta suena al abrirse
+    log('inquilino','entró al planeta '+o.t);
+  }
+  $('plp-x').onclick=()=>$('pl-panel').classList.remove('open');
+  $('pl-panel').addEventListener('click',e=>{ if(e.target.id==='pl-panel') $('pl-panel').classList.remove('open'); });
   // ── interacción: crear / seleccionar / arrastrar ──
   function pos(e){ const r=cv.getBoundingClientRect();
     const p=e.touches&&e.touches[0]?e.touches[0]:e;
@@ -11851,8 +11881,16 @@ addEventListener('DOMContentLoaded', function(){
     return bd<(Math.max(34,W*0.022))**2 ? best : null;
   }
   function down(e){
-    const p=pos(e), n=skin()? orbHit(p.x,p.y,p.rw,p.rh) : nodeAt(p.x,p.y);
-    if(skin()&&window.__freqRipple) window.__freqRipple(p.x*(cv.width/p.rw), p.y*(cv.height/p.rh));
+    const p=pos(e);
+    if(skin()){
+      const k=planetHit(p.x,p.y,p.rw,p.rh);
+      if(window.__freqRipple) window.__freqRipple(p.x*(cv.width/p.rw), p.y*(cv.height/p.rh));
+      if(k){ if(editing&&canEdit()){ newCat=k; paintOrbs();
+          const m=$('iu-msg'); if(m){ m.style.color='#8894A8'; m.textContent='Órbita '+ORBK[k].t+' elegida — ＋ NUEVO OBJETO para sumar algo acá.'; } }
+        else openPlanet(k); return; }
+      if(!editing) return;
+    }
+    const n=skin()? null : nodeAt(p.x,p.y);
     if(n){ sel=n; fillForm(n); if(editing&&!skin()) drag={n, ox:p.x-n.x*p.rw, oy:p.y-n.y*p.rh};
       else if(safeUrl(n.link)) window.open(safeUrl(n.link),'_blank','noopener'); return; }
     if(editing && canEdit()){                       // vacío → nodo nuevo acá
@@ -11861,6 +11899,8 @@ addEventListener('DOMContentLoaded', function(){
       nodes.push(n2); sel=n2; fillForm(n2); $('iu-nlabel').focus();
     } else { sel=null; }
   }
+  cv.addEventListener('mousemove',e=>{ if(!skin()) return; const p=pos(e);
+    const k=planetHit(p.x,p.y,p.rw,p.rh); hoverPl=k; cv.style.cursor=k?'pointer':'crosshair'; });
   function move(e){ if(!drag) return; const p=pos(e);
     drag.n.x=Math.max(0.04,Math.min(0.96,(p.x-drag.ox)/p.rw));
     drag.n.y=Math.max(0.06,Math.min(0.94,(p.y-drag.oy)/p.rh)); e.preventDefault(); }
@@ -12002,6 +12042,8 @@ addEventListener('DOMContentLoaded', function(){
   };
   function close(){ $('iu').classList.remove('open'); if(raf){ cancelAnimationFrame(raf); raf=null; } }
   $('iu-sound').onclick=()=>setAudio(!audioOn);
+  addEventListener('keydown',e=>{ if((e.key==='x'||e.key==='X'||e.key==='Escape')&&$('pl-panel').classList.contains('open')){
+    e.stopImmediatePropagation(); $('pl-panel').classList.remove('open'); } }, true);
   $('iu-x').onclick=close;
   addEventListener('keydown',e=>{
     if(/INPUT|TEXTAREA|SELECT/.test((document.activeElement||{}).tagName||'')) return;
