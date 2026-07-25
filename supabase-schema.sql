@@ -122,3 +122,73 @@ create policy universe_events_insert
   on universe_events for insert
   to anon, authenticated
   with check (true);
+
+-- ═══ INQUILINOS — galaxias de usuarios dentro del universo madre ═══
+-- Cada inquilino (ej. MVB · JEAN CHRISTOPHE) entra por TU puerta con su código,
+-- vive en su galaxia y usa TUS agentes. Sin estas tablas todo funciona igual,
+-- pero queda guardado solo en tu dispositivo (marcado LOCAL).
+
+create table if not exists universe_galaxies (
+  slug       text primary key,
+  name       text,
+  code       text,
+  sub        text,
+  bio        text,
+  color      text,
+  form       text,
+  bg         text,
+  tier       text,
+  active     boolean default true,
+  agents     text,
+  links      text,
+  created_at timestamptz
+);
+
+alter table universe_galaxies enable row level security;
+
+drop policy if exists universe_galaxies_read   on universe_galaxies;
+drop policy if exists universe_galaxies_insert on universe_galaxies;
+drop policy if exists universe_galaxies_update on universe_galaxies;
+
+create policy universe_galaxies_read
+  on universe_galaxies for select
+  to anon, authenticated
+  using (true);
+
+create policy universe_galaxies_insert
+  on universe_galaxies for insert
+  to anon, authenticated
+  with check (true);
+
+create policy universe_galaxies_update
+  on universe_galaxies for update
+  to anon, authenticated
+  using (true) with check (true);
+
+create table if not exists universe_products (
+  id         text primary key,
+  owner      text,
+  name       text,
+  kind       text,
+  "desc"     text,
+  url        text,
+  created_at timestamptz
+);
+
+alter table universe_products enable row level security;
+
+drop policy if exists universe_products_read   on universe_products;
+drop policy if exists universe_products_insert on universe_products;
+
+create policy universe_products_read
+  on universe_products for select
+  to anon, authenticated
+  using (true);
+
+create policy universe_products_insert
+  on universe_products for insert
+  to anon, authenticated
+  with check (true);
+
+-- El universo del inquilino guarda SUS nodos (los crea él mismo desde adentro).
+alter table universe_galaxies add column if not exists nodes text;
