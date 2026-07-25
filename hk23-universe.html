@@ -10793,6 +10793,21 @@ addEventListener('DOMContentLoaded', function(){
   .il-cta .ghost{ background:transparent; border:1px solid #22222E; color:#7A86A8; }
   .il-foot{ margin-top:40px; font-size:8px; letter-spacing:2px; color:#2A2A38; line-height:2; }
   .il-foot a{ color:#4A5470; }
+  /* landing en clave ESPECTRO */
+  #il-specwrap,#il-chanwrap{ display:none; }
+  #inq-land.espectro #il-specwrap,#inq-land.espectro #il-chanwrap{ display:block; }
+  #il-specwrap{ margin:30px 0 6px; border-top:1px solid #14202A; border-bottom:1px solid #14202A; }
+  #il-spec{ width:100%; height:132px; display:block; }
+  #inq-land.espectro{ background:#05070A; }
+  #inq-land.espectro .il-title{ text-shadow:0 0 40px #4FFFA844; }
+  #inq-land.espectro .il-eyebrow{ color:#FFAA2B; }
+  #inq-land.espectro .il-sec{ color:#2E4A40; border-color:#14202A; }
+  #inq-land.espectro .il-card{ background:#080C10; border-color:#14202A; }
+  .il-chan{ display:flex; align-items:baseline; gap:14px; padding:11px 2px; border-bottom:1px solid #101820; }
+  .il-chan .hz{ font-size:11px; color:var(--cc,#4FFFA8); min-width:74px; font-variant-numeric:tabular-nums;
+    letter-spacing:1px; }
+  .il-chan .nm{ font-size:13px; font-weight:700; color:#EAF6F0; }
+  .il-chan .sb{ font-size:10px; color:#3A5A50; margin-left:auto; text-align:right; }
   /* ── panel del dueño ── */
   #inq-admin{ position:fixed; inset:0; z-index:965; display:none; overflow-y:auto; background:rgba(3,3,6,.97);
     font-family:'Space Mono',monospace; }
@@ -10847,6 +10862,8 @@ addEventListener('DOMContentLoaded', function(){
   <div class="il-sub" id="il-sub"></div>
   <div class="il-bio" id="il-bio"></div>
   <div class="il-links" id="il-links"></div>
+  <div id="il-specwrap"><canvas id="il-spec"></canvas></div>
+  <div id="il-chanwrap"><div class="il-sec">◈ SUS CANALES</div><div id="il-chans"></div></div>
   <div class="il-sec">◈ PRODUCTOS Y PLUGINS</div>
   <div class="il-grid" id="il-prods"></div>
   <div class="il-cta">
@@ -10924,7 +10941,7 @@ addEventListener('DOMContentLoaded', function(){
     links:  Array.isArray(t.links) ?t.links :(()=>{ try{ return JSON.parse(t.links)||[];  }catch(e){ return []; } })() });
   // semilla: el primer inquilino, listo para que lo completes desde el panel
   const SEED=[{ slug:'frequency', name:'FREQUENCY UNIVERSE', code:'MVB-JC',
-    sub:'jean christophe · plugins, sets y noche', bio:'', color:'#00F0FF', form:'nebulosa',
+    sub:'jean christophe · plugins, sets y noche', bio:'', color:'#4FFFA8', form:'nebulosa', skin:'espectro',
     bg:'', agents:['atlas','oracle','conector','media'], tier:'referido', active:true, seed:true }];
   let TEN=[], PROD=[];
   async function load(){
@@ -11033,6 +11050,16 @@ addEventListener('DOMContentLoaded', function(){
       (safeUrl(p.url)?'<a href="'+esc(safeUrl(p.url))+'" target="_blank" rel="noopener noreferrer">VER →</a>':'')+'</div>').join('')
       ||'<div class="iq-empty">Sus productos se publican desde el universo madre.</div>';
     $('il-foot').innerHTML='Esta galaxia vive dentro de <b>HK23 UNIVERSE</b> — sus agentes corren en el universo madre.<br>Su link: <a href="?g='+esc(slug)+'">?g='+esc(slug)+'</a>';
+    // en clave ESPECTRO: sus nodos se listan como canales, con su frecuencia
+    const esp=(t.skin||'')==='espectro';
+    L.classList.toggle('espectro',esp);
+    if(esp&&window.InqUniverse&&window.InqUniverse.strip){
+      const ns=window.InqUniverse.strip($('il-spec'), t);
+      $('il-chans').innerHTML=(ns||[]).map(n=>
+        '<div class="il-chan" style="--cc:'+esc(n.col)+'"><span class="hz">'+esc(n.hz)+'</span>'+
+        '<span class="nm">'+esc(n.label)+'</span><span class="sb">'+esc(n.sub||'')+'</span></div>').join('')
+        ||'<div class="iu-empty" style="font-size:10px;color:#2E4A40">Su espectro todavía está en silencio.</div>';
+    }
     L.classList.add('open');
     log('inquilino','landing de '+t.name); return true;
   }
@@ -11326,6 +11353,33 @@ addEventListener('DOMContentLoaded', function(){
     align-items:center; justify-content:center; gap:16px; text-align:center; padding:24px;
     background:radial-gradient(900px 600px at 50% 45%, var(--iuc,#B84DFF)14, transparent 70%), #04050A; }
   #iu-portal.gone{ display:none; }
+  #iu-pcv{ position:absolute; inset:0; width:100%; height:100%; z-index:-1; display:none; }
+  /* ── SKIN ESPECTRO — el color codifica la frecuencia, no decora ── */
+  #iu.espectro{ background:#05070A; }
+  #iu.espectro #iu-portal{ background:
+      radial-gradient(1100px 620px at 50% 62%, #4FFFA81a, transparent 72%),
+      linear-gradient(180deg,#05070A,#070B10 60%,#05070A); }
+  #iu.espectro #iu-pcv{ display:block; }
+  #iu.espectro #iu-pname{ letter-spacing:-2px; text-shadow:0 0 42px #4FFFA855; }
+  #iu.espectro #iu-psub{ color:#FFAA2B; }
+  #iu.espectro #iu-enter{ border-color:#4FFFA8; color:#4FFFA8; border-radius:2px;
+    display:inline-flex; align-items:center; gap:9px; }
+  #iu.espectro #iu-enter:hover{ background:#4FFFA8; color:#04120C; }
+  #iu.espectro #iu-enter::before{ content:'◉'; font-size:11px; }
+  #iu.espectro #iu-top{ background:linear-gradient(180deg,rgba(5,7,10,.96),transparent);
+    border-bottom:1px solid #12FFA10F; }
+  #iu.espectro #iu-title{ color:#4FFFA8; }
+  #iu.espectro .iu-b:hover{ border-color:#4FFFA8; color:#4FFFA8; }
+  #iu.espectro #iu-panel{ background:rgba(5,7,10,.97); border-left:1px solid #14202A; }
+  #iu.espectro .iu-ag:hover{ border-color:#4FFFA8; }
+  #iu.espectro .iu-ag .d{ background:#4FFFA8; }
+  #iu.espectro .iu-pr .k, #iu.espectro .iu-ag i{ color:#FFAA2B; }
+  #iu.espectro .iu-pr a{ background:#4FFFA8; color:#04120C; }
+  #iu-readout{ position:absolute; left:16px; bottom:14px; z-index:4; display:none;
+    font-size:9px; letter-spacing:2px; color:#2E4A40; line-height:1.9; }
+  #iu.espectro #iu-readout{ display:block; }
+  #iu-readout b{ color:#4FFFA8; font-weight:400; font-variant-numeric:tabular-nums; }
+  #iu-readout i{ color:#FFAA2B; font-style:normal; }
   #iu-pname{ font-family:'Anton',Impact,sans-serif; font-size:clamp(38px,9vw,92px); line-height:.92;
     letter-spacing:-1px; color:#F2F4FA; text-wrap:balance; max-width:14ch; }
   #iu-psub{ font-size:10px; letter-spacing:5px; color:var(--iuc,#B84DFF); }
@@ -11384,6 +11438,7 @@ addEventListener('DOMContentLoaded', function(){
 
 <div id="iu">
   <div id="iu-portal">
+    <canvas id="iu-pcv"></canvas>
     <div id="iu-psub">GALAXIA INQUILINA · HK23 UNIVERSE</div>
     <div id="iu-pname">—</div>
     <div id="iu-pquote"></div>
@@ -11391,6 +11446,7 @@ addEventListener('DOMContentLoaded', function(){
   </div>
   <div id="iu-world">
     <canvas id="iu-cv"></canvas>
+    <div id="iu-readout">ANALIZADOR · 20 Hz – 20 kHz<br><b id="iu-ro-n">0</b> CANALES · <i id="iu-ro-sel">—</i></div>
     <div id="iu-top">
       <div id="iu-title">—<small>SU UNIVERSO</small></div>
       <button class="iu-b" id="iu-info">◈ SU FICHA</button>
@@ -11445,6 +11501,90 @@ addEventListener('DOMContentLoaded', function(){
   const localTen=()=>{ try{ return JSON.parse(localStorage.getItem('hk23_inquilinos'))||[]; }catch(e){ return []; } };
   const parseNodes=v=>{ if(Array.isArray(v)) return v; try{ const p=JSON.parse(v); return Array.isArray(p)?p:[]; }catch(e){ return []; } };
 
+  // ═══ SKIN ESPECTRO — la posición del nodo ES su frecuencia; el color la codifica ═══
+  const skin=()=>((T&&T.skin)||'')==='espectro';
+  const freqOf=x=>20*Math.pow(1000, Math.max(0,Math.min(1,x)));          // 20 Hz → 20 kHz, log
+  const fmtHz=f=>f>=1000?(f/1000).toFixed(f>=10000?0:1)+' kHz':Math.round(f)+' Hz';
+  const RAMP=[[0,[255,94,43]],[0.28,[255,170,43]],[0.58,[79,255,168]],[1,[59,224,255]]];
+  function freqCol(x,a){                                                  // sub → graves → medios → agudos
+    x=Math.max(0,Math.min(1,x)); let i=0; while(i<RAMP.length-2&&x>RAMP[i+1][0]) i++;
+    const [p0,c0]=RAMP[i], [p1,c1]=RAMP[i+1], t=(x-p0)/((p1-p0)||1);
+    const c=[0,1,2].map(k=>Math.round(c0[k]+(c1[k]-c0[k])*t));
+    return 'rgba('+c[0]+','+c[1]+','+c[2]+','+(a==null?1:a)+')';
+  }
+  const BARS=104; let peaks=new Array(BARS).fill(0);
+  function spectrum(t){                                                   // sus nodos generan el espectro
+    const out=new Array(BARS);
+    for(let i=0;i<BARS;i++){
+      const fx=i/(BARS-1);
+      let v=0.05+0.05*Math.abs(Math.sin(fx*7+t/900))*(1-fx*0.6);          // piso de ruido, más grave que agudo
+      nodes.forEach((n,k)=>{
+        const d=fx-(n.x||0.5), amp=1-(n.y||0.5)*0.55;                     // más arriba = más fuerte
+        v+=amp*0.9*Math.exp(-(d*d)/0.0016)*(0.72+0.28*Math.sin(t/(260+k*70)+k));
+      });
+      out[i]=Math.min(1,v);
+      peaks[i]=Math.max(out[i], peaks[i]-0.0055);                          // peak-hold que cae
+    }
+    return out;
+  }
+  function drawEspectro(t){
+    const ccx=W/2, base=H*0.80;                                           // la regla de frecuencia vive acá
+    // rejilla de rack
+    cx2.strokeStyle='#0E1620'; cx2.lineWidth=1;
+    for(let i=1;i<8;i++){ const y=base-(base*0.86)*(i/8);
+      cx2.beginPath(); cx2.moveTo(W*0.04,y); cx2.lineTo(W*0.96,y); cx2.stroke(); }
+    // analizador: las barras que hacen sus nodos
+    const sp=spectrum(t), bw=(W*0.92)/BARS;
+    for(let i=0;i<BARS;i++){
+      const x=W*0.04+i*bw, fx=i/(BARS-1), h=sp[i]*(base*0.74);
+      const g=cx2.createLinearGradient(0,base,0,base-h);
+      g.addColorStop(0,freqCol(fx,0.10)); g.addColorStop(1,freqCol(fx,0.92));
+      cx2.fillStyle=g; cx2.fillRect(x,base-h,bw-2,h);
+      const ph=peaks[i]*(base*0.74);                                       // marca de pico
+      cx2.fillStyle=freqCol(fx,0.85); cx2.fillRect(x,base-ph-3,bw-2,2);
+    }
+    // regla de frecuencia
+    cx2.strokeStyle='#1A2A34'; cx2.lineWidth=2;
+    cx2.beginPath(); cx2.moveTo(W*0.04,base+1); cx2.lineTo(W*0.96,base+1); cx2.stroke();
+    cx2.font='500 13px "Space Mono",monospace'; cx2.textAlign='center';
+    [20,60,250,1000,4000,12000,20000].forEach(f=>{
+      const x=W*0.04+(Math.log(f/20)/Math.log(1000))*(W*0.92);
+      cx2.strokeStyle='#22323C'; cx2.beginPath(); cx2.moveTo(x,base+1); cx2.lineTo(x,base+10); cx2.stroke();
+      cx2.fillStyle='#3A5A50'; cx2.fillText(fmtHz(f), x, base+30);
+    });
+    // el núcleo: sección master a la izquierda
+    cx2.font='700 13px "Space Mono",monospace'; cx2.textAlign='left';
+    cx2.fillStyle='#4FFFA8'; cx2.fillText('◉ '+String((T&&T.name)||'').slice(0,26), W*0.04, H*0.10);
+    cx2.font='500 12px "Space Mono",monospace'; cx2.fillStyle='#2E4A40';
+    cx2.fillText('MASTER · '+nodes.length+' CANALES ACTIVOS', W*0.04, H*0.10+22);
+    // los nodos: canales con su vástago cayendo a la regla y su lectura en Hz
+    nodes.forEach((n,i)=>{
+      const x=(n.x||0.5)*W, y=(n.y||0.5)*H*0.66+H*0.10, f=freqOf(n.x||0.5);
+      const c=freqCol(n.x||0.5), r=(n.r||24)*1.7*(1+Math.sin(t/620+i)*0.04);
+      cx2.strokeStyle=freqCol(n.x||0.5,0.28); cx2.lineWidth=2;            // vástago al eje
+      cx2.beginPath(); cx2.moveTo(x,y); cx2.lineTo(x,base); cx2.stroke();
+      cx2.beginPath(); cx2.arc(x,y,r*1.9,0,7); cx2.fillStyle=freqCol(n.x||0.5,0.10); cx2.fill();
+      cx2.beginPath(); cx2.arc(x,y,r,0,7); cx2.fillStyle=c;
+      cx2.shadowColor=c; cx2.shadowBlur=(sel===n?40:20); cx2.fill(); cx2.shadowBlur=0;
+      if(sel===n){ cx2.beginPath(); cx2.arc(x,y,r*1.42,0,7); cx2.strokeStyle='#fff'; cx2.lineWidth=2; cx2.stroke(); }
+      cx2.textAlign='center';
+      cx2.font='700 18px "Space Mono",monospace'; cx2.fillStyle='#EAF6F0';
+      cx2.fillText(String(n.label||'').slice(0,22), x, y+r+27);
+      cx2.font='500 13px "Space Mono",monospace'; cx2.fillStyle=c;
+      cx2.fillText(fmtHz(f), x, y+r+46);                                   // su frecuencia, no un adorno
+      if(n.sub){ cx2.font='500 12px "Space Mono",monospace'; cx2.fillStyle='#3A5A50';
+        cx2.fillText(String(n.sub).slice(0,30), x, y+r+64); }
+    });
+    if(!nodes.length){
+      cx2.font='500 13px "Space Mono",monospace'; cx2.fillStyle='#2E4A40'; cx2.textAlign='center';
+      cx2.fillText(canEdit()?'ESPECTRO VACÍO — TOCÁ ✎ EDITAR: DONDE TOQUES DEFINE LA FRECUENCIA DEL NODO'
+                           :'ESPECTRO EN SILENCIO — TODAVÍA NO HAY CANALES', ccx, H*0.42);
+    }
+    const ro=$('iu-ro-n'), rs=$('iu-ro-sel');
+    if(ro) ro.textContent=nodes.length;
+    if(rs) rs.textContent=sel?(sel.label+' · '+fmtHz(freqOf(sel.x||0.5))):'—';
+  }
+
   // ── su mapa: nodos propios orbitando su centro ──
   const cv=$('iu-cv'), cx2=cv.getContext('2d');
   let W=0,H=0;
@@ -11459,6 +11599,7 @@ addEventListener('DOMContentLoaded', function(){
     if(!fit()){ raf=requestAnimationFrame(draw); return; }
     const col=(T&&T.color)||'#B84DFF';
     cx2.clearRect(0,0,W,H);
+    if(skin()){ drawEspectro(t); raf=requestAnimationFrame(draw); return; }
     const ccx=W/2, ccy=H/2;
     // halo del centro
     const g=cx2.createRadialGradient(ccx,ccy,0,ccx,ccy,Math.min(W,H)*0.42);
@@ -11576,15 +11717,45 @@ addEventListener('DOMContentLoaded', function(){
       ||'<div class="iu-empty">Sus productos se publican desde ◈ INQUILINOS.</div>';
   }
 
+  // ── el portal sintoniza: barrido de espectro detrás de su nombre ──
+  const pcv=$('iu-pcv'), px=pcv.getContext('2d'); let pRaf=null;
+  function portalFrame(t){
+    const w=pcv.clientWidth,h=pcv.clientHeight; if(!w||!h){ pRaf=requestAnimationFrame(portalFrame); return; }
+    if(pcv.width!==w*2||pcv.height!==h*2){ pcv.width=w*2; pcv.height=h*2; }
+    const PW=w*2, PH=h*2, base=PH*0.74;
+    px.clearRect(0,0,PW,PH);
+    const N=88, bw=PW/N, scan=(t/1400)%1.6;                                // la aguja que barre el dial
+    for(let i=0;i<N;i++){
+      const fx=i/(N-1);
+      const near=Math.exp(-Math.pow((fx-(scan-0.3))/0.16,2));              // resuena donde pasa el barrido
+      const v=0.06+0.42*near+0.10*Math.abs(Math.sin(fx*9+t/700))*(1-fx*0.5);
+      const hgt=v*PH*0.30;
+      const g=px.createLinearGradient(0,base,0,base-hgt);
+      g.addColorStop(0,freqCol(fx,0.06)); g.addColorStop(1,freqCol(fx,0.75));
+      px.fillStyle=g; px.fillRect(i*bw, base-hgt, bw-2, hgt);
+    }
+    px.strokeStyle='#12202A'; px.lineWidth=2;
+    px.beginPath(); px.moveTo(0,base+1); px.lineTo(PW,base+1); px.stroke();
+    pRaf=requestAnimationFrame(portalFrame);
+  }
+  function startPortalFx(){ if(!pRaf) pRaf=requestAnimationFrame(portalFrame); }
+  function stopPortalFx(){ if(pRaf){ cancelAnimationFrame(pRaf); pRaf=null; } px.clearRect(0,0,pcv.width,pcv.height); }
+
   function open(t){
     if(!t) return false;
     if(t.active===false){ log('inquilino','acceso cerrado: '+t.slug); return false; }
     T=t; nodes=parseNodes(t.nodes);
     $('iu').classList.add('open');
+    $('iu').classList.toggle('espectro', ((t.skin||'')==='espectro'));
     $('iu').style.setProperty('--iuc',t.color||'#B84DFF');
     $('iu-pname').textContent=t.name||'—';
-    $('iu-psub').textContent=(t.sub||'GALAXIA INQUILINA')+' · HK23 UNIVERSE';
-    $('iu-pquote').textContent=t.bio? String(t.bio).slice(0,120) : 'Su universo vive dentro de HK23 — sus agentes corren en el universo madre.';
+    $('iu-psub').textContent=skin()? ((t.sub||'')+' · SINTONIZÁ').toUpperCase()
+                                   : (t.sub||'GALAXIA INQUILINA')+' · HK23 UNIVERSE';
+    $('iu-enter').textContent=skin()?'SINTONIZAR':'ENTRAR A SU UNIVERSO';
+    $('iu-pquote').textContent=t.bio? String(t.bio).slice(0,120)
+      : (skin()? 'Cada nodo vive en su frecuencia. Donde lo pongas define si es grave o agudo.'
+               : 'Su universo vive dentro de HK23 — sus agentes corren en el universo madre.');
+    if(skin()) startPortalFx(); else stopPortalFx();
     $('iu-portal').classList.remove('gone'); $('iu-world').classList.remove('on');
     $('iu-panel').classList.remove('on'); setEdit(false);
     $('iu-editbtn').style.display=canEdit()?'':'none';
@@ -11592,6 +11763,7 @@ addEventListener('DOMContentLoaded', function(){
     return true;
   }
   $('iu-enter').onclick=()=>{
+    stopPortalFx();
     $('iu-portal').classList.add('gone'); $('iu-world').classList.add('on');
     $('iu-title').innerHTML=esc(T&&T.name||'')+'<small>'+esc((T&&T.sub)||'SU UNIVERSO')+'</small>';
     paintSide(); if(!raf) raf=requestAnimationFrame(draw);
@@ -11604,7 +11776,37 @@ addEventListener('DOMContentLoaded', function(){
     if((e.key==='x'||e.key==='X'||e.key==='Escape')&&$('iu').classList.contains('open')) close();
   });
 
-  window.InqUniverse={ open, close, nodes:()=>nodes, current:()=>T };
+  // tira de espectro para su landing: mismo motor, misma ley de color
+  let sRaf=null;
+  function strip(cvs, t){
+    if(!cvs) return [];
+    const ns=parseNodes(t&&t.nodes);
+    if(sRaf) cancelAnimationFrame(sRaf);
+    const sx=cvs.getContext('2d'); let peaks2=new Array(64).fill(0);
+    function fr(ts){
+      const w=cvs.clientWidth,h=cvs.clientHeight; if(!w||!h){ sRaf=requestAnimationFrame(fr); return; }
+      if(cvs.width!==w*2||cvs.height!==h*2){ cvs.width=w*2; cvs.height=h*2; }
+      const SW=w*2, SH=h*2, N=64, bw=SW/N, base=SH*0.94;
+      sx.clearRect(0,0,SW,SH);
+      for(let i=0;i<N;i++){
+        const fx=i/(N-1);
+        let v=0.05+0.04*Math.abs(Math.sin(fx*8+ts/900));
+        ns.forEach((n,k)=>{ const d=fx-(n.x||0.5);
+          v+=(1-(n.y||0.5)*0.55)*0.85*Math.exp(-(d*d)/0.0022)*(0.74+0.26*Math.sin(ts/(280+k*80)+k)); });
+        v=Math.min(1,v); peaks2[i]=Math.max(v,peaks2[i]-0.006);
+        const hh=v*SH*0.82, g=sx.createLinearGradient(0,base,0,base-hh);
+        g.addColorStop(0,freqCol(fx,0.08)); g.addColorStop(1,freqCol(fx,0.88));
+        sx.fillStyle=g; sx.fillRect(i*bw, base-hh, bw-2, hh);
+        sx.fillStyle=freqCol(fx,0.8); sx.fillRect(i*bw, base-peaks2[i]*SH*0.82-3, bw-2, 2);
+      }
+      if(document.getElementById('inq-land').classList.contains('open')) sRaf=requestAnimationFrame(fr);
+      else sRaf=null;
+    }
+    sRaf=requestAnimationFrame(fr);
+    return ns.slice().sort((a,b)=>(a.x||0)-(b.x||0)).map(n=>({
+      label:n.label||'', sub:n.sub||'', hz:fmtHz(freqOf(n.x||0.5)), col:freqCol(n.x||0.5) }));
+  }
+  window.InqUniverse={ open, close, nodes:()=>nodes, current:()=>T, strip };
 
   // ── reemplaza la vista de galaxia: todo lo que abría la galaxia ahora abre SU UNIVERSO ──
   function hook(){
