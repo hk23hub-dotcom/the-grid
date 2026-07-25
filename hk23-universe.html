@@ -11678,14 +11678,6 @@ addEventListener('DOMContentLoaded', function(){
         cx2.fillStyle=it.o.c+Math.round(hit*0.55*255).toString(16).padStart(2,'0'); cx2.fill(); });
     }
   }
-  // ── el sistema: seis planetas, uno por cada cosa que él hace ──
-  // Un planeta no es un dato: es un destino. Tocás SETS y entrás a sus sets.
-  // Giran lento y parejo, sin cruces ni alineaciones — es su mundo, no un mercado.
-  const PL_SPEED=0.0000085;                                  // una vuelta lenta, calma
-  function planetAt(o,t,R,cx,cy){
-    const th=o.ph+t*PL_SPEED*o.rel;
-    return proj(rot3({x:Math.cos(th)*o.a, y:0, z:Math.sin(th)*o.a}, o.inc, o.node, 0), R,cx,cy);
-  }
   // superficie: esfera con luz propia, terminador y atmósfera
   function sphere3(g,x,y,r,col,glow){
     const lg=g.createRadialGradient(x-r*0.34,y-r*0.36,r*0.06, x,y,r);
@@ -11717,135 +11709,168 @@ addEventListener('DOMContentLoaded', function(){
       g.fillStyle=col+'CC'; g.fill(); }
   }
 
+  const cv=$("iu-cv"), cx2=cv.getContext("2d");
+  let W=0,H=0;
+  function fit(){ const w=cv.clientWidth,h2=cv.clientHeight; if(!w||!h2) return false;
+    if(cv.width!==w*2||cv.height!==h2*2){ cv.width=w*2; cv.height=h2*2; }
+    W=cv.width; H=cv.height; return true; }
+
+  function draw(t){
+    if(!fit()){ raf=requestAnimationFrame(draw); return; }
+    drawOrbital(t||0);
+    raf=requestAnimationFrame(draw);
+  }
+  function nodeAt(px,py){ return null; }   // la red posiciona los planetas; no hay nodos sueltos
+
+  // ── LA RED: cintas que fluyen por el espacio con sus planetas montados encima ──
+  // No hay órbitas ni cruces: hay caminos. Cada planeta viaja por su cinta.
+  const SKY={ deep:'#050A1E', mid:'#0A1230', neb:'#7A5A2E', neb2:'#1E3A6E',
+              band:'#9FC4CE', core:'#C6E84B', star:'#DDE8FF' };
+
+  // cada cinta es una curva suave; los planetas van montados sobre ella
+  const CINTAS=[
+    { pts:[[-0.05,0.30],[0.11,0.20],[0.24,0.34],[0.37,0.21],[0.50,0.33],[0.62,0.22],[0.72,0.30]], w:0.052, ph:0.0,  tw:2.6 },
+    { pts:[[-0.05,0.54],[0.10,0.64],[0.22,0.47],[0.36,0.60],[0.49,0.45],[0.62,0.57],[0.72,0.50]], w:0.060, ph:1.7,  tw:2.1 },
+    { pts:[[-0.05,0.78],[0.12,0.88],[0.27,0.72],[0.40,0.86],[0.53,0.72],[0.65,0.82],[0.72,0.75]], w:0.048, ph:3.4,  tw:2.9 }
+  ];
+  // dónde vive cada planeta: cinta y posición sobre ella
+  const HOME={ sets:[0,0.20], releases:[0,0.66], photos:[1,0.16], clubs:[1,0.60], plugins:[2,0.30], sellos:[2,0.76] };
+
+  function curve(c,u){                                   // Catmull-Rom sobre los puntos de la cinta
+    const P=c.pts, n=P.length-1, s=Math.max(0,Math.min(0.9999,u))*n;
+    const i=Math.floor(s), f=s-i;
+    const p0=P[Math.max(0,i-1)], p1=P[i], p2=P[Math.min(n,i+1)], p3=P[Math.min(n,i+2)];
+    const h=(a,b,cc,d)=>0.5*((2*b)+(-a+cc)*f+(2*a-5*b+4*cc-d)*f*f+(-a+3*b-3*cc+d)*f*f*f);
+    return { x:h(p0[0],p1[0],p2[0],p3[0])*W, y:h(p0[1],p1[1],p2[1],p3[1])*H };
+  }
+  function tangent(c,u){ const a=curve(c,u-0.004), b=curve(c,u+0.004);
+    const dx=b.x-a.x, dy=b.y-a.y, m=Math.hypot(dx,dy)||1; return { x:dx/m, y:dy/m }; }
+  // el ancho gira: cuando pasa por cero, la cinta se retuerce sola
+  function halfW(c,u,t){ return Math.cos(u*c.tw*Math.PI*2 + c.ph + t*0.00016) * c.w * Math.min(W,H); }
+
+  function drawCinta(c,t){
+    const N=150, L=[], Rr=[];
+    for(let i=0;i<=N;i++){ const u=i/N, p=curve(c,u), tg=tangent(c,u), hw=halfW(c,u,t);
+      const nx=-tg.y, ny=tg.x;
+      L.push({x:p.x+nx*hw, y:p.y+ny*hw}); Rr.push({x:p.x-nx*hw, y:p.y-ny*hw}); }
+    // cuerpo translúcido de la cinta
+    const g=cx2.createLinearGradient(0,0,W,H);
+    g.addColorStop(0,'rgba(159,196,206,.13)'); g.addColorStop(0.5,'rgba(159,196,206,.20)');
+    g.addColorStop(1,'rgba(159,196,206,.11)');
+    cx2.beginPath(); cx2.moveTo(L[0].x,L[0].y);
+    for(let i=1;i<=N;i++) cx2.lineTo(L[i].x,L[i].y);
+    for(let i=N;i>=0;i--) cx2.lineTo(Rr[i].x,Rr[i].y);
+    cx2.closePath(); cx2.fillStyle=g; cx2.fill();
+    // bordes brillantes
+    [L,Rr].forEach(E=>{ cx2.beginPath(); cx2.moveTo(E[0].x,E[0].y);
+      for(let i=1;i<=N;i++) cx2.lineTo(E[i].x,E[i].y);
+      hair(cx2,1.4,'rgba(190,225,235,.42)'); cx2.stroke(); });
+    // la línea que corre por adentro, tejiéndose de un borde al otro
+    cx2.beginPath();
+    for(let i=0;i<=N;i++){ const u=i/N, p=curve(c,u), tg=tangent(c,u), hw=halfW(c,u,t);
+      const off=hw*Math.sin(u*c.tw*Math.PI*3.1 + c.ph*1.6 - t*0.00042);
+      const x=p.x-tg.y*off, y=p.y+tg.x*off;
+      i?cx2.lineTo(x,y):cx2.moveTo(x,y); }
+    cx2.strokeStyle='rgba(198,232,75,.85)'; cx2.lineWidth=Math.max(2,W*0.0018);
+    cx2.shadowColor='rgba(198,232,75,.55)'; cx2.shadowBlur=Math.max(6,W*0.006);
+    cx2.stroke(); cx2.shadowBlur=0;
+  }
+
+  function starfield(t){
+    const g=cx2.createLinearGradient(0,0,W*0.3,H);
+    g.addColorStop(0,'#02040E'); g.addColorStop(0.45,SKY.deep); g.addColorStop(1,'#04081A');
+    cx2.fillStyle=g; cx2.fillRect(0,0,W,H);
+    // nebulosas: una dorada arriba a la izquierda, una azul difusa al centro
+    const n1=cx2.createRadialGradient(W*0.30,H*0.20,0,W*0.30,H*0.20,W*0.20);
+    n1.addColorStop(0,'rgba(122,90,46,.20)'); n1.addColorStop(1,'rgba(122,90,46,0)');
+    cx2.fillStyle=n1; cx2.fillRect(0,0,W,H);
+    const n2=cx2.createRadialGradient(W*0.62,H*0.42,0,W*0.62,H*0.42,W*0.36);
+    n2.addColorStop(0,'rgba(30,58,110,.22)'); n2.addColorStop(1,'rgba(30,58,110,0)');
+    cx2.fillStyle=n2; cx2.fillRect(0,0,W,H);
+    // estrellas deterministas, con parpadeo suave
+    for(let i=0;i<340;i++){
+      const a=Math.sin(i*12.9898)*43758.5453, b=Math.sin(i*78.233)*12345.6789;
+      const x=(a-Math.floor(a))*W, y=(b-Math.floor(b))*H;
+      const s=((Math.sin(i*3.17)+1)/2);
+      const tw=0.55+0.45*Math.sin(t/700+i*1.7);
+      cx2.globalAlpha=(0.18+s*0.72)*tw;
+      cx2.fillStyle=SKY.star;
+      const r=s>0.93? Math.max(1.6,W*0.0014) : Math.max(0.7,W*0.0007);
+      cx2.beginPath(); cx2.arc(x,y,r,0,TAU); cx2.fill();
+      if(s>0.96){ hair(cx2,0.8,'rgba(221,232,255,'+(0.30*tw).toFixed(2)+')');
+        cx2.beginPath(); cx2.moveTo(x-r*3,y); cx2.lineTo(x+r*3,y);
+        cx2.moveTo(x,y-r*3); cx2.lineTo(x,y+r*3); cx2.stroke(); }
+    }
+    cx2.globalAlpha=1;
+  }
+
   let hoverPl=null;
+  const PLHIT=[];
   function drawOrbital(t){
-    const cx0=W*0.42, cy0=H*0.50, R=Math.min(W*0.30,H*0.38);
-    cx2.fillStyle=D.vd; cx2.fillRect(0,0,W,H);
-    hair(cx2,1,D.grid);
-    for(let i=0;i<=26;i++){ const x=W*(i/26); cx2.beginPath(); cx2.moveTo(x,0); cx2.lineTo(x,H); cx2.stroke(); }
-    for(let i=0;i<=14;i++){ const y=H*(i/14); cx2.beginPath(); cx2.moveTo(0,y); cx2.lineTo(W,y); cx2.stroke(); }
+    starfield(t);
+    CINTAS.forEach(c=>drawCinta(c,t));
 
     const byCat={}; nodes.forEach(n=>{ const k=(n.cat&&ORBK[n.cat])?n.cat:'sets'; (byCat[k]=byCat[k]||[]).push(n); });
 
-    // órbitas
-    ORB.forEach(o=>{
-      cx2.beginPath();
-      for(let k=0;k<=120;k++){ const th=k/120*TAU;
-        const p=proj(rot3({x:Math.cos(th)*o.a,y:0,z:Math.sin(th)*o.a},o.inc,o.node,0),R,cx0,cy0);
-        k?cx2.lineTo(p.x,p.y):cx2.moveTo(p.x,p.y); }
-      cx2.closePath(); hair(cx2,0.8,o.c+((byCat[o.k]||[]).length?'26':'12')); cx2.stroke();
-    });
-
-    // él, en el centro
-    const pul=0.5+0.5*Math.sin(t/1400);
-    const gg=cx2.createRadialGradient(cx0,cy0,0,cx0,cy0,R*0.16);
-    gg.addColorStop(0,'rgba(230,228,222,'+(0.13+pul*0.04).toFixed(3)+')'); gg.addColorStop(0.5,'rgba(230,228,222,.02)'); gg.addColorStop(1,'rgba(230,228,222,0)');
-    cx2.fillStyle=gg; cx2.fillRect(cx0-R*0.2,cy0-R*0.2,R*0.4,R*0.4);
-    sphere3(cx2,cx0,cy0,Math.max(7,W*0.0060),'#E6E4DE',false);
-
-    // los seis planetas
     PLHIT.length=0; const LBL=[];
-    const order=ORB.map(o=>({o,p:planetAt(o,t,R,cx0,cy0)})).sort((a,b)=>b.p.z-a.p.z);
-    order.forEach(({o,p})=>{
+    ORB.forEach(o=>{
+      const home=HOME[o.k]||[0,0.5], c=CINTAS[home[0]];
+      const u=0.10+0.80*((home[1]+t*0.0000042)%1);        // viaja lento, sin salirse de su cinta
+      const p=curve(c,u), tg=tangent(c,u), hw=halfW(c,u,t);
+      const off=hw*Math.sin(u*c.tw*Math.PI*3.1 + c.ph*1.6 - t*0.00042);
+      const x=p.x-tg.y*off, y=p.y+tg.x*off;               // montado sobre la línea
       const list=byCat[o.k]||[], has=list.length>0;
-      const base=Math.max(9,W*0.0088)*(0.82+Math.min(0.5,list.length*0.07));
-      const r=base*Math.max(0.5,p.s), hov=hoverPl===o.k;
-      if(o.k==='sellos') rings(cx2,p.x,p.y,r,o.c,-0.42);
-      if(o.k==='photos') moons(cx2,p.x,p.y,r,o.c,t,3);
-      cx2.globalAlpha=has?1:0.42;
-      sphere3(cx2,p.x,p.y,r,o.c,hov||has);
+      const r=Math.max(10,W*0.0105)*(0.80+Math.min(0.55,list.length*0.08));
+      if(o.k==='sellos') rings(cx2,x,y,r,o.c,-0.38);
+      if(o.k==='photos') moons(cx2,x,y,r,o.c,t,3);
+      cx2.globalAlpha=has?1:0.5;
+      sphere3(cx2,x,y,r,o.c,has||hoverPl===o.k);
       cx2.globalAlpha=1;
-      if(hov){ cx2.beginPath(); cx2.arc(p.x,p.y,r*1.9,0,TAU); hair(cx2,1.4,D.ice+'66'); cx2.stroke(); }
-      LBL.push({ o, x:p.x, y:p.y+r, has, n:list.length });
-      PLHIT.push({ k:o.k, x:p.x, y:p.y, r:Math.max(r*2.2, Math.max(30,W*0.020)) });
+      if(hoverPl===o.k){ cx2.beginPath(); cx2.arc(x,y,r*1.85,0,TAU); hair(cx2,1.5,'rgba(221,232,255,.55)'); cx2.stroke(); }
+      LBL.push({ o, x, y:y+r, has, n:list.length });
+      PLHIT.push({ k:o.k, x, y, r:Math.max(r*2.1, Math.max(32,W*0.021)) });
     });
 
-    // las etiquetas, resueltas para que nunca se pisen
+    // etiquetas, separadas si se pisan
     const LS=Math.max(11,W*0.0072), GAP=LS*4.4;
     LBL.sort((a,b)=>a.y-b.y).forEach((l,i)=>{ for(let j=0;j<i;j++){
       const q=LBL[j]; if(Math.abs(q.x-l.x)<LS*9 && Math.abs(q.y-l.y)<GAP) l.y=q.y+GAP; } });
     cx2.textAlign='center';
     LBL.forEach(l=>{
       cx2.font='700 '+(LS*1.15)+'px "Space Mono",ui-monospace,monospace';
-      cx2.fillStyle=l.has?D.ice:D.dim; cx2.fillText(l.o.t, l.x, l.y+LS*1.9);
+      cx2.fillStyle='rgba(6,10,24,.75)';
+      cx2.fillText(l.o.t, l.x+2, l.y+LS*2.0);             // sombra para separarlo del cielo
+      cx2.fillStyle=l.has?'#EAF2FF':'#5A6E8E'; cx2.fillText(l.o.t, l.x, l.y+LS*1.9);
       cx2.font='500 '+(LS*0.84)+'px "Space Mono",ui-monospace,monospace';
-      cx2.fillStyle=l.o.c+(l.has?'DD':'66');
+      cx2.fillStyle=l.o.c+(l.has?'EE':'77');
       cx2.fillText(l.has? String(l.n).padStart(2,'0')+' '+(l.n===1?'ITEM':'ITEMS') : 'VACÍO', l.x, l.y+LS*3.1); });
     cx2.textAlign='left';
-    // cabecera y registro
+
+    // registro lateral
     const S=Math.max(10,W*0.0070), PX=W*0.755;
-    mono(cx2,'FREQUENCY · SU SISTEMA', W*0.045, H*0.068, S*0.86, D.dim);
-    mono(cx2,'SEIS PLANETAS · TOCÁ UNO PARA ENTRAR', W*0.045, H*0.105, S*0.86, D.soft);
-    mono(cx2,'SUS MUNDOS', PX, H*0.095, S*0.86, D.dim);
-    hair(cx2,1,D.hair); cx2.beginPath(); cx2.moveTo(PX,H*0.115); cx2.lineTo(W*0.965,H*0.115); cx2.stroke();
-    cx2.textAlign='left';
+    mono(cx2,'FREQUENCY · LA RED', W*0.045, H*0.068, S*0.86,'#7E96B8');
+    mono(cx2,'SEIS PLANETAS SOBRE LAS RUTAS · TOCÁ UNO PARA ENTRAR', W*0.045, H*0.105, S*0.86,'#A8BEDC');
+    mono(cx2,'SUS MUNDOS', PX, H*0.095, S*0.86,'#5A7296');
+    hair(cx2,1,'rgba(159,196,206,.22)'); cx2.beginPath(); cx2.moveTo(PX,H*0.115); cx2.lineTo(W*0.965,H*0.115); cx2.stroke();
     ORB.forEach((o,k)=>{
       const y=H*0.115+(k+1)*Math.max(34,H*0.052), list=byCat[o.k]||[];
       mono(cx2,o.g, PX, y, S*1.25, o.c+(list.length?'':'55'));
-      mono(cx2,o.t, PX+S*2.4, y, S*1.0, list.length?D.ice:D.dim);
-      mono(cx2,String(list.length).padStart(2,'0'), W*0.955, y, S*1.0, list.length?o.c:D.dim,'right');
+      mono(cx2,o.t, PX+S*2.4, y, S*1.0, list.length?'#EAF2FF':'#5A7296');
+      mono(cx2,String(list.length).padStart(2,'0'), W*0.955, y, S*1.0, list.length?o.c:'#5A7296','right');
       cx2.textAlign='left';
-      mono(cx2,o.desc, PX+S*2.4, y+S*1.25, S*0.80, D.dim);
+      mono(cx2,o.desc, PX+S*2.4, y+S*1.25, S*0.80,'#5A7296');
     });
+
     const roN=$('iu-ro-n'), roS=$('iu-ro-sel');
     if(roN) roN.textContent=String(nodes.length).padStart(2,'0');
     if(roS) roS.textContent=hoverPl?ORBK[hoverPl].t:'TOCÁ UN PLANETA';
   }
-  const PLHIT=[];
+  window.__PLHIT=PLHIT;
   function planetHit(px,py,rw,rh){
     const sx=cv.width/rw, sy=cv.height/rh;
     let best=null,bd=1e9;
     PLHIT.forEach(p=>{ const d=Math.hypot(p.x-px*sx,p.y-py*sy); if(d<p.r&&d<bd){ bd=d; best=p.k; } });
     return best;
-  }
-
-  // ── su mapa: nodos propios orbitando su centro ──
-  const cv=$('iu-cv'), cx2=cv.getContext('2d');
-  let W=0,H=0;
-  function fit(){ const w=cv.clientWidth,h=cv.clientHeight; if(!w||!h) return false;
-    if(cv.width!==w*2||cv.height!==h*2){ cv.width=w*2; cv.height=h*2; } W=w*2; H=h*2; return true; }
-  function nodeAt(mx,my){                       // mx,my en px CSS
-    for(let i=nodes.length-1;i>=0;i--){ const n=nodes[i];
-      const dx=n.x*(W/2)-mx, dy=n.y*(H/2)-my, r=(n.r||26);
-      if(dx*dx+dy*dy < r*r) return n; }
-    return null; }
-  function draw(t){
-    if(!fit()){ raf=requestAnimationFrame(draw); return; }
-    const col=(T&&T.color)||'#B84DFF';
-    cx2.clearRect(0,0,W,H);
-    if(skin()){ drawOrbital(t); raf=requestAnimationFrame(draw); return; }
-    const ccx=W/2, ccy=H/2;
-    // halo del centro
-    const g=cx2.createRadialGradient(ccx,ccy,0,ccx,ccy,Math.min(W,H)*0.42);
-    g.addColorStop(0,col+'18'); g.addColorStop(1,'transparent');
-    cx2.fillStyle=g; cx2.fillRect(0,0,W,H);
-    // conexiones al centro
-    cx2.strokeStyle=col+'22'; cx2.lineWidth=1.5;
-    nodes.forEach(n=>{ cx2.beginPath(); cx2.moveTo(ccx,ccy); cx2.lineTo(n.x*W,n.y*H); cx2.stroke(); });
-    // núcleo
-    cx2.beginPath(); cx2.arc(ccx,ccy,30,0,7); cx2.fillStyle='#0A0B12'; cx2.fill();
-    cx2.strokeStyle=col; cx2.lineWidth=2; cx2.stroke();
-    cx2.font='700 15px "Space Mono",monospace'; cx2.fillStyle=col; cx2.textAlign='center';
-    cx2.fillText((T&&T.name||'').split(/[ ·]/)[0].slice(0,6), ccx, ccy+5);
-    // nodos
-    nodes.forEach((n,i)=>{
-      const x=n.x*W, y=n.y*H, r=(n.r||26)*2, pulse=1+Math.sin(t/700+i)*0.05;
-      const nc=n.color||col;
-      cx2.beginPath(); cx2.arc(x,y,r*1.7*pulse,0,7); cx2.fillStyle=nc+'12'; cx2.fill();
-      cx2.beginPath(); cx2.arc(x,y,r*pulse,0,7); cx2.fillStyle=nc; cx2.shadowColor=nc;
-      cx2.shadowBlur=(sel===n?34:16); cx2.fill(); cx2.shadowBlur=0;
-      if(sel===n){ cx2.beginPath(); cx2.arc(x,y,r*1.35,0,7); cx2.strokeStyle='#fff'; cx2.lineWidth=2; cx2.stroke(); }
-      cx2.font='700 17px "Space Mono",monospace'; cx2.fillStyle='#F0F3FA'; cx2.textAlign='center';
-      cx2.fillText(String(n.label||'').slice(0,22), x, y+r+26);
-      if(n.sub){ cx2.font='12px "Space Mono",monospace'; cx2.fillStyle=nc+'AA';
-        cx2.fillText(String(n.sub).slice(0,28), x, y+r+44); }
-    });
-    if(!nodes.length){
-      cx2.font='12px "Space Mono",monospace'; cx2.fillStyle='#3A3A5A'; cx2.textAlign='center';
-      cx2.fillText(canEdit()?'SU UNIVERSO ESTÁ VACÍO — TOCÁ ✎ EDITAR Y CREÁ EL PRIMER NODO'
-                           :'SU UNIVERSO TODAVÍA ESTÁ EN CONSTRUCCIÓN', ccx, ccy+Math.min(W,H)*0.3);
-    }
-    raf=requestAnimationFrame(draw);
   }
 
   // ── entrar a un planeta: lo que hay adentro de esa parte de su música ──
