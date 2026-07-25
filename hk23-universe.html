@@ -11453,6 +11453,7 @@ addEventListener('DOMContentLoaded', function(){
     <div id="iu-top">
       <div id="iu-title">—<small>SU UNIVERSO</small></div>
       <button class="iu-b" id="iu-info">◈ SU FICHA</button>
+      <button class="iu-b" id="iu-sound">◌ SONIDO</button>
       <button class="iu-b" id="iu-editbtn">✎ EDITAR</button>
       <button class="iu-b x" id="iu-x">✕ SALIR (X)</button>
     </div>
@@ -11592,8 +11593,44 @@ addEventListener('DOMContentLoaded', function(){
   const clock=ms=>{ const s=Math.max(0,Math.round(ms/1000)); return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0'); };
 
   // ── ondas: cada objeto late a su cadencia; tocar el campo lanza un frente que hace resonar ──
+  // ── sonido: cada órbita tiene su nota; tocar el campo la hace sonar ──
+  // Las frecuencias siguen la serie armónica de una fundamental grave: lo lento suena grave,
+  // lo rápido suena agudo. Es la misma ley que ordena las órbitas, ahora audible.
+  const HZ={ sellos:55, plugins:82.5, clubs:110, releases:165, sets:220, photos:330 };
+  let AC=null, master=null, audioOn=false;
+  function audioInit(){
+    if(AC) return true;
+    try{ const C=window.AudioContext||window.webkitAudioContext; if(!C) return false;
+      AC=new C(); master=AC.createGain(); master.gain.value=0.0001; master.connect(AC.destination);
+      return true; }catch(e){ return false; }
+  }
+  function voice(hz, dur, vol){
+    if(!audioOn||!AC) return;
+    try{
+      const t0=AC.currentTime;
+      const o=AC.createOscillator(), g=AC.createGain(), f=AC.createBiquadFilter();
+      o.type='sine'; o.frequency.value=hz;
+      f.type='lowpass'; f.frequency.value=Math.min(8000, hz*7); f.Q.value=0.8;
+      g.gain.setValueAtTime(0.0001,t0);
+      g.gain.exponentialRampToValueAtTime(Math.max(0.0002,vol), t0+0.012);   // ataque corto
+      g.gain.exponentialRampToValueAtTime(0.0001, t0+dur);                    // cola larga
+      o.connect(f); f.connect(g); g.connect(master);
+      o.start(t0); o.stop(t0+dur+0.05);
+    }catch(e){}
+  }
+  function setAudio(on){
+    audioOn=on&&audioInit();
+    if(audioOn){ try{ if(AC.state==='suspended') AC.resume();
+      master.gain.setTargetAtTime(0.16, AC.currentTime, 0.25); }catch(e){} }
+    else if(AC){ try{ master.gain.setTargetAtTime(0.0001, AC.currentTime, 0.15); }catch(e){} }
+    const b=$('iu-sound'); if(b){ b.classList.toggle('on',audioOn); b.textContent=audioOn?'◉ SONIDO':'◌ SONIDO'; }
+    try{ localStorage.setItem('hk23_freq_audio', audioOn?'1':'0'); }catch(e){}
+    log('inquilino','sonido '+(audioOn?'ON':'OFF'));
+  }
+  window.FreqAudio={ set:setAudio, toggle:()=>setAudio(!audioOn), on:()=>audioOn };
   const RIP=[];                                        // frentes lanzados por el dedo
-  function ripple(x,y){ RIP.push({x,y,t0:(typeof performance!=='undefined'?performance.now():0)});
+  function ripple(x,y){ RIP.push({x,y,rung:{},t0:(typeof performance!=='undefined'?performance.now():0)});
+    voice(55, 3.4, 0.05);                                          // el sistema responde en la fundamental
     while(RIP.length>6) RIP.shift(); }
   window.__freqRipple=ripple;
   function drawWaves(t,R,cx0,cy0,IT){
@@ -11617,6 +11654,9 @@ addEventListener('DOMContentLoaded', function(){
       IT.forEach(it=>{ const p=posOf(it,t,R,cx0,cy0);
         const d=Math.hypot(p.x-rp.x,p.y-rp.y), hit=1-Math.min(1,Math.abs(d-rr)/(Math.max(30,W*0.030)));
         if(hit<=0) return;
+        if(!rp.rung) rp.rung={};
+        if(!rp.rung[it.n.id||it.i]){ rp.rung[it.n.id||it.i]=1;      // el frente toca cada objeto una vez
+          voice(HZ[it.o.k]||220, 2.2, 0.09*Math.max(0.3,p.s)); }
         cx2.beginPath(); cx2.arc(p.x,p.y,Math.max(1,Math.max(7,W*0.008)*hit*Math.max(0.15,p.s)),0,TAU);
         cx2.fillStyle=it.o.c+Math.round(hit*0.55*255).toString(16).padStart(2,'0'); cx2.fill(); });
     }
@@ -11709,6 +11749,10 @@ addEventListener('DOMContentLoaded', function(){
     const BY=H*0.855;
     hair(cx2,1,D.hair); cx2.beginPath(); cx2.moveTo(W*0.045,BY-H*0.040); cx2.lineTo(W*0.68,BY-H*0.040); cx2.stroke();
     if(liveConj){
+      const key=(liveConj.a.n.id||liveConj.a.i)+'|'+(liveConj.b.n.id||liveConj.b.i);
+      if(drawOrbital._lastX!==key){ drawOrbital._lastX=key;        // el cruce se anuncia con su intervalo
+        voice(HZ[liveConj.a.o.k]||220, 3.0, 0.075);
+        setTimeout(()=>voice(HZ[liveConj.b.o.k]||220, 3.0, 0.075), 140); }
       const p1=posOf(liveConj.a,t,R,cx0,cy0), p2=posOf(liveConj.b,t,R,cx0,cy0);
       const mx=(p1.x+p2.x)/2, my=(p1.y+p2.y)/2, k=liveConj.k;
       const gf=cx2.createRadialGradient(mx,my,0,mx,my,R*0.45*k);
@@ -11723,13 +11767,14 @@ addEventListener('DOMContentLoaded', function(){
       mono(cx2, liveConj.a.o.t+' × '+liveConj.b.o.t+'   ·   LA VENTANA DURA LO QUE DURA LA ALINEACIÓN',
         W*0.045, BY+S*3.3, S*0.84, D.soft);
 
-    } else if(soon){
+    } else { drawOrbital._lastX=null; }
+    if(!liveConj&&soon){
       mono(cx2,'PRÓXIMO CRUCE', W*0.045, BY-H*0.082, S*0.86, D.dim);
       mono(cx2, meaning(soon.a,soon.b), W*0.045, BY-H*0.052, S*1.15, D.soft);
       cx2.font='700 '+(S*2.6)+'px "Space Mono",ui-monospace,monospace'; cx2.textAlign='left'; cx2.fillStyle=D.soft;
       cx2.fillText(String(soon.a.n.label||'').toUpperCase()+'  ×  '+String(soon.b.n.label||'').toUpperCase(), W*0.045, BY+S*1.2);
       mono(cx2,'EN '+clock(soon.ms)+'   ·   '+soon.a.o.t+' × '+soon.b.o.t, W*0.045, BY+S*2.9, S*0.84, D.dim);
-    } else {
+    } else if(!liveConj){
       mono(cx2, canEdit()? '◆ CARGÁ SETS, RELEASES, PLUGINS, PHOTOS, CLUBS Y SELLOS — CADA UNO ENTRA EN SU ÓRBITA'
                          : '◆ SISTEMA EN FORMACIÓN', W*0.045, BY, S, D.dim);
     }
@@ -11956,6 +12001,7 @@ addEventListener('DOMContentLoaded', function(){
     if(T&&T.bg&&window.MediaEngine&&window.MediaEngine.add){ try{ window.MediaEngine.add(T.bg); }catch(e){} }
   };
   function close(){ $('iu').classList.remove('open'); if(raf){ cancelAnimationFrame(raf); raf=null; } }
+  $('iu-sound').onclick=()=>setAudio(!audioOn);
   $('iu-x').onclick=close;
   addEventListener('keydown',e=>{
     if(/INPUT|TEXTAREA|SELECT/.test((document.activeElement||{}).tagName||'')) return;
