@@ -11373,6 +11373,10 @@ addEventListener('DOMContentLoaded', function(){
   #iu.espectro .iu-ag .d{ background:#4DD8FF; }
   #iu.espectro .iu-pr .k, #iu.espectro .iu-ag i{ color:#4DD8FF; }
   #iu.espectro .iu-pr a{ background:#4DD8FF; color:#03060A; border-radius:1px; }
+  #iu-norb{ display:flex; gap:4px; flex-wrap:wrap; margin-bottom:7px; }
+  .iu-orbchip{ font-family:"Space Mono",monospace; font-size:7.5px; letter-spacing:1.5px; padding:5px 8px;
+    border-radius:1px; cursor:pointer; background:transparent; border:1px solid var(--oc,#2A2A2A); color:var(--oc,#888); opacity:.5; }
+  .iu-orbchip.on{ background:var(--oc); color:#05070E; font-weight:700; opacity:1; }
   #iu-readout{ position:absolute; left:18px; bottom:12px; z-index:4; display:none;
     font-size:9px; letter-spacing:2px; color:#3E5A6A; line-height:1.9; }
   #iu.espectro #iu-readout{ display:block; }
@@ -11445,7 +11449,7 @@ addEventListener('DOMContentLoaded', function(){
   </div>
   <div id="iu-world">
     <canvas id="iu-cv"></canvas>
-    <div id="iu-readout">CAMPO ESPACIAL · 20 Hz – 20 kHz · GRAVES ◄ ► AGUDOS<br><b id="iu-ro-n">00</b> OBJETOS · <i id="iu-ro-sel">—</i></div>
+    <div id="iu-readout">SISTEMA ORBITAL · EL PERÍODO ES LA CADENCIA<br><b id="iu-ro-n">00</b> OBJETOS · <i id="iu-ro-sel">—</i></div>
     <div id="iu-top">
       <div id="iu-title">—<small>SU UNIVERSO</small></div>
       <button class="iu-b" id="iu-info">◈ SU FICHA</button>
@@ -11462,11 +11466,13 @@ addEventListener('DOMContentLoaded', function(){
     </div>
     <div id="iu-edit">
       <div class="hint" id="iu-hint">MODO EDICIÓN — tocá el vacío para crear un nodo · tocá un nodo para editarlo · arrastralo para moverlo</div>
-      <input id="iu-nlabel" placeholder="nombre del nodo · ej. MIS SETS" autocomplete="off">
+      <div id="iu-norb"></div>
+      <input id="iu-nlabel" placeholder="nombre · ej. SET 001 · WAREHOUSE" autocomplete="off">
       <input id="iu-nsub" placeholder="bajada · ej. mixes y grabaciones" autocomplete="off">
       <input id="iu-nlink" placeholder="link (opcional) · https://…" autocomplete="off">
       <div class="iu-cols" id="iu-ncols"></div>
       <div class="iu-row">
+        <button class="iu-b" id="iu-nnew">＋ NUEVO OBJETO</button>
         <button class="iu-b on" id="iu-nsave">GUARDAR NODO</button>
         <button class="iu-b" id="iu-ndel">BORRAR</button>
         <button class="iu-b" id="iu-bio-edit">✎ SU BIO</button>
@@ -11511,181 +11517,231 @@ addEventListener('DOMContentLoaded', function(){
     const c=[0,1,2].map(k=>Math.round(c0[k]+(c1[k]-c0[k])*t));
     return 'rgba('+c[0]+','+c[1]+','+c[2]+','+(a==null?1:a)+')';
   }
-  // ═══ CAMPO ESPACIAL — telemetría de objetos sonoros en un domo 3D ═══
-  // Cada nodo es un OBJETO: su frecuencia lo ubica en azimut, su altura en elevación.
-  // Abajo corre el espectrograma en cascada. Todo anotado como un instrumento real.
-  const D={ vd:'#03060A', ink:'#060B11', grid:'#0E1D28', hair:'#17303E',
-            ice:'#DCE8F0', cy:'#4DD8FF', hot:'#FF7A18', dim:'#3E5A6A', soft:'#7E9AAC' };
-  const INF=[[0,[2,2,10]],[0.22,[46,14,90]],[0.45,[130,38,102]],[0.68,[214,94,58]],[0.86,[248,168,54]],[1,[252,255,196]]];
-  function inferno(v){                                                  // paleta científica de intensidad
-    v=Math.max(0,Math.min(1,v)); let i=0; while(i<INF.length-2&&v>INF[i+1][0]) i++;
-    const [p0,c0]=INF[i],[p1,c1]=INF[i+1], k=(v-p0)/((p1-p0)||1);
-    return 'rgb('+[0,1,2].map(j=>Math.round(c0[j]+(c1[j]-c0[j])*k)).join(',')+')';
-  }
-  const TILT=0.42, FOV=3.1;
-  function sphere(az,el,rot){                                           // punto en la esfera, rotado y ladeado
-    const a=az+rot;
-    let x=Math.cos(el)*Math.sin(a), y=Math.sin(el), z=Math.cos(el)*Math.cos(a);
+  // ═══ SISTEMA ORBITAL — LA CARRERA COMO MECÁNICA CELESTE ═══
+  // Cada órbita es una categoría real y su período es su CADENCIA: un sello se mueve
+  // lento y estructural, un set pasa cada semana, las fotos son un enjambre constante.
+  // Cuando dos órbitas se alinean, eso ES un hecho de agenda: release × club = fecha.
+  const D={ vd:'#05070E', grid:'#0A1018', hair:'#17202F', ice:'#E6E4DE',
+            cy:'#5FA8D3', hot:'#FF6B00', gold:'#C9A227', dim:'#46566E', soft:'#8894A8' };
+  const TAU=6.283185307, TILT=0.62, FOV=3.6;
+
+  // las seis órbitas: glifo, color, radio, cadencia (vueltas por minuto de simulación)
+  const ORB=[
+    { k:'sets',     t:'SETS',     g:'◐', c:'#5FA8D3', a:0.50, w:0.000190, inc:-0.16, node:0.0,  cad:'semanal' },
+    { k:'photos',   t:'PHOTOS',   g:'▣', c:'#B9B4A9', a:0.34, w:0.000305, inc: 0.42, node:2.1,  cad:'constante' },
+    { k:'releases', t:'RELEASES', g:'◉', c:'#C9A227', a:0.68, w:0.000104, inc: 0.20, node:4.0,  cad:'mensual' },
+    { k:'clubs',    t:'CLUBS',    g:'⬢', c:'#C1543A', a:0.84, w:0.000082, inc:-0.44, node:1.1,  cad:'fin de semana' },
+    { k:'plugins',  t:'PLUGINS',  g:'⌘', c:'#8C7AB6', a:1.00, w:0.000051, inc: 0.30, node:5.2,  cad:'por versión' },
+    { k:'sellos',   t:'SELLOS',   g:'✦', c:'#5E9E7E', a:1.18, w:0.000031, inc:-0.24, node:3.3,  cad:'estructural' }
+  ];
+  const ORBK=ORB.reduce((m,o)=>(m[o.k]=o,m),{});
+  const catOf=n=>ORBK[(n&&n.cat)||'sets']||ORB[0];
+
+  function rot3(p, inc, node, spin){
+    const ci=Math.cos(inc), si=Math.sin(inc);
+    const y1=p.y*ci-p.z*si, z1=p.y*si+p.z*ci;
+    const cn=Math.cos(node+spin), sn=Math.sin(node+spin);
+    const x2=p.x*cn+z1*sn, z2=-p.x*sn+z1*cn;
     const ct=Math.cos(TILT), st=Math.sin(TILT);
-    return { x, y:y*ct-z*st, z:y*st+z*ct };
+    return { x:x2, y:y1*ct-z2*st, z:y1*st+z2*ct };
   }
-  function toScreen(p,R,cx,cy){ const s=FOV/(FOV+p.z); return { x:cx+p.x*R*s, y:cy-p.y*R*s, s, z:p.z }; }
-  const azOf=fx=>(-1.15+2.30*Math.max(0,Math.min(1,fx)));               // graves a babor, agudos a estribor
-  const elOf=fy=>(0.62-1.05*Math.max(0,Math.min(1,fy)));
-  const dbOf=fy=>Math.round(-3-52*Math.max(0,Math.min(1,fy)));
+  function proj(p,R,cx,cy){ const s=FOV/(FOV+p.z); return { x:cx+p.x*R*s, y:cy-p.y*R*s, s, z:p.z }; }
+  function spin(t){ return t*0.0000070; }
 
-  // espectrograma en cascada
-  const FB=132, TR=52; let fall=[];
-  function pushSlice(t){
-    const col=new Array(FB);
-    for(let i=0;i<FB;i++){
-      const fx=i/(FB-1);
-      let v=0.012+0.016*Math.abs(Math.sin(fx*17+t/700));
-      nodes.forEach((n,k)=>{
-        const d=fx-(n.x||0.5), w=1-(n.y||0.5)*0.6;
-        // traza fina (la que se lee como dato) + halo tenue que le da cuerpo
-        v+=w*1.05*Math.exp(-(d*d)/0.00022)*(0.62+0.38*Math.sin(t/(240+k*90)+k))
-          +w*0.16*Math.exp(-(d*d)/0.0026);
-      });
-      col[i]=Math.min(1,v);
-    }
-    fall.push(col); if(fall.length>TR) fall.shift();
+  // cada ítem hereda la órbita de su categoría y toma su propia fase
+  function items(ns){
+    const per={};
+    return ns.map((n,i)=>{
+      const o=catOf(n); per[o.k]=(per[o.k]||0)+1;
+      const k=per[o.k]-1;
+      return { n, i, o, ph:(k*1.9+o.node*0.7)%TAU,
+               a:o.a*(1+((k%3)-1)*0.045), w:o.w*(1+((k%2)?0.012:-0.012)) };
+    });
   }
+  const ang=(it,t)=>it.ph+it.w*t;
+  function posOf(it,t,R,cx,cy){
+    const th=ang(it,t);
+    return proj(rot3({x:Math.cos(th)*it.a,y:0,z:Math.sin(th)*it.a}, it.o.inc, it.o.node, spin(t)),R,cx,cy);
+  }
+  function sep(a,b,t){ const d=Math.abs(((ang(a,t)-ang(b,t))%TAU+TAU)%TAU); return Math.min(d,TAU-d); }
+  const CONJ=0.19;
+  function nextConj(a,b,t){ const dw=Math.abs(a.w-b.w); if(dw<1e-9) return null;
+    const d=((ang(a,t)-ang(b,t))%TAU+TAU)%TAU; return ((a.w>b.w)?(TAU-d)%TAU:d)/dw; }
+  // qué significa que dos órbitas se crucen — el hecho, no el adorno
+  const P=(a,b,v)=>({[a+"|"+b]:v,[b+"|"+a]:v});
+  const MEAN=Object.assign({},
+    P("releases","clubs","FECHA DE PRESENTACIÓN"),
+    P("sets","sellos","DEMO EN CARPETA"),
+    P("releases","sellos","FIRMA / LICENCIA"),
+    P("sets","clubs","RESIDENCIA"),
+    P("sets","releases","EL SET QUE SE VUELVE DISCO"),
+    P("plugins","releases","SONIDO PROPIO EN EL DISCO"),
+    P("plugins","sets","SET CON HERRAMIENTA PROPIA"),
+    P("plugins","clubs","PRUEBA EN SISTEMA GRANDE"),
+    P("plugins","sellos","HERRAMIENTA CON SELLO"),
+    P("plugins","photos","MATERIAL DE LANZAMIENTO"),
+    P("photos","clubs","ARCHIVO DE LA NOCHE"),
+    P("photos","releases","ARTE DE TAPA"),
+    P("photos","sets","REGISTRO DEL SET"),
+    P("photos","sellos","IDENTIDAD DEL SELLO"),
+    P("clubs","sellos","NOCHE DEL SELLO"));
+  const meaning=(a,b)=>MEAN[a.o.k+'|'+b.o.k]||'CRUCE';
+
   function hair(g,w,c){ g.lineWidth=w||1; g.strokeStyle=c||D.hair; }
-  function tick(g,x,y,len,vert){ g.beginPath();
-    if(vert){ g.moveTo(x,y); g.lineTo(x,y+len); } else { g.moveTo(x,y); g.lineTo(x+len,y); } g.stroke(); }
-  function mono(g,txt,x,y,size,color,align){
-    g.font='500 '+size+'px "Space Mono",monospace'; g.textAlign=align||'left'; g.fillStyle=color; g.fillText(txt,x,y);
+  function mono(g,s,x,y,sz,c,al){ g.font='500 '+sz+'px "Space Mono",monospace'; g.textAlign=al||'left'; g.fillStyle=c; g.fillText(s,x,y); }
+  const clock=ms=>{ const s=Math.max(0,Math.round(ms/1000)); return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0'); };
+
+  // ── ondas: cada objeto late a su cadencia; tocar el campo lanza un frente que hace resonar ──
+  const RIP=[];                                        // frentes lanzados por el dedo
+  function ripple(x,y){ RIP.push({x,y,t0:(typeof performance!=='undefined'?performance.now():0)});
+    while(RIP.length>6) RIP.shift(); }
+  window.__freqRipple=ripple;
+  function drawWaves(t,R,cx0,cy0,IT){
+    // pulsos propios: un anillo por objeto, a su período
+    IT.forEach(it=>{
+      const p=posOf(it,t,R,cx0,cy0), per=1/(it.w*1000)*2.2, ph=((t/1000)%per)/per;
+      for(let k=0;k<2;k++){ const f=(ph+k*0.5)%1;
+        const rr=Math.max(0,f*Math.max(26,W*0.030)*Math.max(0.15,p.s)), a=(1-f)*0.30;
+        if(a<0.02) continue;
+        cx2.beginPath(); cx2.arc(p.x,p.y,rr,0,TAU);
+        hair(cx2,1.1*(1-f)+0.3, it.o.c+Math.round(a*255).toString(16).padStart(2,'0')); cx2.stroke(); }
+    });
+    // frentes del tacto: expanden y hacen resonar lo que cruzan
+    for(let i=RIP.length-1;i>=0;i--){ const rp=RIP[i], age=(t-rp.t0)/1500;
+      if(age>1){ RIP.splice(i,1); continue; }
+      const rr=Math.max(0,age*Math.max(W,H)*0.62), a=(1-age)*0.45;
+      cx2.beginPath(); cx2.arc(rp.x,rp.y,rr,0,TAU);
+      hair(cx2,2.4*(1-age)+0.4,'rgba(230,228,222,'+a.toFixed(3)+')'); cx2.stroke();
+      cx2.beginPath(); cx2.arc(rp.x,rp.y,Math.max(0,rr*0.86),0,TAU);
+      hair(cx2,1.1*(1-age),'rgba(255,107,0,'+(a*0.5).toFixed(3)+')'); cx2.stroke();
+      IT.forEach(it=>{ const p=posOf(it,t,R,cx0,cy0);
+        const d=Math.hypot(p.x-rp.x,p.y-rp.y), hit=1-Math.min(1,Math.abs(d-rr)/(Math.max(30,W*0.030)));
+        if(hit<=0) return;
+        cx2.beginPath(); cx2.arc(p.x,p.y,Math.max(1,Math.max(7,W*0.008)*hit*Math.max(0.15,p.s)),0,TAU);
+        cx2.fillStyle=it.o.c+Math.round(hit*0.55*255).toString(16).padStart(2,'0'); cx2.fill(); });
+    }
   }
-
-  function drawDomo(t){
-    const rot=t/14000;
+  let liveConj=null;
+  function drawOrbital(t){
+    const cx0=W*0.40, cy0=H*0.48, R=Math.min(W*0.30,H*0.40);
     cx2.fillStyle=D.vd; cx2.fillRect(0,0,W,H);
-    // ── retícula de fondo, hairlines ──
     hair(cx2,1,D.grid);
-    for(let i=0;i<=24;i++){ const x=W*(i/24); cx2.beginPath(); cx2.moveTo(x,0); cx2.lineTo(x,H*0.70); cx2.stroke(); }
-    for(let i=0;i<=10;i++){ const y=H*0.70*(i/10); cx2.beginPath(); cx2.moveTo(0,y); cx2.lineTo(W,y); cx2.stroke(); }
+    for(let i=0;i<=26;i++){ const x=W*(i/26); cx2.beginPath(); cx2.moveTo(x,0); cx2.lineTo(x,H); cx2.stroke(); }
+    for(let i=0;i<=14;i++){ const y=H*(i/14); cx2.beginPath(); cx2.moveTo(0,y); cx2.lineTo(W,y); cx2.stroke(); }
 
-    const cx0=W*0.5, cy0=H*0.345, R=Math.min(W*0.40,H*0.34);
+    const IT=items(nodes);
+    const live=ORB.filter(o=>IT.some(x=>x.o.k===o.k));
 
-    // ── domo: paralelos y meridianos, con profundidad ──
-    for(let e=0;e<=5;e++){
-      const el=e*(1.35/5);
+    // ── las órbitas de cada categoría, cada una en su plano ──
+    live.forEach(o=>{
       cx2.beginPath();
-      for(let a=0;a<=96;a++){ const p=toScreen(sphere(a/96*6.2832,el,rot),R,cx0,cy0);
-        a?cx2.lineTo(p.x,p.y):cx2.moveTo(p.x,p.y); }
-      cx2.closePath(); hair(cx2,e===0?1.6:0.9,e===0?D.cy+'55':D.hair); cx2.stroke();
+      for(let k=0;k<=120;k++){ const th=k/120*TAU;
+        const p=proj(rot3({x:Math.cos(th)*o.a,y:0,z:Math.sin(th)*o.a},o.inc,o.node,spin(t)),R,cx0,cy0);
+        k?cx2.lineTo(p.x,p.y):cx2.moveTo(p.x,p.y); }
+      cx2.closePath(); hair(cx2,0.9,o.c+'2E'); cx2.stroke();
+      // el nombre de la órbita, montado sobre su propia elipse
+      const lp=proj(rot3({x:Math.cos(2.35)*o.a,y:0,z:Math.sin(2.35)*o.a},o.inc,o.node,spin(t)),R,cx0,cy0);
+      mono(cx2,o.t, lp.x, lp.y-7, Math.max(9,W*0.0052), o.c+'66','center');
+    });
+
+    // ── el centro: él ──
+    const pul=0.5+0.5*Math.sin(t/1100);
+    const gg=cx2.createRadialGradient(cx0,cy0,0,cx0,cy0,R*0.40);
+    gg.addColorStop(0,'rgba(230,228,222,'+(0.09+pul*0.03).toFixed(3)+')'); gg.addColorStop(1,'rgba(230,228,222,0)');
+    cx2.fillStyle=gg; cx2.fillRect(cx0-R*0.5,cy0-R*0.5,R,R);
+    cx2.beginPath(); cx2.arc(cx0,cy0,Math.max(9,W*0.0068)*(1+pul*0.05),0,TAU); hair(cx2,0.9,D.ice+'33'); cx2.stroke();
+    cx2.beginPath(); cx2.arc(cx0,cy0,Math.max(4,W*0.0032),0,TAU); cx2.fillStyle=D.ice; cx2.fill();
+
+    // ── cruces vivos entre categorías ──
+    liveConj=null; let soon=null;
+    for(let i=0;i<IT.length;i++) for(let j=i+1;j<IT.length;j++){
+      if(IT[i].o.k===IT[j].o.k) continue;
+      const s=sep(IT[i],IT[j],t);
+      if(s<CONJ){ const k=1-s/CONJ; if(!liveConj||k>liveConj.k) liveConj={a:IT[i],b:IT[j],k}; }
+      const nx=nextConj(IT[i],IT[j],t);
+      if(nx!=null&&nx>800&&(!soon||nx<soon.ms)) soon={ms:nx,a:IT[i],b:IT[j]};
     }
-    for(let m=0;m<12;m++){
-      const az=m*(6.2832/12);
+    // hilos tenues entre órbitas que se están acercando
+    for(let i=0;i<IT.length;i++) for(let j=i+1;j<IT.length;j++){
+      if(IT[i].o.k===IT[j].o.k) continue;
+      const near=1-Math.min(1,sep(IT[i],IT[j],t)/0.75); if(near<0.12) continue;
+      const p1=posOf(IT[i],t,R,cx0,cy0), p2=posOf(IT[j],t,R,cx0,cy0);
+      hair(cx2,0.5+near*1.3,'rgba(230,228,222,'+(0.04+near*0.16).toFixed(3)+')');
+      cx2.beginPath(); cx2.moveTo(p1.x,p1.y); cx2.lineTo(p2.x,p2.y); cx2.stroke();
+    }
+
+    drawWaves(t,R,cx0,cy0,IT);
+    // ── los ítems ──
+    const drawn=IT.map(it=>({it,p:posOf(it,t,R,cx0,cy0)})).sort((a,b)=>b.p.z-a.p.z);
+    drawn.forEach(({it,p})=>{
+      const o=it.o, hot=sel===it.n, fade=0.42+0.58*(1-(p.z+1)/2);
       cx2.beginPath();
-      for(let e=0;e<=32;e++){ const p=toScreen(sphere(az,e/32*1.45,rot),R,cx0,cy0);
-        e?cx2.lineTo(p.x,p.y):cx2.moveTo(p.x,p.y); }
-      hair(cx2,0.8,D.hair); cx2.stroke();
+      for(let k=0;k<13;k++){ const q=posOf(it,t-k*2100,R,cx0,cy0); k?cx2.lineTo(q.x,q.y):cx2.moveTo(q.x,q.y); }
+      hair(cx2,1,'rgba('+(hot?'255,122,24':'220,232,240')+','+(0.13*fade).toFixed(3)+')'); cx2.stroke();
+      const r=Math.max(1.5,Math.max(3.6,W*0.0036)*Math.max(0.15,p.s));
+      cx2.beginPath(); cx2.arc(p.x,p.y,r*4.2,0,TAU); cx2.fillStyle=o.c+'12'; cx2.fill();
+      cx2.beginPath(); cx2.arc(p.x,p.y,r*2.0,0,TAU); hair(cx2,0.9,o.c+(hot?'CC':'55')); cx2.stroke();
+      cx2.beginPath(); cx2.arc(p.x,p.y,r,0,TAU); cx2.fillStyle=hot?D.hot:o.c;
+      cx2.globalAlpha=fade; cx2.fill(); cx2.globalAlpha=1;
+      const inX=liveConj&&(liveConj.a===it||liveConj.b===it);
+      if(hot||inX){
+        const S=Math.max(10,W*0.0064), lf=(it.i%2===1), lx=p.x+(lf?-1:1)*r*3.2, al=lf?'right':'left';
+        hair(cx2,0.7,hot?D.hot:(inX?D.hot+'88':o.c+'55'));
+        cx2.beginPath(); cx2.moveTo(p.x+(lf?-1:1)*r*1.6,p.y); cx2.lineTo(lx,p.y); cx2.stroke();
+        mono(cx2,String(it.n.label||'').slice(0,24).toUpperCase(), lx+(lf?-5:5), p.y-r*0.2, S*1.05, (hot||inX)?D.hot:D.ice, al);
+        mono(cx2,o.t, lx+(lf?-5:5), p.y+S*1.25, S*0.80, o.c+'BB', al);
+      }
+    });
+
+    // ── panel: sus seis órbitas ──
+    const PX=W*0.745, S=Math.max(10,W*0.0070);
+    mono(cx2,'REGISTRO DE ÓRBITAS', PX, H*0.095, S*0.86, D.dim);
+    hair(cx2,1,D.hair); cx2.beginPath(); cx2.moveTo(PX,H*0.115); cx2.lineTo(W*0.965,H*0.115); cx2.stroke();
+    ORB.forEach((o,k)=>{
+      const y=H*0.115+(k+1)*Math.max(34,H*0.052), n=IT.filter(x=>x.o.k===o.k).length;
+      mono(cx2,o.g, PX, y, S*1.25, o.c+(n?'':'44'));
+      mono(cx2,o.t, PX+S*2.4, y, S*1.0, n?D.ice:D.dim);
+      mono(cx2,String(n).padStart(2,'0'), W*0.955, y, S*1.0, n?o.c:D.dim,'right');
+      mono(cx2,'cadencia '+o.cad, PX+S*2.4, y+S*1.25, S*0.80, D.dim);
+    });
+
+    // ── el negocio: el cruce es el hecho ──
+    const BY=H*0.855;
+    hair(cx2,1,D.hair); cx2.beginPath(); cx2.moveTo(W*0.045,BY-H*0.040); cx2.lineTo(W*0.68,BY-H*0.040); cx2.stroke();
+    if(liveConj){
+      const p1=posOf(liveConj.a,t,R,cx0,cy0), p2=posOf(liveConj.b,t,R,cx0,cy0);
+      const mx=(p1.x+p2.x)/2, my=(p1.y+p2.y)/2, k=liveConj.k;
+      const gf=cx2.createRadialGradient(mx,my,0,mx,my,R*0.45*k);
+      gf.addColorStop(0,'rgba(255,107,0,'+(0.26*k).toFixed(3)+')'); gf.addColorStop(1,'rgba(255,107,0,0)');
+      cx2.fillStyle=gf; cx2.fillRect(mx-R*0.6,my-R*0.6,R*1.2,R*1.2);
+      hair(cx2,1.8,'rgba(255,107,0,'+(0.35+0.6*k).toFixed(2)+')');
+      cx2.beginPath(); cx2.moveTo(p1.x,p1.y); cx2.lineTo(p2.x,p2.y); cx2.stroke();
+      mono(cx2,'CRUCE ACTIVO', W*0.045, BY-H*0.082, S*0.86, D.hot);
+      mono(cx2, meaning(liveConj.a,liveConj.b), W*0.045, BY-H*0.052, S*1.15, D.ice);
+      cx2.font='700 '+(S*3.6)+'px "Space Mono",ui-monospace,monospace'; cx2.textAlign='left'; cx2.fillStyle=D.ice;
+      cx2.fillText(String(liveConj.a.n.label||'').toUpperCase()+'  ×  '+String(liveConj.b.n.label||'').toUpperCase(), W*0.045, BY+S*1.5);
+      mono(cx2, liveConj.a.o.t+' × '+liveConj.b.o.t+'   ·   LA VENTANA DURA LO QUE DURA LA ALINEACIÓN',
+        W*0.045, BY+S*3.3, S*0.84, D.soft);
+
+    } else if(soon){
+      mono(cx2,'PRÓXIMO CRUCE', W*0.045, BY-H*0.082, S*0.86, D.dim);
+      mono(cx2, meaning(soon.a,soon.b), W*0.045, BY-H*0.052, S*1.15, D.soft);
+      cx2.font='700 '+(S*2.6)+'px "Space Mono",ui-monospace,monospace'; cx2.textAlign='left'; cx2.fillStyle=D.soft;
+      cx2.fillText(String(soon.a.n.label||'').toUpperCase()+'  ×  '+String(soon.b.n.label||'').toUpperCase(), W*0.045, BY+S*1.2);
+      mono(cx2,'EN '+clock(soon.ms)+'   ·   '+soon.a.o.t+' × '+soon.b.o.t, W*0.045, BY+S*2.9, S*0.84, D.dim);
+    } else {
+      mono(cx2, canEdit()? '◆ CARGÁ SETS, RELEASES, PLUGINS, PHOTOS, CLUBS Y SELLOS — CADA UNO ENTRA EN SU ÓRBITA'
+                         : '◆ SISTEMA EN FORMACIÓN', W*0.045, BY, S, D.dim);
     }
-    // anillos de rango con cota
-    [0.42,0.72,1].forEach((k,i)=>{
-      cx2.beginPath(); cx2.ellipse(cx0,cy0,R*k,R*k*Math.sin(TILT+0.28)*0.92,0,0,6.2832);
-      hair(cx2,0.9,i===2?D.hair:D.grid); cx2.stroke();
-      mono(cx2,(i===0?'-40':i===1?'-20':'0')+' dB', cx0+R*k*0.72, cy0+R*k*Math.sin(TILT+0.28)*0.92+Math.max(15,H*0.021), Math.max(9,W*0.0062), D.dim,'center');
-    });
-    // eje de escucha
-    hair(cx2,0.9,D.hair);
-    cx2.beginPath(); cx2.moveTo(cx0-R*1.12,cy0); cx2.lineTo(cx0+R*1.12,cy0); cx2.stroke();
-    cx2.beginPath(); cx2.moveTo(cx0,cy0-R*0.95); cx2.lineTo(cx0,cy0+R*0.55); cx2.stroke();
-    // el oyente
-    cx2.beginPath(); cx2.arc(cx0,cy0,Math.max(3,W*0.0024),0,6.2832); cx2.fillStyle=D.cy; cx2.fill();
-    cx2.beginPath(); cx2.arc(cx0,cy0,Math.max(9,W*0.0072),0,6.2832); hair(cx2,1,D.cy+'66'); cx2.stroke();
-    mono(cx2,'PUNTO DE ESCUCHA', cx0+Math.max(14,W*0.011), cy0+Math.max(4,W*0.0032), Math.max(9,W*0.0062), D.dim);
 
-    // ── objetos sonoros: posición = frecuencia y elevación ──
-    const objs=nodes.map((n,i)=>{
-      const fx=n.x||0.5, fy=n.y||0.5, f=freqOf(fx);
-      const p=toScreen(sphere(azOf(fx), elOf(fy), rot), R, cx0, cy0);
-      return { n, i, p, f, fx, fy, hz:fmtHz(f), db:dbOf(fy),
-        az:Math.round(azOf(fx)*57.2958), el:Math.round(elOf(fy)*57.2958),
-        amp:0.45+0.55*Math.abs(Math.sin(t/(520+i*130)+i)) };
-    }).sort((a,b)=>b.p.z-a.p.z);                                        // los de atrás primero
-
-    objs.forEach(o=>{
-      const far=(o.p.z+1)/2, alpha=(0.42+0.58*(1-far)).toFixed(2);
-      const r=Math.max(4,W*0.0042)*o.p.s;
-      // estela al plano de escucha
-      hair(cx2,0.8,D.hair); cx2.setLineDash([2,4]);
-      const g0=toScreen(sphere(azOf(o.fx),0,rot),R,cx0,cy0);
-      cx2.beginPath(); cx2.moveTo(o.p.x,o.p.y); cx2.lineTo(g0.x,g0.y); cx2.stroke(); cx2.setLineDash([]);
-      // halo de energía
-      cx2.beginPath(); cx2.arc(o.p.x,o.p.y,r*(4+o.amp*2),0,6.2832);
-      cx2.fillStyle=(sel===o.n?'rgba(255,122,24,':'rgba(77,216,255,')+(0.05*o.amp).toFixed(3)+')'; cx2.fill();
-      // anillos concéntricos
-      for(let k=1;k<=2;k++){ cx2.beginPath(); cx2.arc(o.p.x,o.p.y,r*(1.9+k*1.15+o.amp*0.5),0,6.2832);
-        hair(cx2,0.9,(sel===o.n?D.hot:D.cy)+Math.round(40/k).toString(16).padStart(2,'0')); cx2.stroke(); }
-      // retícula
-      hair(cx2,1,(sel===o.n?D.hot:D.cy)+'99');
-      [[-1,0],[1,0],[0,-1],[0,1]].forEach(([dx,dy])=>{ cx2.beginPath();
-        cx2.moveTo(o.p.x+dx*r*2.2,o.p.y+dy*r*2.2); cx2.lineTo(o.p.x+dx*r*3.4,o.p.y+dy*r*3.4); cx2.stroke(); });
-      // el objeto
-      cx2.beginPath(); cx2.arc(o.p.x,o.p.y,r,0,6.2832);
-      cx2.fillStyle=sel===o.n?D.hot:D.ice; cx2.globalAlpha=+alpha; cx2.fill(); cx2.globalAlpha=1;
-    });
-
-    // ── líneas guía a las fichas del margen ──
-    const lead=objs.slice().sort((a,b)=>a.p.y-b.p.y);
-    const usedL=[], usedR=[];
-    lead.forEach(o=>{
-      const right=o.p.x>cx0;
-      const bank=right?usedR:usedL;
-      const lh=Math.max(46,H*0.062);
-      let ly=Math.max(H*0.10, Math.min(H*0.62, o.p.y));
-      while(bank.some(v=>Math.abs(v-ly)<lh)) ly+=lh;
-      bank.push(ly);
-      const lx=right?W*0.845:W*0.155;
-      hair(cx2,0.9,(sel===o.n?D.hot:D.hair));
-      cx2.beginPath(); cx2.moveTo(o.p.x,o.p.y);
-      cx2.lineTo(o.p.x+(right?1:-1)*Math.max(24,W*0.02), ly); cx2.lineTo(lx,ly); cx2.stroke();
-      cx2.beginPath(); cx2.arc(lx,ly,2,0,6.2832); cx2.fillStyle=sel===o.n?D.hot:D.cy; cx2.fill();
-      const tx=right?lx+Math.max(9,W*0.007):lx-Math.max(9,W*0.007), al=right?'left':'right';
-      const S=Math.max(10,W*0.0072);
-      mono(cx2,String(o.n.label||'').slice(0,20).toUpperCase(), tx, ly-2, S*1.18, sel===o.n?D.hot:D.ice, al);
-      mono(cx2, o.hz+'   '+o.db+' dB   AZ '+(o.az>0?'+':'')+o.az+'°   EL '+(o.el>0?'+':'')+o.el+'°',
-        tx, ly+S*1.5, S*0.92, D.soft, al);
-      if(o.n.sub) mono(cx2, String(o.n.sub).slice(0,26).toUpperCase(), tx, ly+S*2.8, S*0.8, D.dim, al);
-    });
-
-    // ── espectrograma en cascada ──
-    pushSlice(t);
-    const wy=H*0.715, wh=H*0.170, wx=W*0.075, ww=W*0.85;
-    cx2.fillStyle=D.ink; cx2.fillRect(wx,wy,ww,wh);
-    const cw=ww/FB, rh=wh/TR;
-    for(let r0=0;r0<fall.length;r0++){ const col=fall[fall.length-1-r0];
-      for(let i=0;i<FB;i++){ const v=col[i]; if(v<0.055) continue;
-        cx2.fillStyle=inferno(v); cx2.fillRect(wx+i*cw, wy+r0*rh, cw+0.6, rh+0.6); } }
-    hair(cx2,1,D.hair); cx2.strokeRect(wx,wy,ww,wh);
-    // regla de frecuencia
-    [20,60,250,1000,4000,12000,20000].forEach(f=>{
-      const x=wx+(Math.log(f/20)/Math.log(1000))*ww;
-      hair(cx2,0.9,D.hair); tick(cx2,x,wy+wh,Math.max(6,H*0.010),true);
-      mono(cx2,fmtHz(f),x,wy+wh+Math.max(20,H*0.028),Math.max(9,W*0.0062),D.dim,'center');
-    });
-    mono(cx2,'ESPECTROGRAMA · CASCADA TEMPORAL', wx, wy-Math.max(9,H*0.013), Math.max(9,W*0.0062), D.dim);
-    mono(cx2,'AHORA', wx+ww+Math.max(8,W*0.006), wy+Math.max(10,H*0.014), Math.max(9,W*0.0062), D.dim);
-    mono(cx2,'-'+TR+' F', wx+ww+Math.max(8,W*0.006), wy+wh, Math.max(9,W*0.0062), D.dim);
-
-    // ── cabecera de misión ──
-    const S=Math.max(10,W*0.0075);
-    hair(cx2,1,D.hair); cx2.beginPath(); cx2.moveTo(W*0.028,H*0.088); cx2.lineTo(W*0.30,H*0.088); cx2.stroke();
-    mono(cx2,'◆ CAMPO ESPACIAL · MATRIZ DE OBJETOS', W*0.028, H*0.062, S, D.cy);
-    mono(cx2, String(nodes.length).padStart(2,'0')+' OBJETOS   ·   20 Hz – 20 kHz   ·   RESOLUCIÓN '+FB+' BANDAS',
-      W*0.028, H*0.118, S*0.88, D.dim);
-    mono(cx2,'SISTEMA', W*0.972, H*0.062, S*0.88, D.dim,'right');
-    mono(cx2,'● EN LÍNEA', W*0.972, H*0.098, S*0.88, D.cy,'right');
-    if(!nodes.length) mono(cx2, canEdit()
-      ? 'MATRIZ VACÍA — ✎ EDITAR: LA POSICIÓN HORIZONTAL FIJA LA FRECUENCIA, LA VERTICAL LA ELEVACIÓN'
-      : 'MATRIZ SIN OBJETOS', cx0, cy0+R*1.35, S, D.dim, 'center');
+    mono(cx2,'FREQUENCY · SISTEMA ORBITAL', W*0.045, H*0.068, S*0.86, D.dim);
+    mono(cx2, String(IT.length).padStart(2,'0')+' OBJETOS EN '+live.length+' ÓRBITAS   ·   EL PERÍODO ES LA CADENCIA   ·   EL CRUCE ES EL HECHO',
+      W*0.045, H*0.105, S*0.86, D.dim);
 
     const ro=$('iu-ro-n'), rs=$('iu-ro-sel');
-    if(ro) ro.textContent=String(nodes.length).padStart(2,'0');
-    if(rs) rs.textContent=sel?(sel.label+' · '+fmtHz(freqOf(sel.x||0.5))+' · '+dbOf(sel.y||0.5)+' dB'):'—';
+    if(ro) ro.textContent=String(IT.length).padStart(2,'0');
+    if(rs){ const so=IT.find(x=>x.n===sel);
+      rs.textContent=so?(so.o.t+' · '+so.n.label):(liveConj?'CRUCE ACTIVO':'—'); }
   }
 
   // ── su mapa: nodos propios orbitando su centro ──
@@ -11702,7 +11758,7 @@ addEventListener('DOMContentLoaded', function(){
     if(!fit()){ raf=requestAnimationFrame(draw); return; }
     const col=(T&&T.color)||'#B84DFF';
     cx2.clearRect(0,0,W,H);
-    if(skin()){ drawDomo(t); raf=requestAnimationFrame(draw); return; }
+    if(skin()){ drawOrbital(t); raf=requestAnimationFrame(draw); return; }
     const ccx=W/2, ccy=H/2;
     // halo del centro
     const g=cx2.createRadialGradient(ccx,ccy,0,ccx,ccy,Math.min(W,H)*0.42);
@@ -11741,13 +11797,22 @@ addEventListener('DOMContentLoaded', function(){
   function pos(e){ const r=cv.getBoundingClientRect();
     const p=e.touches&&e.touches[0]?e.touches[0]:e;
     return { x:p.clientX-r.left, y:p.clientY-r.top, rw:r.width, rh:r.height }; }
+  function orbHit(px,py,rw,rh){                       // en modo orbital, el objeto está donde lo pone su órbita
+    const sx=cv.width/rw, sy=cv.height/rh, R=Math.min(W*0.30,H*0.40), cx0=W*0.40, cy0=H*0.48;
+    const t=(typeof performance!=="undefined"?performance.now():0);
+    let best=null, bd=1e9;
+    items(nodes).forEach(it=>{ const q=posOf(it,t,R,cx0,cy0);
+      const d=(q.x-px*sx)**2+(q.y-py*sy)**2; if(d<bd){ bd=d; best=it.n; } });
+    return bd<(Math.max(34,W*0.022))**2 ? best : null;
+  }
   function down(e){
-    const p=pos(e), n=nodeAt(p.x,p.y);
-    if(n){ sel=n; fillForm(n); if(editing) drag={n, ox:p.x-n.x*p.rw, oy:p.y-n.y*p.rh};
+    const p=pos(e), n=skin()? orbHit(p.x,p.y,p.rw,p.rh) : nodeAt(p.x,p.y);
+    if(skin()&&window.__freqRipple) window.__freqRipple(p.x*(cv.width/p.rw), p.y*(cv.height/p.rh));
+    if(n){ sel=n; fillForm(n); if(editing&&!skin()) drag={n, ox:p.x-n.x*p.rw, oy:p.y-n.y*p.rh};
       else if(safeUrl(n.link)) window.open(safeUrl(n.link),'_blank','noopener'); return; }
     if(editing && canEdit()){                       // vacío → nodo nuevo acá
       const n2={ id:'n'+Math.random().toString(36).slice(2,8), label:'NUEVO', sub:'', link:'',
-        color:newColor, x:p.x/p.rw, y:p.y/p.rh, r:24 };
+        color:newColor, cat:newCat, x:p.x/p.rw, y:p.y/p.rh, r:24 };
       nodes.push(n2); sel=n2; fillForm(n2); $('iu-nlabel').focus();
     } else { sel=null; }
   }
@@ -11759,8 +11824,13 @@ addEventListener('DOMContentLoaded', function(){
   cv.addEventListener('touchstart',down,{passive:true}); cv.addEventListener('touchmove',move,{passive:false});
   addEventListener('touchend',up);
 
+  let newCat='sets';
+  function paintOrbs(){ const b=$('iu-norb'); if(!b) return; b.innerHTML='';
+    ORB.forEach(o=>{ const d=document.createElement('button'); d.className='iu-orbchip'+(o.k===newCat?' on':'');
+      d.style.setProperty('--oc',o.c); d.textContent=o.g+' '+o.t;
+      d.onclick=()=>{ newCat=o.k; if(sel){ sel.cat=o.k; sel.color=o.c; } paintOrbs(); }; b.appendChild(d); }); }
   function fillForm(n){ $('iu-nlabel').value=n.label||''; $('iu-nsub').value=n.sub||'';
-    $('iu-nlink').value=n.link||''; newColor=n.color||COLORS[0]; paintCols(); }
+    $('iu-nlink').value=n.link||''; newColor=n.color||COLORS[0]; newCat=n.cat||'sets'; paintCols(); paintOrbs(); }
   function paintCols(){ const b=$('iu-ncols'); b.innerHTML='';
     COLORS.forEach(c=>{ const d=document.createElement('div'); d.className='iu-col'+(c===newColor?' on':'');
       d.style.background=c; d.onclick=()=>{ newColor=c; if(sel) sel.color=c; paintCols(); }; b.appendChild(d); }); }
@@ -11780,10 +11850,16 @@ addEventListener('DOMContentLoaded', function(){
       m.textContent=ok?'✓ guardado en el universo — lo ve todo el mundo':'✓ guardado en este dispositivo (corré el SQL para que sea global)'; }
     return ok;
   }
+  $('iu-nnew').onclick=()=>{ if(!canEdit()) return;
+    const n2={ id:'n'+Math.random().toString(36).slice(2,8), label:'NUEVO', sub:'', link:'',
+      cat:newCat, color:(ORBK[newCat]||{}).c||newColor, x:0.5, y:0.5, r:24 };
+    nodes.push(n2); sel=n2; fillForm(n2); $('iu-nlabel').value=''; $('iu-nlabel').focus();
+    const m=$('iu-msg'); if(m){ m.style.color='#8894A8'; m.textContent='Elegí su órbita y ponele nombre.'; } };
   $('iu-nsave').onclick=async()=>{
     if(!sel){ const m=$('iu-msg'); m.style.color='#FF3A1F'; m.textContent='Tocá el vacío para crear un nodo, o uno existente para editarlo.'; return; }
     sel.label=($('iu-nlabel').value||'NUEVO').toUpperCase().slice(0,22);
-    sel.sub=($('iu-nsub').value||'').slice(0,40); sel.link=($('iu-nlink').value||'').trim(); sel.color=newColor;
+    sel.sub=($('iu-nsub').value||'').slice(0,40); sel.link=($('iu-nlink').value||'').trim();
+    sel.cat=newCat; sel.color=(ORBK[newCat]||{}).c||newColor;
     await persist(); log('inquilino','nodo guardado: '+sel.label); };
   $('iu-ndel').onclick=async()=>{ if(!sel) return; const l=sel.label;
     nodes=nodes.filter(n=>n!==sel); sel=null; ['nlabel','nsub','nlink'].forEach(k=>$('iu-'+k).value='');
@@ -11794,6 +11870,7 @@ addEventListener('DOMContentLoaded', function(){
   $('iu-done').onclick=()=>setEdit(false);
 
   function setEdit(on){
+    if(on&&typeof paintOrbs==="function") paintOrbs();
     if(on&&!canEdit()){ const m=$('iu-msg'); return; }
     editing=on; $('iu-edit').classList.toggle('on',on); $('iu-editbtn').classList.toggle('on',on);
     $('iu-editbtn').textContent=on?'✎ EDITANDO':'✎ EDITAR';
@@ -11825,31 +11902,22 @@ addEventListener('DOMContentLoaded', function(){
   function portalFrame(t){
     const w=pcv.clientWidth,h=pcv.clientHeight; if(!w||!h){ pRaf=requestAnimationFrame(portalFrame); return; }
     if(pcv.width!==w*2||pcv.height!==h*2){ pcv.width=w*2; pcv.height=h*2; }
-    const PW=w*2, PH=h*2, rot=t/16000;
+    const PW=w*2, PH=h*2;
+    const cx0=PW*0.5, cy0=PH*0.54, R=Math.min(PW*0.26,PH*0.36);
     px.fillStyle=D.vd; px.fillRect(0,0,PW,PH);
     // retícula de instrumento
     hair(px,1,D.grid);
     for(let i=0;i<=20;i++){ const x=PW*(i/20); px.beginPath(); px.moveTo(x,0); px.lineTo(x,PH); px.stroke(); }
     for(let i=0;i<=12;i++){ const y=PH*(i/12); px.beginPath(); px.moveTo(0,y); px.lineTo(PW,y); px.stroke(); }
-    // el domo esperando: paralelos y meridianos girando lento
-    const cx0=PW*0.5, cy0=PH*0.56, R=Math.min(PW*0.30,PH*0.40);
-    for(let e=0;e<=4;e++){ const el=e*(1.32/4); px.beginPath();
-      for(let a=0;a<=84;a++){ const p=toScreen(sphere(a/84*6.2832,el,rot),R,cx0,cy0);
-        a?px.lineTo(p.x,p.y):px.moveTo(p.x,p.y); }
-      px.closePath(); hair(px,e===0?1.4:0.8,e===0?D.cy+'44':D.hair); px.stroke(); }
-    for(let m=0;m<10;m++){ const az=m*(6.2832/10); px.beginPath();
-      for(let e=0;e<=26;e++){ const p=toScreen(sphere(az,e/26*1.4,rot),R,cx0,cy0);
-        e?px.lineTo(p.x,p.y):px.moveTo(p.x,p.y); }
-      hair(px,0.7,D.hair); px.stroke(); }
-    // barrido de sintonía recorriendo la banda
-    const sc=((t/2600)%1);
-    const sx0=PW*0.10+sc*PW*0.80;
-    hair(px,1.2,D.cy+'66'); px.beginPath(); px.moveTo(sx0,PH*0.86); px.lineTo(sx0,PH*0.92); px.stroke();
-    hair(px,0.9,D.hair); px.beginPath(); px.moveTo(PW*0.10,PH*0.92); px.lineTo(PW*0.90,PH*0.92); px.stroke();
-    [20,250,1000,4000,20000].forEach(f=>{ const x=PW*0.10+(Math.log(f/20)/Math.log(1000))*PW*0.80;
-      hair(px,0.9,D.hair); px.beginPath(); px.moveTo(x,PH*0.92); px.lineTo(x,PH*0.945); px.stroke();
-      mono(px,fmtHz(f),x,PH*0.975,Math.max(9,PW*0.0055),D.dim,'center'); });
-    mono(px,'BANDA DE SINTONÍA', PW*0.10, PH*0.875, Math.max(9,PW*0.0055), D.dim);
+    // el sistema esperando: seis órbitas girando lento
+    ORB.forEach((o,k)=>{ px.beginPath();
+      for(let s=0;s<=110;s++){ const th=s/110*TAU;
+        const p=proj(rot3({x:Math.cos(th)*o.a,y:0,z:Math.sin(th)*o.a},o.inc,o.node,spin(t)),R,cx0,cy0);
+        s?px.lineTo(p.x,p.y):px.moveTo(p.x,p.y); }
+      px.closePath(); hair(px,0.8,o.c+"22"); px.stroke();
+      const q=proj(rot3({x:Math.cos(t*0.00006*(k+1))*o.a,y:0,z:Math.sin(t*0.00006*(k+1))*o.a},o.inc,o.node,spin(t)),R,cx0,cy0);
+      px.beginPath(); px.arc(q.x,q.y,Math.max(2.5,PW*0.0022),0,TAU); px.fillStyle=o.c+"AA"; px.fill(); });
+    px.beginPath(); px.arc(cx0,cy0,Math.max(3,PW*0.0026),0,TAU); px.fillStyle=D.ice; px.fill();
     // un pozo de luz frío bajo el nombre
     const gw=px.createRadialGradient(cx0,PH*0.30,0, cx0,PH*0.30,PW*0.42);
     gw.addColorStop(0,'rgba(77,216,255,.055)'); gw.addColorStop(1,'rgba(77,216,255,0)');
