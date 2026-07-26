@@ -1,6 +1,6 @@
 {
-  "generated": "2026-07-25T10:36:50.617Z",
-  "date": "2026-07-25",
+  "generated": "2026-07-26T10:46:44.538Z",
+  "date": "2026-07-26",
   "worlds": [
     {
       "id": "hk23-universe",
@@ -62,13 +62,9 @@
   },
   "featured": "chile-goldmine",
   "commits24h": [
-    "0c91c65 FREQUENCY: sistema orbital — la frecuencia que se ve y se toca (#12)",
-    "38809bf INQUILINOS (galaxia + landing + productos) + FABLE FX (fachada de entidades + intro pixelada) (#11)",
-    "8b562b3 MVB: cargar eventos reales desde el propio universo (#10)",
-    "3161134 MUNDO MVB: la noche en vivo — eventos del momento, mapa, buscador y CONECTOR (#9)",
-    "db3d052 oracle: reporte diario 2026-07-24"
+    "284d1f7 FREQUENCY: disco-universo + platina a tempo + panel de control (#13)"
   ],
-  "weekCommitCount": 14,
+  "weekCommitCount": 15,
   "actions": [
     "Reactivar 8 mundo(s) sin push en 30d: CHILE GOLDMINE, VICEGOLFER COMMAND CENTER, CRYPTOVICE HONEYSCAM, UNO AL DIA SOPROLE, AFFILIATE GROWTH AGENT, ATLAS X, HK23 VICE OS ECOSYSTEM, HOW TO USE CLAUDE",
     "Ningún mundo está LIVE — conectar VERCEL_TOKEN o desplegar uno",
@@ -76,6 +72,7 @@
     "Repartir links ?ref= de la semana a los referidos"
   ],
   "reports": [
+    "2026-07-26.md",
     "2026-07-25.md",
     "2026-07-24.md",
     "2026-07-23.md",
