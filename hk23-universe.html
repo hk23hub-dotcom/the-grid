@@ -12579,6 +12579,16 @@ addEventListener('DOMContentLoaded', function(){
   .wa-drop{ margin:0 8px 8px; padding:9px; text-align:center; font-size:8px; letter-spacing:1px;
     color:var(--wa-dim,#5E7E6A); border:1px dashed var(--wa-edge,#3A5A48); border-radius:2px; }
   .wa-drop.hot{ border-color:var(--wa-acc,#AAFF66); color:var(--wa-acc,#AAFF66); }
+  .wa-radio{ border-top:1px solid var(--wa-edge,#3A5A48); margin:0 8px 8px; padding-top:8px; }
+  .wa-rh{ display:flex; align-items:center; gap:8px; font-size:7px; letter-spacing:2px;
+    color:var(--wa-dim,#5E7E6A); margin-bottom:6px; }
+  .wa-rh span{ margin-left:auto; cursor:pointer; color:var(--wa-acc,#AAFF66); }
+  .wa-rh span:focus-visible{ outline:2px solid #fff; outline-offset:1px; }
+  .wa-chips{ display:flex; gap:4px; flex-wrap:wrap; }
+  .wa-chip{ font-size:7.5px; letter-spacing:1px; padding:5px 8px; border-radius:2px; cursor:pointer;
+    border:1px solid var(--wa-edge,#3A5A48); background:transparent; color:var(--wa-txt,#9FE0B8); }
+  .wa-chip:hover{ background:var(--wa-edge,#3A5A4840); }
+  .wa-chip.on{ background:var(--wa-acc,#AAFF66); color:var(--wa-bg,#0B120E); font-weight:700; }
 </style>
 
 <div id="wa" role="dialog" aria-label="WINAMP-23 reproductor" tabindex="-1"><div class="wa-win" id="wa-win">
@@ -12609,6 +12619,14 @@ addEventListener('DOMContentLoaded', function(){
     <input id="wa-url" placeholder="pegá una URL de audio (mp3, stream…)" autocomplete="off">
     <button id="wa-addurl">＋ URL</button>
     <button id="wa-fav" title="ver solo favoritos">★</button>
+  </div>
+  <div class="wa-radio">
+    <div class="wa-rh">📡 RADIO DEL MUNDO <span id="wa-rg" role="button" tabindex="0">🌍 ABRIR RADIO.GARDEN ↗</span></div>
+    <div class="wa-add" style="padding-top:0">
+      <input id="wa-rgurl" placeholder="pegá una estación de radio.garden y suena acá" autocomplete="off">
+      <button id="wa-rgadd">＋ RADIO</button>
+    </div>
+    <div class="wa-chips" id="wa-stations"></div>
   </div>
 </div></div>
 
@@ -12701,6 +12719,47 @@ addEventListener('DOMContentLoaded', function(){
     $('wa-url').value=''; if(cur<0) playAt(i); };
   $('wa-url').addEventListener('keydown',e=>{ if(e.key==='Enter') $('wa-addurl').click(); });
   $('wa-fav').onclick=()=>{ onlyFav=!onlyFav; $('wa-fav').style.opacity=onlyFav?'1':'.6'; renderPL(); };
+
+  // ── RADIO DEL MUNDO — radio.garden no se puede embeber, pero sus estaciones sí suenan acá ──
+  // estaciones de arranque (streams públicos estables, pensados para DJ): SomaFM
+  const STARTERS=[
+    { n:'📡 GROOVE SALAD', src:'https://ice1.somafm.com/groovesalad-128-mp3' },
+    { n:'📡 DRONE ZONE',   src:'https://ice1.somafm.com/dronezone-128-mp3' },
+    { n:'📡 BEAT BLENDER', src:'https://ice1.somafm.com/beatblender-128-mp3' },
+    { n:'📡 THE TRIP',     src:'https://ice1.somafm.com/thetrip-128-mp3' },
+    { n:'📡 DEF CON',      src:'https://ice1.somafm.com/defcon-128-mp3' }
+  ];
+  // de una URL de radio.garden saco el id de la estación y armo su stream
+  function rgStream(url){
+    const m=String(url).match(/listen\/[^/]+\/([A-Za-z0-9_-]+)/) || String(url).match(/\/([A-Za-z0-9_-]{6,})(?:\?|$)/);
+    return m ? 'https://radio.garden/api/ara/content/listen/'+m[1]+'/channel.mp3' : null;
+  }
+  function playRadio(name,src){
+    audio.src=src; initAudio(); if(AC&&AC.state==='suspended') AC.resume();
+    audio.play().catch(()=>{});
+    cur=-1; $('wa-title').textContent=name; $('wa-play').textContent='❚❚'; $('wa-time').textContent='EN VIVO';
+    [...$('wa-stations').children].forEach(c=>c.classList.toggle('on',c.dataset.src===src));
+    renderPL();
+    log('winamp','📡 '+name);
+  }
+  function renderStations(){
+    const box=$('wa-stations');
+    const extra=load('wa_radios',[]);          // las de radio.garden que agregó el usuario
+    box.innerHTML=[...STARTERS,...extra].map(s=>
+      '<button class="wa-chip" data-src="'+esc(s.src)+'">'+esc(s.n)+'</button>').join('');
+    box.querySelectorAll('.wa-chip').forEach(c=>c.onclick=()=>playRadio(c.textContent,c.dataset.src));
+  }
+  $('wa-rgadd').onclick=()=>{
+    const u=($('wa-rgurl').value||'').trim(); const src=rgStream(u);
+    if(!src){ $('wa-rgurl').style.borderColor='#FF6B00'; setTimeout(()=>$('wa-rgurl').style.borderColor='',700); return; }
+    const nm='📡 '+(u.split('/').filter(Boolean).slice(-2,-1)[0]||'estación').replace(/-/g,' ').toUpperCase().slice(0,22);
+    const list=load('wa_radios',[]); list.push({n:nm,src}); try{ localStorage.setItem('wa_radios',JSON.stringify(list)); }catch(e){}
+    $('wa-rgurl').value=''; renderStations(); playRadio(nm,src);
+  };
+  $('wa-rgurl').addEventListener('keydown',e=>{ if(e.key==='Enter') $('wa-rgadd').click(); });
+  const openRG=()=>{ try{ window.open('https://radio.garden/','_blank','noopener'); }catch(e){} log('winamp','abrió radio.garden'); };
+  $('wa-rg').onclick=openRG;
+  $('wa-rg').addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); openRG(); } });
   function addFiles(files){ let first=-1;
     [...files].forEach(f=>{ if(!/audio|mp3|ogg|wav|m4a|flac/i.test(f.type+f.name)) return;
       const i=addTrack(f.name.replace(/\.[^.]+$/,''), URL.createObjectURL(f), true); if(first<0) first=i; });
@@ -12754,7 +12813,7 @@ addEventListener('DOMContentLoaded', function(){
 
   const WA={
     open(k){ $('wa').classList.add('open'); if(k) applySkin(k); else applySkin(skin);
-      renderPL(); if(!vraf) vraf=requestAnimationFrame(vis); $('wa').focus();
+      renderPL(); renderStations(); if(!vraf) vraf=requestAnimationFrame(vis); $('wa').focus();
       log('winamp','abierto ('+skin+')'); },
     close(){ $('wa').classList.remove('open'); if(vraf){ cancelAnimationFrame(vraf); vraf=null; } },
     play:toggle, add:addTrack, skin:applySkin, skins:()=>Object.keys(SKINS)
