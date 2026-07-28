@@ -1,6 +1,6 @@
 {
-  "generated": "2026-07-27T12:28:17.667Z",
-  "date": "2026-07-27",
+  "generated": "2026-07-28T11:21:55.894Z",
+  "date": "2026-07-28",
   "worlds": [
     {
       "id": "hk23-universe",
@@ -61,8 +61,12 @@
     "local": 9
   },
   "featured": "chile-goldmine",
-  "commits24h": [],
-  "weekCommitCount": 15,
+  "commits24h": [
+    "0bf024e Mobile: a tappable world launcher so the universe works without a keyboard (#15)",
+    "8d1cdb5 WINAMP-23: reproductor de música que funciona, alojado en MVB (#14)",
+    "744d0da oracle: reporte diario 2026-07-27"
+  ],
+  "weekCommitCount": 17,
   "actions": [
     "Reactivar 8 mundo(s) sin push en 30d: CHILE GOLDMINE, VICEGOLFER COMMAND CENTER, CRYPTOVICE HONEYSCAM, UNO AL DIA SOPROLE, AFFILIATE GROWTH AGENT, ATLAS X, HK23 VICE OS ECOSYSTEM, HOW TO USE CLAUDE",
     "Ningún mundo está LIVE — conectar VERCEL_TOKEN o desplegar uno",
@@ -70,6 +74,7 @@
     "Repartir links ?ref= de la semana a los referidos"
   ],
   "reports": [
+    "2026-07-28.md",
     "2026-07-27.md",
     "2026-07-26.md",
     "2026-07-25.md",
