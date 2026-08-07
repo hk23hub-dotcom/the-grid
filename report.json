@@ -1,6 +1,6 @@
 {
-  "generated": "2026-08-06T11:26:56.759Z",
-  "date": "2026-08-06",
+  "generated": "2026-08-07T10:03:58.379Z",
+  "date": "2026-08-07",
   "worlds": [
     {
       "id": "hk23-universe",
@@ -61,8 +61,10 @@
     "local": 9
   },
   "featured": "chile-goldmine",
-  "commits24h": [],
-  "weekCommitCount": 6,
+  "commits24h": [
+    "79b4420 oracle: reporte diario 2026-08-06"
+  ],
+  "weekCommitCount": 7,
   "actions": [
     "Reactivar 8 mundo(s) sin push en 30d: CHILE GOLDMINE, VICEGOLFER COMMAND CENTER, CRYPTOVICE HONEYSCAM, UNO AL DIA SOPROLE, AFFILIATE GROWTH AGENT, ATLAS X, HK23 VICE OS ECOSYSTEM, HOW TO USE CLAUDE",
     "Ningún mundo está LIVE — conectar VERCEL_TOKEN o desplegar uno",
@@ -70,6 +72,7 @@
     "Repartir links ?ref= de la semana a los referidos"
   ],
   "reports": [
+    "2026-08-07.md",
     "2026-08-06.md",
     "2026-08-05.md",
     "2026-08-04.md",
