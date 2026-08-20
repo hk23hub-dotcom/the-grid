@@ -3620,7 +3620,7 @@ document.addEventListener('keydown', e => {
     if (affirmation.style.opacity === '1') { closeAffirmation(); return; }
     // si hay un mundo abierto encima (MVB, TALLER, CRYPTO, COSMOS, un overlay…),
     // ESC/X le pertenece a ese mundo: cerrarlo NO debe además mover la pantalla base
-    if (document.querySelector('#mvb.open, #taller.open, .hkov.open') ||
+    if (document.querySelector('#mvb.open, #taller.open, #atlas.open, .hkov.open') ||
         ['cw','cosmos'].some(id => { const el = document.getElementById(id);
           return el && el.style.display && el.style.display !== 'none'; })) return;
     if (currentScreen !== 'portal' && currentScreen !== 'map') goTo('map');
@@ -12888,6 +12888,8 @@ addEventListener('DOMContentLoaded', function(){
   // los mundos, agrupados — cada uno va a su API real (nada muerto)
   const GROUPS=[
     ['◈ TU UNIVERSO', [
+      ['◉','MÚSICA','tu planeta de temas','#E8C86A',()=>call(window.MusicaHK&&window.MusicaHK.open)],
+      ['▦','DASHBOARD','ejecutar · vender · referidos','#39d0ff',()=>call(window.DASH&&window.DASH.toggle)],
       ['◈','WINAMP','tu música + radios','#AAFF66',()=>call(window.Winamp&&window.Winamp.open)],
       ['🌃','MVB','la noche en vivo','#FF3AC8',()=>call(window.MVB&&window.MVB.open)],
       ['📚','BIBLIOTECA','libros y guías','#FFD200',()=>call(window.hkBiblioteca)],
@@ -12941,5 +12943,1423 @@ addEventListener('DOMContentLoaded', function(){
 })();
 </script>
 
+<script>
+(function(){ const d=document.getElementById("hk-dock");
+  if(d){ const b=document.createElement("button"); b.className="dk"; b.textContent="🏛 MADRE";
+    b.style.setProperty("--dc","#FFD200"); b.style.color="#FFD200CC";
+    b.onclick=()=>location.href="./hk23-universe"; d.insertBefore(b, d.firstChild); } })();
+</script>
+
+<!-- ═══════════ ATLAS 23 — OPERADOR DEL UNIVERSO ═══════════
+     Un tablero que no informa: verifica y actúa.
+     Regla dura: ninguna fila afirma nada sin la prueba al lado. -->
+<style id="atl-style">
+  #atl-fab{ position:fixed; right:16px; bottom:calc(84px + env(safe-area-inset-bottom,0px)); z-index:970;
+    width:56px; height:56px; border-radius:50%; border:1px solid #23303F; cursor:pointer;
+    background:radial-gradient(circle at 34% 28%, #16202E, #05070E); color:#9FE8FF;
+    font:700 15px/1 'Space Mono',ui-monospace,monospace; box-shadow:0 10px 30px rgba(0,0,0,.6); }
+  #atl-fab:active{ transform:scale(.94); }
+  #atl-fab:focus-visible{ outline:2px solid #9FE8FF; outline-offset:2px; }
+  #atl-fab .dot{ position:absolute; top:6px; right:6px; width:9px; height:9px; border-radius:50%;
+    background:#FF6B00; display:none; }
+  #atl-fab.hay .dot{ display:block; }
+  #atlas{ position:fixed; inset:0; z-index:975; display:none; background:#05070E;
+    overflow-y:auto; -webkit-overflow-scrolling:touch;
+    font-family:'Space Mono',ui-monospace,monospace; color:#E6E4DE; }
+  #atlas.open{ display:block; }
+  .atl-w{ max-width:900px; margin:0 auto; padding:24px 16px calc(60px + env(safe-area-inset-bottom,0px)); }
+  .atl-top{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:6px; }
+  .atl-top h2{ font-size:19px; letter-spacing:5px; margin:0; font-weight:700; }
+  .atl-x{ margin-left:auto; font-size:11px; letter-spacing:2px; color:#05070E; background:#E6E4DE;
+    border:none; border-radius:3px; padding:10px 15px; cursor:pointer; }
+  .atl-eye{ font-size:8px; letter-spacing:4px; color:#5A6478; margin-bottom:18px; }
+  .atl-kpis{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:16px; }
+  .atl-k{ border:1px solid #17202C; border-radius:4px; padding:12px 10px; background:#080B12; }
+  .atl-k .v{ font-size:21px; font-weight:700; line-height:1; }
+  .atl-k .l{ font-size:7px; letter-spacing:2px; color:#5A6478; margin-top:7px; }
+  .atl-bar{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:22px; }
+  .atl-go{ font-size:11px; letter-spacing:2px; color:#05070E; background:#9FE8FF; border:none;
+    border-radius:3px; padding:11px 17px; cursor:pointer; font-weight:700; }
+  .atl-go[disabled]{ opacity:.5; cursor:progress; }
+  .atl-when{ font-size:8px; letter-spacing:1px; color:#5A6478; }
+  .atl-h{ font-size:8px; letter-spacing:4px; color:#5A6478; margin:24px 0 9px;
+    border-bottom:1px solid #141C26; padding-bottom:7px; }
+  .atl-r{ display:flex; align-items:flex-start; gap:11px; padding:12px 11px; border-radius:4px;
+    border:1px solid #141C26; background:#080B12; margin-bottom:7px; }
+  .atl-p{ flex:0 0 auto; font-size:7px; letter-spacing:1.5px; font-weight:700; color:#05070E;
+    border-radius:2px; padding:4px 6px; min-width:64px; text-align:center; }
+  .atl-t{ flex:1 1 auto; min-width:0; }
+  .atl-t b{ display:block; font-size:12px; letter-spacing:.5px; color:#E6E4DE; font-weight:700; }
+  .atl-t i{ display:block; font-size:9px; letter-spacing:.4px; color:#8C97A8; font-style:normal;
+    margin-top:4px; line-height:1.55; word-break:break-word; }
+  .atl-t .ev{ display:block; font-size:8px; letter-spacing:.5px; color:#5A6478; margin-top:5px; }
+  .atl-t .ev b{ display:inline; color:#7C8AA0; font-weight:700; }
+  .atl-a{ flex:0 0 auto; display:flex; flex-direction:column; gap:5px; }
+  .atl-b{ font-size:8px; letter-spacing:1.5px; color:#9FE8FF; background:transparent;
+    border:1px solid #24384A; border-radius:3px; padding:7px 9px; cursor:pointer; white-space:nowrap; }
+  .atl-b:hover{ background:#0E1620; }
+  .atl-b:focus-visible{ outline:2px solid #9FE8FF; outline-offset:2px; }
+  .atl-b.hot{ color:#FF6B00; border-color:#4A2A14; }
+  .atl-fix{ display:none; margin:8px 0 2px; gap:6px; }
+  .atl-fix.open{ display:flex; }
+  .atl-fix input{ flex:1 1 auto; min-width:0; background:#05070E; border:1px solid #24384A; border-radius:3px;
+    color:#E6E4DE; font:400 11px 'Space Mono',ui-monospace,monospace; padding:9px 10px; }
+  .atl-fix input:focus-visible{ outline:2px solid #9FE8FF; outline-offset:1px; }
+  .atl-note{ font-size:9px; letter-spacing:.4px; color:#5A6478; line-height:1.7; margin:14px 0 0;
+    border-left:2px solid #1B2634; padding-left:11px; }
+  .atl-sql{ display:none; white-space:pre-wrap; word-break:break-all; font-size:9px; color:#8C97A8;
+    background:#04060B; border:1px solid #141C26; border-radius:4px; padding:12px; margin-top:8px; line-height:1.65; }
+  .atl-sql.open{ display:block; }
+  @media(max-width:560px){
+    .atl-kpis{ grid-template-columns:1fr 1fr; }
+    .atl-r{ flex-wrap:wrap; }
+    .atl-a{ flex-direction:row; width:100%; }
+    .atl-b{ flex:1 1 auto; }
+  }
+  @media(prefers-reduced-motion:reduce){ #atlas *{ animation:none !important; transition:none !important; } }
+</style>
+<button id="atl-fab" aria-label="Abrir ATLAS, el control del universo" title="ATLAS (A)">A23<span class="dot"></span></button>
+<div id="atlas" role="dialog" aria-modal="true" aria-label="ATLAS 23 — control del universo"></div>
+
+<script>
+// ═══ ATLAS 23 — no informa: verifica y actúa. Ninguna fila afirma sin la prueba al lado. ═══
+(function(){
+  const $=id=>document.getElementById(id);
+  const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  const SUPA={ url:'https://qhklngvzdmwsbopbkiff.supabase.co', key:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFoa2xuZ3Z6ZG13c2JvcGJraWZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3OTEwOTYsImV4cCI6MjA5NzM2NzA5Nn0.ttdBrxCF6Wl6I8yKOICfTq7WyPylMmSmdKGUb176BCs' };
+  const HEAD={ apikey:SUPA.key, Authorization:'Bearer '+SUPA.key, 'Content-Type':'application/json' };
+  const log=(a,b)=>{ try{ (window.hkLog||function(){})(a,b); }catch(e){} };
+  const hora=()=>{ try{ return new Date().toLocaleTimeString('es-CL',{hour12:false}); }catch(e){ return ''; } };
+  const num=n=>{ try{ return Number(n).toLocaleString('es-CL'); }catch(e){ return String(n); } };
+
+  // ── lo que se verifica ──
+  const RUTAS=[ ['/universe-os','tu universo'], ['/frequency','el universo de JC'],
+                ['/jc','atajo corto de JC'], ['/g/frequency','galaxia por slug'] ];
+  const TABLAS=[ ['universe_galaxies','los universos de tus inquilinos'],
+                 ['universe_products','lo que está a la venta'],
+                 ['universe_events','los eventos del mundo MVB'],
+                 ['universe_sellers','quién vende entradas'],
+                 ['universe_presence','quién está conectado ahora'] ];
+  const abrePanel=(id,tab)=>()=>{ const p=document.getElementById(id); if(p) p.classList.add('open');
+    if(tab){ const t=document.querySelector('.ag-tab[data-pane="'+tab+'"]'); if(t) t.click(); } };
+  const MUNDOS=[
+    ['WINAMP',    'api',  'window.Winamp.open',        ()=>window.Winamp&&window.Winamp.open],
+    ['MVB',       'api',  'window.MVB.open',           ()=>window.MVB&&window.MVB.open],
+    ['BIBLIOTECA','api',  'window.hkBiblioteca',       ()=>window.hkBiblioteca],
+    ['TALLER',    'api',  'window.Taller.open',        ()=>window.Taller&&window.Taller.open],
+    ['INQUILINOS','api',  'window.Inquilinos.open',    ()=>window.Inquilinos&&window.Inquilinos.open],
+    ['MEDIA',     'panel','#me-panel',                 ()=>document.getElementById('me-panel')&&abrePanel('me-panel')],
+    ['QR VIVO',   'panel','#ag-panel (pestaña qr)',    ()=>document.getElementById('ag-panel')&&abrePanel('ag-panel','qr')],
+    ['LAB',       'api',  'window.EntityLab.on',       ()=>window.EntityLab&&window.EntityLab.on],
+    ['CRYPTO',    'api',  'window.CryptoSignals.open', ()=>window.CryptoSignals&&window.CryptoSignals.open],
+    ['FABLE',     'api',  'window.FableFX.toggle',     ()=>window.FableFX&&window.FableFX.toggle],
+    ['FUSIÓN',    'api',  'window.Fusion.next',        ()=>window.Fusion&&window.Fusion.next],
+    ['GALAXIA',   'api',  'window.hkGalaxia',          ()=>window.hkGalaxia],
+    ['COSMOS',    'api',  'window.WarpJump / CosmosView.open',
+                          ()=>(typeof window.WarpJump==='function'?window.WarpJump:(window.CosmosView&&window.CosmosView.open))],
+    ['AGENTES',   'panel','#ag-panel',                 ()=>document.getElementById('ag-panel')&&abrePanel('ag-panel')],
+    ['ORACLE',    'api',  'window.hkOracle',           ()=>window.hkOracle],
+    ['DEFENSA',   'api',  'window.hkDefensa',          ()=>window.hkDefensa],
+    ['BACKROOMS', 'api',  'window.hkBackrooms',        ()=>window.hkBackrooms] ];
+  const SQL='-- Corré esto entero en el editor SQL de tu Supabase.\n'+
+    TABLAS.map(([t])=>'-- '+t).join('\n')+
+    '\n-- El bloque completo está en supabase-schema.sql del repositorio.';
+
+  // ── el estado, siempre con su prueba y su hora ──
+  let R={ rutas:[], tablas:[], mundos:[], conten:[], cuando:'', corriendo:false, corrio:false };
+  const esArchivo=()=>location.protocol==='file:';
+
+  async function verRutas(){
+    const out=[];
+    for(const [ruta,que] of RUTAS){
+      if(esArchivo()){ out.push({ k:ruta, que, estado:'nover',
+        prueba:'abierto como archivo local (file://)',
+        detalle:'No hay servidor al que preguntarle. Abrilo desde el link real y vuelvo a chequear.' }); continue; }
+      const t0=Date.now();
+      try{
+        const r=await fetch(location.origin+ruta,{cache:'no-store'});
+        const txt=await r.text(); const ms=Date.now()-t0;
+        const tieneAtlas=txt.indexOf('id="atlas"')>=0;
+        out.push({ k:ruta, que,
+          estado: !r.ok ? 'fail' : (tieneAtlas ? 'ok' : 'warn'),
+          prueba:'HTTP '+r.status+' · '+num(txt.length)+' b · '+ms+' ms',
+          detalle: !r.ok ? 'El servidor contestó '+r.status+'. Esa ruta no está sirviendo nada.'
+                 : tieneAtlas ? 'Responde, y lo publicado incluye este mismo ATLAS.'
+                 : 'Responde, pero lo publicado es una versión anterior: no tiene ATLAS adentro. Falta desplegar.',
+          url: location.origin+ruta });
+      }catch(e){ out.push({ k:ruta, que, estado:'fail', prueba:String(e&&e.message||e).slice(0,80),
+        detalle:'No se pudo consultar la ruta.' }); }
+    }
+    return out;
+  }
+
+  async function verTablas(){
+    const out=[];
+    for(const [tb,que] of TABLAS){
+      try{
+        const r=await fetch(SUPA.url+'/rest/v1/'+tb+'?select=*&limit=1',
+          { headers:Object.assign({},HEAD,{ Prefer:'count=exact', Range:'0-0' }) });
+        const cr=r.headers.get('content-range')||''; const n=(cr.split('/')[1]||'').trim();
+        if(r.ok) out.push({ k:tb, que, estado:'ok',
+          prueba:'HTTP '+r.status+(n&&n!=='*'?' · '+n+' fila(s)':''),
+          detalle:'La tabla existe y responde: '+que+' se guardan para todos, no solo acá.' });
+        else { let msg=''; try{ msg=((await r.json())||{}).message||''; }catch(e){}
+          out.push({ k:tb, que, estado:'local', prueba:'HTTP '+r.status+(msg?' · '+msg.slice(0,64):''),
+            detalle:'Todavía no existe. Mientras tanto '+que+' viven solo en este dispositivo.', sql:true }); }
+      }catch(e){ out.push({ k:tb, que, estado:'nover', prueba:String(e&&e.message||e).slice(0,70),
+        detalle:'No hubo red para preguntarle a Supabase. No sé si existe: no lo doy por bueno.', sqlUI:true }); }
+    }
+    return out;
+  }
+
+  function verMundos(){
+    return MUNDOS.map(([label,tipo,donde,pick])=>{
+      let fn=null; try{ fn=pick(); }catch(e){}
+      const vivo=typeof fn==='function';
+      return { k:label, que:donde, estado: vivo?'ok':'fail',
+        prueba: (vivo?'responde':'no responde')+' · '+donde,
+        detalle: vivo ? (tipo==='panel'?'El panel existe en la página y se abre.':'El botón llama a una función que existe.')
+                      : 'El botón del menú apunta acá y acá no hay nada: entrar no hace nada.',
+        abrir: vivo ? fn : null };
+    });
+  }
+
+  function leerLocal(k,def){ try{ const v=JSON.parse(localStorage.getItem(k)); return v==null?def:v; }catch(e){ return def; } }
+  function verContenido(){
+    const inq=leerLocal('hk23_inquilinos',[]), prodL=leerLocal('hk23_inq_productos',[]);
+    const gal=leerLocal('hk23_galaxias',[]);
+    const out=[];
+    out.push({ k:'INQUILINOS', que:'universos de tus usuarios',
+      estado: inq.length?'local':'warn',
+      prueba: inq.length? inq.length+' guardado(s) en este dispositivo' : 'ninguno guardado acá',
+      detalle: inq.length? 'Guardados en este teléfono/compu. Si la tabla universe_galaxies existe, además viajan.'
+                         : 'Solo está la semilla FREQUENCY. Todavía no creaste ninguno desde el panel.' });
+    out.push({ k:'PRODUCTOS', que:'lo que está a la venta',
+      estado: prodL.length?'local':'warn',
+      prueba: prodL.length? prodL.length+' guardado(s) en este dispositivo' : 'ninguno cargado',
+      detalle: prodL.length? 'Cargados acá. Con universe_products vivos, se ven desde cualquier lado.'
+                           : 'Nadie puede comprarte nada todavía. Creá el primero acá abajo.',
+      crear:true });
+    out.push({ k:'GALAXIAS', que:'las que creaste vos',
+      estado: gal.length?'ok':'warn',
+      prueba: gal.length+' en este dispositivo',
+      detalle: gal.length? 'Existen y se dibujan en el cosmos.' : 'Ninguna creada todavía.' });
+    return out;
+  }
+
+  // ── pintar ──
+  const PILL={ ok:['#4FE0A8','ANDA'], warn:['#FFC24D','A MEDIAS'], fail:['#FF6B00','NO ANDA'],
+               local:['#5FA8D3','SOLO ACÁ'], nover:['#7C8AA0','SIN VERIFICAR'] };
+  function fila(r, botones){
+    const [col,txt]=PILL[r.estado]||PILL.nover;
+    return '<div class="atl-r" data-k="'+esc(r.k)+'">'+
+      '<span class="atl-p" style="background:'+col+'">'+txt+'</span>'+
+      '<span class="atl-t"><b>'+esc(r.k)+'</b>'+
+        '<i>'+esc(r.detalle||'')+'</i>'+
+        '<span class="ev"><b>PRUEBA</b> · '+esc(r.prueba||'')+' · '+esc(R.cuando)+'</span>'+
+        (r.crear?'<span class="atl-fix" id="atl-np"><input id="atl-np-n" placeholder="nombre del producto" maxlength="60">'+
+                 '<input id="atl-np-p" placeholder="precio" maxlength="12" inputmode="decimal" style="max-width:90px">'+
+                 '<button class="atl-b" id="atl-np-ok">GUARDAR</button></span>':'')+
+        (r.sql||r.sqlUI?'<span class="atl-sql" id="atl-sql-'+esc(r.k)+'">'+esc(SQL)+'</span>':'')+
+      '</span>'+
+      '<span class="atl-a">'+(botones||[]).map(b=>
+        '<button class="atl-b'+(b[2]?' hot':'')+'" data-do="'+esc(b[1])+'">'+esc(b[0])+'</button>').join('')+
+      '</span></div>';
+  }
+  function pintar(){
+    const vivos=R.mundos.filter(m=>m.estado==='ok').length;
+    const pubOk=R.rutas.filter(r=>r.estado==='ok').length;
+    const tabOk=R.tablas.filter(t=>t.estado==='ok').length;
+    const pres=R.tablas.find(t=>t.k==='universe_presence');
+    const kpis=[
+      ['MUNDOS QUE ANDAN', vivos+'/'+R.mundos.length, vivos===R.mundos.length?'#4FE0A8':'#FFC24D'],
+      ['RUTAS PUBLICADAS', R.rutas.length?pubOk+'/'+R.rutas.length:'—', pubOk===R.rutas.length&&pubOk?'#4FE0A8':'#FF6B00'],
+      ['TABLAS VIVAS',     tabOk+'/'+R.tablas.length, tabOk===R.tablas.length?'#4FE0A8':'#FFC24D'],
+      ['DATOS GLOBALES',   tabOk?'SÍ':'NO', tabOk?'#4FE0A8':'#FF6B00']
+    ];
+    const H=[];
+    H.push('<div class="atl-w">',
+      '<div class="atl-top"><h2>ATLAS 23</h2>',
+      '<button class="atl-x" id="atl-close">✕ CERRAR</button></div>',
+      '<div class="atl-eye">OPERADOR DEL UNIVERSO · TODO LO QUE DICE ACÁ LLEVA SU PRUEBA</div>',
+      '<div class="atl-kpis">', kpis.map(([l,v,c])=>
+        '<div class="atl-k"><div class="v" style="color:'+c+'">'+esc(v)+'</div><div class="l">'+esc(l)+'</div></div>').join(''),
+      '</div>',
+      '<div class="atl-bar"><button class="atl-go" id="atl-run"'+(R.corriendo?' disabled':'')+'>',
+        R.corriendo?'VERIFICANDO…':'▸ VERIFICAR TODO','</button>',
+      '<span class="atl-when">', R.corrio?('última verificación '+esc(R.cuando)):'todavía no verifiqué nada','</span></div>');
+
+    if(!R.corrio){
+      H.push('<p class="atl-note">No te muestro nada hasta chequearlo. Tocá <b>VERIFICAR TODO</b> ',
+        'y cada línea va a venir con la prueba de dónde salió: el código HTTP, los bytes, la cantidad de filas.</p>');
+    } else {
+      H.push('<div class="atl-h">◆ PUBLICACIÓN — ¿el link vive de verdad?</div>');
+      R.rutas.forEach(r=>H.push(fila(r, r.url?[['COPIAR','copiar:'+r.url],['ABRIR','ir:'+r.url]]:[])));
+
+      H.push('<div class="atl-h">◆ DATOS — ¿se guarda para todos o solo acá?</div>');
+      R.tablas.forEach(r=>H.push(fila(r, r.estado==='ok'?[]:[['CÓMO','sql:'+r.k],['SUPABASE','ir:https://supabase.com/dashboard/project/qhklngvzdmwsbopbkiff/sql/new']])));
+
+      H.push('<div class="atl-h">◆ MUNDOS — ¿el botón hace algo?</div>');
+      R.mundos.forEach(r=>H.push(fila(r, r.abrir?[['ENTRAR','abrir:'+r.k]]:[['REVISAR','nada:'+r.k,true]])));
+
+      H.push('<div class="atl-h">◆ CONTENIDO — ¿hay algo adentro?</div>');
+      R.conten.forEach(r=>H.push(fila(r, r.crear?[['＋ CREAR','nuevoprod']]:[])));
+
+      H.push('<p class="atl-note">Lo que dice <b>SOLO ACÁ</b> vive en este dispositivo y nadie más lo ve. ',
+        'Lo que dice <b>SIN VERIFICAR</b> es que no pude comprobarlo, no que esté bien.</p>');
+    }
+    H.push('</div>');
+    $('atlas').innerHTML=H.join('');
+    $('atl-close').onclick=cerrar;
+    $('atl-run').onclick=correr;
+    $('atlas').querySelectorAll('[data-do]').forEach(b=>b.onclick=()=>hacer(b.dataset.do));
+    const np=$('atl-np-ok'); if(np) np.onclick=guardarProd;
+    const fab=$('atl-fab'); if(fab) fab.classList.toggle('hay',
+      R.corrio && (R.rutas.some(r=>r.estado==='fail') || R.mundos.some(m=>m.estado==='fail')));
+  }
+
+  // ── actuar: cada botón hace algo real ──
+  function avisar(t){ let el=document.getElementById('atl-live');
+    if(!el){ el=document.createElement('div'); el.id='atl-live'; el.setAttribute('aria-live','polite');
+      el.style.cssText='position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)';
+      document.body.appendChild(el); }
+    el.textContent=t; }
+  function hacer(cmd){
+    const i=cmd.indexOf(':'), verbo=i<0?cmd:cmd.slice(0,i), arg=i<0?'':cmd.slice(i+1);
+    if(verbo==='copiar'){ try{ navigator.clipboard.writeText(arg); }catch(e){}
+      avisar('Link copiado: '+arg); return; }
+    if(verbo==='ir'){ window.open(arg,'_blank','noopener'); return; }
+    if(verbo==='sql'){ const el=$('atl-sql-'+arg); if(el) el.classList.toggle('open');
+      try{ navigator.clipboard.writeText(SQL); }catch(e){}
+      avisar('SQL copiado'); return; }
+    if(verbo==='abrir'){ const m=R.mundos.find(x=>x.k===arg);
+      if(m&&m.abrir){ cerrar(); setTimeout(()=>{ try{ m.abrir(); }catch(e){ avisar('Ese mundo tiró un error al abrir.'); } },130); }
+      return; }
+    if(verbo==='nada'){ avisar(arg+' no está conectado a ninguna función. No es que falle: no hace nada.'); return; }
+    if(cmd==='nuevoprod'){ const f=$('atl-np'); if(f){ f.classList.add('open'); const n=$('atl-np-n'); if(n) n.focus(); } return; }
+  }
+
+  // guardar un producto de verdad: Supabase si vive, si no acá — y lo vuelvo a leer para no mentirte
+  async function guardarProd(){
+    const n=($('atl-np-n')||{}).value||'', p=($('atl-np-p')||{}).value||'';
+    if(!n.trim()){ avisar('Sin nombre no lo guardo.'); const el=$('atl-np-n'); if(el) el.focus(); return; }
+    const row={ id:'p'+Date.now().toString(36), owner:'frequency', name:n.trim(),
+                price:String(p).trim(), created_at:new Date().toISOString() };
+    let global=false, motivo='';
+    try{
+      const r=await fetch(SUPA.url+'/rest/v1/universe_products',
+        { method:'POST', headers:Object.assign({},HEAD,{ Prefer:'return=representation' }), body:JSON.stringify(row) });
+      if(r.ok) global=true; else { try{ motivo=((await r.json())||{}).message||('HTTP '+r.status); }catch(e){ motivo='HTTP '+r.status; } }
+    }catch(e){ motivo=String(e&&e.message||e).slice(0,60); }
+    const local=leerLocal('hk23_inq_productos',[]); local.push(row);
+    try{ localStorage.setItem('hk23_inq_productos',JSON.stringify(local)); }catch(e){}
+    const releido=leerLocal('hk23_inq_productos',[]).some(x=>x.id===row.id);   // lo leo de vuelta
+    avisar(global? 'Producto guardado para todos.' : 'Guardado solo en este dispositivo'+(motivo?': '+motivo:'')+'.');
+    log('atlas','creó el producto '+row.name+(global?' (global)':' (local)'));
+    if(!releido) avisar('No se pudo guardar en ningún lado. Fijate el espacio del navegador.');
+    R.conten=verContenido(); pintar();
+  }
+
+  async function correr(){
+    if(R.corriendo) return;
+    R.corriendo=true; pintar();
+    R.cuando=hora();
+    R.mundos=verMundos();
+    R.conten=verContenido();
+    const [ru,ta]=await Promise.all([verRutas(),verTablas()]);
+    R.rutas=ru; R.tablas=ta; R.cuando=hora(); R.corrio=true; R.corriendo=false;
+    pintar();
+    avisar('Verificación terminada. '+R.mundos.filter(m=>m.estado==='ok').length+' de '+R.mundos.length+' mundos andan.');
+    log('atlas','verificó el universo entero');
+  }
+
+  let ultimo=null;
+  function abrir(){ const el=$('atlas'); if(el.classList.contains('open')) return;
+    if(!el.innerHTML) pintar();
+    el.classList.add('open'); ultimo=document.activeElement;
+    const b=$('atl-run'); if(b) setTimeout(()=>b.focus(),30);
+    log('atlas','abrió el control del universo');
+    if(!R.corrio) correr(); }
+  function cerrar(){ const el=$('atlas'); if(!el.classList.contains('open')) return;
+    el.classList.remove('open'); if(ultimo&&ultimo.focus) ultimo.focus(); ultimo=null; }
+
+  const fab=$('atl-fab'); if(fab) fab.onclick=()=>$('atlas').classList.contains('open')?cerrar():abrir();
+  addEventListener('keydown',e=>{
+    if(/INPUT|TEXTAREA|SELECT/.test((document.activeElement||{}).tagName||'')) return;
+    const ab=$('atlas').classList.contains('open');
+    if((e.key==='a'||e.key==='A')&&!ab){ abrir(); }
+    else if(ab&&(e.key==='Escape'||e.key==='x'||e.key==='X')){ e.stopImmediatePropagation(); cerrar(); }
+  }, true);
+
+  window.Atlas={ open:abrir, close:cerrar, verificar:correr, estado:()=>JSON.parse(JSON.stringify(
+    { cuando:R.cuando, rutas:R.rutas, tablas:R.tablas,
+      mundos:R.mundos.map(m=>({k:m.k,estado:m.estado,prueba:m.prueba})), conten:R.conten })) };
+})();
+</script>
+
+
+<!-- ═══════════ TELÉFONO — que funcione en la mano, no solo en el escritorio ═══════════ -->
+<style id="mv-style">
+  /* 1 · NADA puede pintar claro. Si un fondo falla, se ve el universo, no una sábana. */
+  #media-stage, #media-stage .media-layer, #media-stage .ml-inner{ background:#05070E !important; }
+  #media-stage iframe, #media-stage video, #media-stage img{ background:#05070E !important; }
+
+  @media (max-width:820px){
+    /* 2 · los dos botones flotantes dejan de tapar la barra de abajo */
+    #lz-fab{ bottom:calc(74px + env(safe-area-inset-bottom,0px)) !important; }
+    #atl-fab{ bottom:calc(142px + env(safe-area-inset-bottom,0px)) !important; }
+
+    /* 3 · nada tocable puede medir menos que un dedo */
+    #dash-fab{ min-height:44px !important; display:inline-flex !important; align-items:center !important; }
+    /* el dashboard llegó después del arreglo móvil: sus botones también son para un dedo */
+    #dash-panel .d-tab, #dash-panel .d-btn, #dash-panel .d-world, #dash-panel .d-x, #dash-panel .d-del{
+      min-height:44px !important; display:inline-flex !important; align-items:center !important;
+      justify-content:center !important; }
+    #dash-panel #dash-tabs{ flex-wrap:wrap !important; }
+    #dash-panel .d-tab{ flex:1 0 auto !important; padding-left:10px !important; padding-right:10px !important; }
+    #dash-panel .d-world{ justify-content:flex-start !important; }
+    /* los últimos que quedaban cortos: puerta de entrada, lanzadores y CTA de tier */
+    #enter-btn, .gate-cta, #me-launch, #ag-launch{
+      min-height:44px !important; display:inline-flex !important;
+      align-items:center !important; justify-content:center !important; }
+    #hk-dock button, #hk-dock a, .nav-btn, .dk, .zone-header button, .zone-header a{
+      min-height:44px !important; padding-top:10px !important; padding-bottom:10px !important;
+      display:inline-flex !important; align-items:center !important; justify-content:center !important; }
+    #hk-dock{ padding-right:76px !important; }        /* deja aire para el ⊕ */
+
+    /* 4 · nada se sale de la pantalla */
+    .portal-quote{ max-width:calc(100vw - 32px) !important; font-size:11px !important; line-height:1.7 !important; }
+    #media-stage iframe{ max-width:100vw !important; }
+  }
+</style>
+<script>
+// ═══ TELÉFONO: cinco arreglos, cada uno por algo que se midió roto ═══
+(function(){
+  const chico = () => Math.min(innerWidth, innerHeight) <= 820 ||
+                      /iPhone|iPad|Android|Mobile/i.test(navigator.userAgent);
+
+  // 1 · dejar hacer zoom con los dedos. Estaba prohibido, y con letras de 8px es cruel.
+  const mv=document.querySelector('meta[name=viewport]');
+  if(mv) mv.setAttribute('content','width=device-width, initial-scale=1, viewport-fit=cover');
+
+  // 2 · en el teléfono, fuera el video de fondo.
+  //     Pesa, gasta batería, y si no carga tapa el universo entero de gris.
+  //     El fondo de verdad es la nebulosa dibujada, que siempre está.
+  function sacarVideo(){
+    if(!chico()) return;
+    let n=0;
+    document.querySelectorAll('#media-stage iframe').forEach(f=>{ 
+      const l=f.closest('.media-layer')||f.parentElement;
+      if(l) l.style.display='none'; else f.style.display='none';
+      n++; });
+    const st=document.getElementById('media-stage');
+    if(st) st.style.background='#05070E';
+    return n;
+  }
+  sacarVideo();
+  // el motor de fondos puede montar capas después: las vigilo
+  const st=document.getElementById('media-stage');
+  if(st && window.MutationObserver) new MutationObserver(()=>sacarVideo()).observe(st,{childList:true,subtree:true});
+
+  // 3 · red de seguridad: si algo igual pinta claro, lo oscurezco.
+  //     Se mide el píxel real del fondo, no se asume.
+  function noQuedarEnBlanco(){
+    const b=getComputedStyle(document.body).backgroundColor;
+    document.documentElement.style.background='#05070E';
+    if(!/rgba?\(\s*(\d+)/.test(b)) document.body.style.background='#05070E';
+  }
+  noQuedarEnBlanco();
+
+  window.Movil={ esChico:chico, sacarVideo, version:'1' };
+})();
+</script>
+
+
+<!-- ═══════════ PLANETA MÚSICA — HK23. Toda tu música, un cuerpo. ═══════════ -->
+<style id="mp-style">
+  #mp{ position:fixed; inset:0; z-index:978; display:none; background:#03040A;
+    font-family:'Space Mono',ui-monospace,monospace; color:#E6E4DE; overflow:hidden; }
+  #mp.open{ display:block; }
+  #mp-cv{ position:absolute; inset:0; width:100%; height:100%; touch-action:manipulation; }
+  .mp-top{ position:absolute; left:0; right:0; top:0; z-index:3; display:flex; align-items:center;
+    gap:10px; padding:14px 14px calc(14px) ; padding-top:calc(14px + env(safe-area-inset-top,0px));
+    background:linear-gradient(#03040A, #03040A00); pointer-events:none; flex-wrap:wrap; }
+  .mp-top > *{ pointer-events:auto; }
+  .mp-top b{ font-size:12px; letter-spacing:5px; }
+  .mp-top i{ font-size:8px; letter-spacing:3px; color:#5A6478; font-style:normal; }
+  .mp-x{ margin-left:auto; font-size:11px; letter-spacing:2px; color:#03040A; background:#E6E4DE;
+    border:none; border-radius:3px; padding:11px 15px; cursor:pointer; min-height:44px; }
+  .mp-b{ font-size:9px; letter-spacing:2px; color:#9FE8FF; background:transparent;
+    border:1px solid #24384A; border-radius:3px; padding:11px 13px; cursor:pointer; min-height:44px; }
+  .mp-b:focus-visible,.mp-x:focus-visible{ outline:2px solid #9FE8FF; outline-offset:2px; }
+  .mp-b.on{ background:#9FE8FF; color:#03040A; font-weight:700; }
+
+  /* el tema abierto: entrás adentro */
+  #mp-in{ position:absolute; inset:0; z-index:6; display:none; background:rgba(3,4,10,.96);
+    backdrop-filter:blur(12px); overflow-y:auto; -webkit-overflow-scrolling:touch; }
+  #mp-in.open{ display:block; }
+  .mi-w{ max-width:720px; margin:0 auto; padding:26px 18px calc(150px + env(safe-area-inset-bottom,0px)); }
+  .mi-eye{ font-size:8px; letter-spacing:4px; color:#5A6478; margin-bottom:8px; }
+  .mi-t{ font-size:27px; letter-spacing:-.5px; line-height:1.1; font-weight:700; margin:0 0 4px; }
+  .mi-a{ font-size:11px; letter-spacing:3px; color:#8C97A8; margin-bottom:16px; }
+  .mi-ring{ display:inline-block; font-size:8px; letter-spacing:3px; color:#03040A; background:#E8C86A;
+    border-radius:2px; padding:5px 9px; font-weight:700; margin-bottom:16px; }
+  .mi-h{ font-size:8px; letter-spacing:4px; color:#5A6478; margin:22px 0 8px;
+    border-bottom:1px solid #141C26; padding-bottom:7px; }
+  .mi-p{ font-size:13px; line-height:1.85; color:#C7CFDA; margin:0 0 12px; white-space:pre-wrap; }
+  .mi-p.vacio{ color:#5A6478; font-style:italic; }
+  .mi-moons{ display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:8px; }
+  .mi-moon{ border:1px solid #141C26; background:#080B12; border-radius:4px; padding:12px 12px;
+    cursor:pointer; text-align:left; min-height:56px; }
+  .mi-moon b{ display:block; font-size:11px; color:#E6E4DE; }
+  .mi-moon i{ display:block; font-size:8px; letter-spacing:1px; color:#5A6478; font-style:normal; margin-top:4px; }
+  .mi-acts{ display:flex; gap:8px; flex-wrap:wrap; margin-top:20px; }
+
+  /* la cabina: pinchar dos temas */
+  #mp-deck{ position:absolute; left:0; right:0; bottom:0; z-index:7; display:none;
+    background:linear-gradient(#03040A00,#03040A 22%); padding:16px 14px calc(14px + env(safe-area-inset-bottom,0px)); }
+  #mp-deck.open{ display:block; }
+  .dk-row{ display:flex; gap:10px; align-items:stretch; max-width:720px; margin:0 auto; }
+  .dk-side{ flex:1 1 0; min-width:0; border:1px solid #1B2634; border-radius:4px; background:#070A11; padding:11px; }
+  .dk-side.live{ border-color:#9FE8FF; }
+  .dk-side .lb{ font-size:7px; letter-spacing:3px; color:#5A6478; }
+  .dk-side .nm{ font-size:11px; margin:5px 0 8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .dk-side .nm.vacio{ color:#5A6478; }
+  .dk-side button{ font-size:9px; letter-spacing:1px; background:transparent; border:1px solid #24384A;
+    color:#9FE8FF; border-radius:3px; padding:9px 10px; cursor:pointer; width:100%; min-height:44px; }
+  .dk-fade{ max-width:720px; margin:12px auto 0; }
+  .dk-fade input{ width:100%; height:44px; accent-color:#9FE8FF; }
+  .dk-fade .lb{ display:flex; justify-content:space-between; font-size:7px; letter-spacing:3px; color:#5A6478; }
+
+  /* cargar un tema */
+  #mp-add{ position:absolute; inset:0; z-index:8; display:none; background:rgba(3,4,10,.97); overflow-y:auto; }
+  #mp-add.open{ display:block; }
+  .ma-w{ max-width:560px; margin:0 auto; padding:26px 18px calc(60px + env(safe-area-inset-bottom,0px)); }
+  .ma-f{ display:block; margin-bottom:12px; }
+  .ma-f span{ display:block; font-size:8px; letter-spacing:3px; color:#5A6478; margin-bottom:6px; }
+  .ma-f input,.ma-f textarea{ width:100%; background:#05070E; border:1px solid #24384A; border-radius:3px;
+    color:#E6E4DE; font:400 13px 'Space Mono',ui-monospace,monospace; padding:12px; min-height:46px; }
+  .ma-f textarea{ min-height:88px; line-height:1.7; resize:vertical; }
+  .ma-f input:focus-visible,.ma-f textarea:focus-visible{ outline:2px solid #9FE8FF; outline-offset:1px; }
+  .ma-chk{ display:flex; align-items:center; gap:10px; margin:16px 0; cursor:pointer; min-height:44px; }
+  .ma-chk input{ width:22px; height:22px; accent-color:#E8C86A; }
+  .ma-chk span{ font-size:11px; letter-spacing:1px; }
+  .mp-vacio[hidden]{ display:none !important; }
+  .mp-vacio{ position:absolute; inset:0; z-index:2; display:flex; align-items:center; justify-content:center;
+    pointer-events:none; padding:30px; }
+  .mp-vacio div{ max-width:420px; text-align:center; pointer-events:auto; }
+  .mp-vacio p{ font-size:12px; line-height:1.9; color:#8C97A8; margin:0 0 18px; }
+  @media(prefers-reduced-motion:reduce){ #mp *{ animation:none !important; transition:none !important; } }
+</style>
+
+<div id="mp" role="dialog" aria-modal="true" aria-label="Planeta música HK23">
+  <canvas id="mp-cv"></canvas>
+  <div class="mp-top">
+    <b>MÚSICA</b><i>HK23 · TOCÁ UN TEMA PARA ENTRAR</i>
+    <button class="mp-b" id="mp-new">＋ TEMA</button>
+    <button class="mp-b" id="mp-deck-t">◐ CABINA</button>
+    <button class="mp-x" id="mp-close">✕</button>
+  </div>
+  <div class="mp-vacio" id="mp-vacio" hidden><div>
+    <p>El planeta está encendido y vacío. Todavía no cargaste ningún tema —<br>
+       y no voy a inventarte una discografía que no es tuya.</p>
+    <button class="mp-b on" id="mp-new2">＋ CARGAR MI PRIMER TEMA</button>
+  </div></div>
+  <div id="mp-in" role="dialog" aria-modal="true" aria-label="El tema por dentro"></div>
+  <div id="mp-deck">
+    <div class="dk-row">
+      <div class="dk-side" id="dk-a"><div class="lb">◐ DECK A</div>
+        <div class="nm vacio" id="dk-a-n">vacío</div><button id="dk-a-p">▸ PLAY</button></div>
+      <div class="dk-side" id="dk-b"><div class="lb">DECK B ◑</div>
+        <div class="nm vacio" id="dk-b-n">vacío</div><button id="dk-b-p">▸ PLAY</button></div>
+    </div>
+    <div class="dk-fade">
+      <div class="lb"><span>A</span><span id="dk-mix">CENTRO</span><span>B</span></div>
+      <input type="range" id="dk-x" min="0" max="100" value="50" aria-label="Crossfader entre deck A y deck B">
+    </div>
+  </div>
+  <div id="mp-add" role="dialog" aria-modal="true" aria-label="Cargar un tema"></div>
+</div>
+
+<script>
+// ═══ PLANETA MÚSICA — HK23. El planeta sos vos; los temas orbitan; el anillo dice timeless. ═══
+(function(){
+  const $=id=>document.getElementById(id);
+  const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  const safeUrl=u=>/^https?:\/\//i.test(u||'')?encodeURI(u):'';
+  const esAudio=u=>/\.(mp3|m4a|aac|wav|ogg|opus|flac)(\?|$)/i.test(u||'');
+  const log=(a,b)=>{ try{ (window.hkLog||function(){})(a,b); }catch(e){} };
+  const TAU=Math.PI*2;
+
+  // ── los temas. Vacío a propósito: tu música la cargás vos. ──
+  const K='hk23_musica';
+  const leer=()=>{ try{ return JSON.parse(localStorage.getItem(K))||[]; }catch(e){ return []; } };
+  const guardar=t=>{ try{ localStorage.setItem(K,JSON.stringify(t)); return true; }catch(e){ return false; } };
+  let TEMAS=leer();
+  fetch('./musica.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(j=>{
+    if(!j) return; const arr=Array.isArray(j)?j:(j.temas||j.tracks||[]);
+    if(!arr.length) return;
+    const m=new Map(TEMAS.map(t=>[t.id,t]));
+    arr.forEach(t=>{ if(t&&t.id) m.set(t.id,{...(m.get(t.id)||{}),...t}); });
+    TEMAS=[...m.values()]; layout(); pintarVacio();
+  }).catch(()=>{});
+
+  // ── geometría: dónde vive cada tema ──
+  const cv=$('mp-cv'), g=cv.getContext('2d');
+  let W=0,H=0,DPR=1, ORB=[], CEN={x:0,y:0,r:0};
+  function fit(){ const r=cv.getBoundingClientRect();
+    DPR=Math.min(2,window.devicePixelRatio||1);
+    if(cv.width!==Math.round(r.width*DPR)||cv.height!==Math.round(r.height*DPR)){
+      cv.width=Math.round(r.width*DPR); cv.height=Math.round(r.height*DPR); }
+    W=cv.width; H=cv.height; layout(); }
+  addEventListener('resize',fit);
+
+  function layout(){
+    CEN={ x:W*0.5, y:H*0.50, r:Math.min(W,H)*0.135 };
+    const n=TEMAS.length; ORB=[];
+    if(!n) return;
+    const R0=CEN.r*3.05, R1=Math.min(W,H)*0.46;   // aire: el planeta y su rótulo no se pisan con los temas
+    const porAnillo=Math.max(4,Math.ceil(Math.sqrt(n)*1.6));
+    TEMAS.forEach((t,i)=>{
+      const anillo=Math.floor(i/porAnillo), enAnillo=Math.min(porAnillo,n-anillo*porAnillo);
+      const rad=R0+(R1-R0)*(anillo/Math.max(1,Math.ceil(n/porAnillo)-1||1));
+      const fase=(i%porAnillo)/enAnillo*TAU + anillo*0.6;
+      ORB.push({ t, i, rad:isFinite(rad)?rad:R0, fase, vel:0.000060/(1+anillo*0.45),
+        lunas:(t.lunas||[]).slice(0,6) });
+    });
+  }
+
+  // ── pintar ──
+  function esfera(cx,cy,r,col,vivo){
+    if(r<=0.5) return;
+    const gr=g.createRadialGradient(cx-r*0.34,cy-r*0.36,r*0.06, cx,cy,r);
+    gr.addColorStop(0, vivo?'#FFFFFF':'#8C97A8');
+    gr.addColorStop(0.30, col);
+    gr.addColorStop(1,'#05070E');
+    g.fillStyle=gr; g.beginPath(); g.arc(cx,cy,r,0,TAU); g.fill();
+    g.beginPath(); g.arc(cx,cy,r*1.02,0,TAU);
+    g.strokeStyle=vivo?'rgba(159,232,255,.55)':'rgba(140,151,168,.25)';
+    g.lineWidth=Math.max(1,r*0.06); g.stroke();
+  }
+  function anilloTimeless(cx,cy,r,t){
+    // el anillo no decora: dice que el tema aguantó el tiempo
+    g.save(); g.translate(cx,cy); g.rotate(-0.42);
+    for(let k=0;k<3;k++){
+      g.beginPath(); g.ellipse(0,0, r*(2.05+k*0.30), r*(0.60+k*0.09), 0, 0, TAU);
+      g.strokeStyle='rgba(232,200,106,'+(0.72-k*0.19).toFixed(2)+')';
+      g.lineWidth=Math.max(1.1, r*(0.13-k*0.03)); g.stroke();
+    }
+    g.restore();
+  }
+  let hot=null, t0=0, corriendo=false;
+  const HIT=[];
+  function pintar(ts){
+    if(!corriendo) return;
+    requestAnimationFrame(pintar);
+    fit();
+    g.fillStyle='#03040A'; g.fillRect(0,0,W,H);
+    // estrellas deterministas
+    for(let i=0;i<160;i++){ const a=Math.sin(i*12.9898)*43758.5453, b=Math.sin(i*78.233)*12345.6789;
+      const x=(a-Math.floor(a))*W, y=(b-Math.floor(b))*H, s=(Math.sin(i*3.17)+1)/2;
+      g.globalAlpha=0.10+s*0.55; g.fillStyle='#EAF0FF';
+      g.beginPath(); g.arc(x,y,s>0.93?Math.max(1.4,W*0.0012):Math.max(0.6,W*0.0006),0,TAU); g.fill(); }
+    g.globalAlpha=1;
+
+    HIT.length=0;
+    // órbitas
+    ORB.forEach(o=>{ g.beginPath(); g.ellipse(CEN.x,CEN.y,o.rad,o.rad*0.78,0,0,TAU);
+      g.strokeStyle='rgba(120,150,190,.10)'; g.lineWidth=1; g.stroke(); });
+
+    // el planeta: toda tu música
+    esfera(CEN.x,CEN.y,CEN.r,'#3C7ADF',true);
+    const LS=Math.max(11,W*0.0068);
+    g.textAlign='center'; g.font='700 '+(LS*1.25)+'px "Space Mono",ui-monospace,monospace';
+    g.fillStyle='#EAF2FF'; g.fillText('HK23', CEN.x, CEN.y+CEN.r+LS*2.1);
+    g.font='500 '+(LS*0.86)+'px "Space Mono",ui-monospace,monospace'; g.fillStyle='#8C97A8';
+    g.fillText(TEMAS.length? String(TEMAS.length).padStart(2,'0')+(TEMAS.length===1?' TEMA':' TEMAS') : 'SIN TEMAS',
+      CEN.x, CEN.y+CEN.r+LS*3.3);
+
+    // los temas
+    const orden=ORB.map(o=>{ const a=o.fase+ts*o.vel;
+      return { o, x:CEN.x+Math.cos(a)*o.rad, y:CEN.y+Math.sin(a)*o.rad*0.78, prof:(Math.sin(a)+1)/2, a }; })
+      .sort((p,q)=>p.prof-q.prof);
+    orden.forEach(({o,x,y,prof,a})=>{
+      const s=0.74+0.42*prof, r=Math.max(6,Math.min(W,H)*0.030)*s;
+      const t=o.t, act=hot===t.id;
+      if(t.tl) anilloTimeless(x,y,r,t);
+      esfera(x,y,r, t.tl?'#E8C86A':'#5FA8D3', act||t.tl);
+      // lunas: temas relacionados
+      o.lunas.forEach((m,j)=>{ const ma=a*2.4+j*(TAU/Math.max(1,o.lunas.length));
+        const mx=x+Math.cos(ma)*r*2.2, my=y+Math.sin(ma)*r*1.5;
+        g.beginPath(); g.arc(mx,my,Math.max(1.6,r*0.20),0,TAU);
+        g.fillStyle='rgba(198,214,236,.80)'; g.fill(); });
+      if(act){ g.beginPath(); g.arc(x,y,r*2.6,0,TAU);
+        g.strokeStyle='rgba(159,232,255,.65)'; g.lineWidth=Math.max(1.2,W*0.0011); g.stroke(); }
+      g.font='700 '+(LS*0.92)+'px "Space Mono",ui-monospace,monospace';
+      g.fillStyle='rgba(3,4,10,.85)'; g.fillText((t.t||'').slice(0,20).toUpperCase(), x+1.5, y+r+LS*2.0+1.5);
+      g.fillStyle=t.tl?'#E8C86A':'#DDE6F2'; g.fillText((t.t||'').slice(0,20).toUpperCase(), x, y+r+LS*1.9);
+      HIT.push({ id:t.id, x, y, r:Math.max(r*2.2, 44*DPR) });   // 44px reales, no de adorno
+    });
+    g.textAlign='left';
+  }
+  function golpe(px,py){
+    const rct=cv.getBoundingClientRect(), sx=W/rct.width, sy=H/rct.height;
+    let best=null, bd=1e9;
+    HIT.forEach(h=>{ const d=Math.hypot(h.x-(px-rct.left)*sx, h.y-(py-rct.top)*sy);
+      if(d<h.r&&d<bd){ bd=d; best=h.id; } });
+    return best;
+  }
+
+  // ── entrar al tema: no a reproducirlo, a lo que es ──
+  function entrar(id){
+    const t=TEMAS.find(x=>x.id===id); if(!t) return;
+    const campo=(tit,val,vacio)=>'<div class="mi-h">'+esc(tit)+'</div><p class="mi-p'+(val?'':' vacio')+'">'+
+      esc(val||vacio)+'</p>';
+    const url=safeUrl(t.u);
+    const lunas=(t.lunas||[]);
+    $('mp-in').innerHTML='<div class="mi-w">'+
+      '<div class="mi-eye">◆ ADENTRO DEL TEMA</div>'+
+      (t.tl?'<div class="mi-ring">◍ TIMELESS</div>':'')+
+      '<h2 class="mi-t">'+esc(t.t||'—')+'</h2>'+
+      '<div class="mi-a">'+esc(t.a||'HK23')+(t.y?' · '+esc(t.y):'')+'</div>'+
+      campo('QUÉ ES', t.es, 'Todavía no escribiste qué es este tema.')+
+      campo('LO QUE PROVOCA', t.pr, 'Todavía no escribiste lo que provoca.')+
+      campo('DE DÓNDE SALIÓ', t.dd, 'Todavía no escribiste de dónde salió.')+
+      '<div class="mi-h">LUNAS — TEMAS RELACIONADOS ('+lunas.length+')</div>'+
+      (lunas.length? '<div class="mi-moons">'+lunas.map(m=>
+          '<div class="mi-moon"'+(safeUrl(m.u)?' data-ir="'+esc(safeUrl(m.u))+'"':'')+'>'+
+          '<b>'+esc(m.t||'—')+'</b><i>'+esc(m.a||'')+'</i></div>').join('')+'</div>'
+        : '<p class="mi-p vacio">Sin temas relacionados todavía.</p>')+
+      '<div class="mi-acts">'+
+        (url? (esAudio(url)
+            ? '<button class="mp-b on" data-deck="a">◐ CARGAR EN DECK A</button>'+
+              '<button class="mp-b" data-deck="b">CARGAR EN DECK B ◑</button>'
+            : '<button class="mp-b on" data-abrir="'+esc(url)+'">▸ ESCUCHAR AFUERA</button>')
+          : '<span class="mi-p vacio" style="margin:0">Sin link: no se puede sonar todavía.</span>')+
+        '<button class="mp-b" data-edit="1">✎ EDITAR</button>'+
+        '<button class="mp-b" data-cerrar="1">✕ VOLVER AL PLANETA</button>'+
+      '</div></div>';
+    const P=$('mp-in'); P.classList.add('open');
+    P.querySelectorAll('[data-ir]').forEach(b=>b.onclick=()=>window.open(b.dataset.ir,'_blank','noopener'));
+    P.querySelectorAll('[data-abrir]').forEach(b=>b.onclick=()=>window.open(b.dataset.abrir,'_blank','noopener'));
+    P.querySelectorAll('[data-deck]').forEach(b=>b.onclick=()=>{ cargarDeck(b.dataset.deck,t); cerrarIn(); abrirDeck(true); });
+    P.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{ cerrarIn(); formulario(t); });
+    P.querySelectorAll('[data-cerrar]').forEach(b=>b.onclick=cerrarIn);
+    const c=P.querySelector('.mi-w'); c.setAttribute('tabindex','-1'); setTimeout(()=>c.focus(),20);
+    log('musica','entró a '+(t.t||id));
+  }
+  function cerrarIn(){ $('mp-in').classList.remove('open'); }
+
+  // ── la cabina: dos temas sonando, un crossfader real ──
+  let AC=null, D={ a:null, b:null };
+  function nodo(lado){
+    if(D[lado]) return D[lado];
+    const el=new Audio(); el.crossOrigin='anonymous'; el.loop=true; el.preload='none';
+    D[lado]={ el, gain:null, src:null, tema:null };
+    return D[lado];
+  }
+  function armar(lado){
+    const d=nodo(lado);
+    if(!AC){ try{ AC=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ return d; } }
+    if(!d.gain && AC){ try{ d.src=AC.createMediaElementSource(d.el); d.gain=AC.createGain();
+      d.src.connect(d.gain); d.gain.connect(AC.destination); mezclar(); }catch(e){} }
+    return d;
+  }
+  function cargarDeck(lado,t){
+    const d=armar(lado); d.tema=t; d.el.src=safeUrl(t.u);
+    const n=$('dk-'+lado+'-n'); n.textContent=t.t||'—'; n.classList.remove('vacio');
+    log('musica','deck '+lado.toUpperCase()+': '+(t.t||''));
+  }
+  function mezclar(){
+    const v=+$('dk-x').value/100;
+    if(D.a&&D.a.gain) D.a.gain.gain.value=Math.cos(v*Math.PI/2);
+    if(D.b&&D.b.gain) D.b.gain.gain.value=Math.cos((1-v)*Math.PI/2);
+    if(D.a&&!D.a.gain) D.a.el.volume=Math.cos(v*Math.PI/2);
+    if(D.b&&!D.b.gain) D.b.el.volume=Math.cos((1-v)*Math.PI/2);
+    $('dk-mix').textContent = v<0.35?'◐ A':(v>0.65?'B ◑':'CENTRO');
+    $('dk-a').classList.toggle('live', v<0.65); $('dk-b').classList.toggle('live', v>0.35);
+  }
+  function play(lado){
+    const d=armar(lado); if(!d.el.src){ avisar('Ese deck está vacío. Entrá a un tema y cargalo.'); return; }
+    if(AC&&AC.state==='suspended') AC.resume();
+    if(d.el.paused){ d.el.play().catch(()=>avisar('El navegador no pudo sonar ese link.'));
+      $('dk-'+lado+'-p').textContent='❚❚ PAUSA'; }
+    else { d.el.pause(); $('dk-'+lado+'-p').textContent='▸ PLAY'; }
+    mezclar();
+  }
+  function abrirDeck(v){ $('mp-deck').classList.toggle('open', v!==undefined?v:!$('mp-deck').classList.contains('open'));
+    $('mp-deck-t').classList.toggle('on', $('mp-deck').classList.contains('open')); }
+
+  // ── cargar / editar un tema ──
+  function avisar(t){ let el=$('mp-live');
+    if(!el){ el=document.createElement('div'); el.id='mp-live'; el.setAttribute('aria-live','polite');
+      el.style.cssText='position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)';
+      $('mp').appendChild(el); }
+    el.textContent=t; }
+  const campoF=(k,l,v,ph,area)=>'<label class="ma-f"><span>'+esc(l)+'</span>'+
+    (area?'<textarea id="mf-'+k+'" placeholder="'+esc(ph||'')+'">'+esc(v||'')+'</textarea>'
+        :'<input id="mf-'+k+'" value="'+esc(v||'')+'" placeholder="'+esc(ph||'')+'">')+'</label>';
+  function formulario(t){
+    t=t||{};
+    $('mp-add').innerHTML='<div class="ma-w">'+
+      '<div class="mi-eye">◆ '+(t.id?'EDITAR TEMA':'CARGAR UN TEMA')+'</div>'+
+      '<h2 class="mi-t" style="font-size:19px;margin-bottom:18px">'+(t.id?esc(t.t||''):'TU MÚSICA, TUS PALABRAS')+'</h2>'+
+      campoF('t','TÍTULO',t.t,'cómo se llama')+
+      campoF('a','ARTISTA',t.a||'HK23','quién lo hizo')+
+      campoF('y','AÑO',t.y,'2024')+
+      campoF('u','LINK','',0)+
+      '<p class="mi-p vacio" style="margin:-6px 0 14px;font-size:10px">Un .mp3 directo se puede pinchar en la cabina. '+
+      'Un link de YouTube o SoundCloud solo se abre afuera.</p>'+
+      campoF('es','QUÉ ES',t.es,'qué es este tema','area')+
+      campoF('pr','LO QUE PROVOCA',t.pr,'qué le hace a quien lo escucha','area')+
+      campoF('dd','DE DÓNDE SALIÓ',t.dd,'el sample, la noche, el club, el sello','area')+
+      campoF('ln','LUNAS — TEMAS RELACIONADOS',(t.lunas||[]).map(m=>(m.t||'')+' — '+(m.a||'')).join('\n'),
+             'uno por línea:  título — artista','area')+
+      '<label class="ma-chk"><input type="checkbox" id="mf-tl"'+(t.tl?' checked':'')+'>'+
+      '<span>◍ Es un tema <b>TIMELESS</b> — le pone anillo, se ve desde lejos</span></label>'+
+      '<div class="mi-acts">'+
+        '<button class="mp-b on" id="mf-ok">GUARDAR</button>'+
+        (t.id?'<button class="mp-b" id="mf-del">BORRAR</button>':'')+
+        '<button class="mp-b" id="mf-x">CANCELAR</button>'+
+      '</div></div>';
+    const A=$('mp-add'); A.classList.add('open');
+    const v=k=>{ const e=$('mf-'+k); return e?e.value.trim():''; };
+    if(t.u){ const e=$('mf-u'); if(e) e.value=t.u; }
+    $('mf-ok').onclick=()=>{
+      const tit=v('t'); if(!tit){ avisar('Sin título no lo guardo.'); $('mf-t').focus(); return; }
+      const lunas=v('ln').split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{
+        const p=l.split(/\s+[—–-]\s+/); return { t:p[0]||l, a:p[1]||'' }; });
+      const row={ id:t.id||('tk'+Date.now().toString(36)), t:tit, a:v('a')||'HK23', y:v('y'),
+        u:v('u'), es:v('es'), pr:v('pr'), dd:v('dd'), tl:!!$('mf-tl').checked, lunas };
+      const i=TEMAS.findIndex(x=>x.id===row.id);
+      if(i>=0) TEMAS[i]=row; else TEMAS.push(row);
+      const ok=guardar(TEMAS);
+      TEMAS=leer();                                  // lo leo de vuelta: no te digo "guardado" sin comprobarlo
+      const quedo=TEMAS.some(x=>x.id===row.id);
+      layout(); pintarVacio(); A.classList.remove('open');
+      avisar(quedo? (ok?'Tema guardado en este dispositivo.':'Guardado.') : 'NO se pudo guardar. Fijate el espacio del navegador.');
+      log('musica',(i>=0?'editó ':'cargó ')+row.t);
+    };
+    if($('mf-del')) $('mf-del').onclick=()=>{
+      TEMAS=TEMAS.filter(x=>x.id!==t.id); guardar(TEMAS); TEMAS=leer();
+      layout(); pintarVacio(); A.classList.remove('open'); avisar('Tema borrado.'); };
+    $('mf-x').onclick=()=>A.classList.remove('open');
+    setTimeout(()=>{ const e=$('mf-t'); if(e) e.focus(); },30);
+  }
+
+  function pintarVacio(){ const v=$('mp-vacio'); if(v) v.hidden = TEMAS.length>0; }
+
+  // ── abrir / cerrar ──
+  let ultimo=null;
+  function abrir(){ const el=$('mp'); if(el.classList.contains('open')) return;
+    el.classList.add('open'); ultimo=document.activeElement;
+    corriendo=true; fit(); pintarVacio(); requestAnimationFrame(pintar);
+    setTimeout(()=>{ const b=$('mp-close'); if(b) b.focus(); },30);
+    log('musica','abrió el planeta música'); }
+  function cerrar(){ const el=$('mp'); if(!el.classList.contains('open')) return;
+    corriendo=false; el.classList.remove('open'); cerrarIn(); $('mp-add').classList.remove('open');
+    ['a','b'].forEach(l=>{ if(D[l]&&D[l].el&&!D[l].el.paused){ D[l].el.pause(); $('dk-'+l+'-p').textContent='▸ PLAY'; } });
+    if(ultimo&&ultimo.focus) ultimo.focus(); ultimo=null; }
+
+  $('mp-close').onclick=cerrar;
+  $('mp-new').onclick=()=>formulario(null);
+  $('mp-new2').onclick=()=>formulario(null);
+  $('mp-deck-t').onclick=()=>abrirDeck();
+  $('dk-a-p').onclick=()=>play('a'); $('dk-b-p').onclick=()=>play('b');
+  $('dk-x').oninput=mezclar;
+  cv.addEventListener('pointerdown',e=>{ const id=golpe(e.clientX,e.clientY); if(id){ hot=id; entrar(id); } });
+  cv.addEventListener('pointermove',e=>{ hot=golpe(e.clientX,e.clientY); });
+  addEventListener('keydown',e=>{
+    if(/INPUT|TEXTAREA|SELECT/.test((document.activeElement||{}).tagName||'')) return;
+    if(!$('mp').classList.contains('open')) return;
+    if(e.key==='Escape'){ e.stopImmediatePropagation();
+      if($('mp-add').classList.contains('open')) $('mp-add').classList.remove('open');
+      else if($('mp-in').classList.contains('open')) cerrarIn();
+      else cerrar(); }
+  }, true);
+
+  window.MusicaHK={ open:abrir, close:cerrar, nuevo:()=>formulario(null),
+    temas:()=>JSON.parse(JSON.stringify(TEMAS)), cabina:abrirDeck };
+})();
+</script>
+
+
+<!-- ═══════════ DASHBOARD — traído desde hk23-universe.html: un solo universo ═══════════ -->
+<style>
+  #dash-fab{position:fixed;top:66px;left:24px;z-index:9000;font-family:'Space Mono',monospace;font-size:10px;
+    letter-spacing:2px;text-transform:uppercase;color:#cdd;background:rgba(10,10,16,.85);border:1px solid #2a2a36;
+    border-radius:30px;padding:10px 16px;cursor:pointer;backdrop-filter:blur(6px);}
+  #dash-fab:hover{border-color:#39d0ff;color:#fff;}
+  #dash-fab.on{border-color:#39d0ff;color:#39d0ff;}
+  #dash-panel{position:fixed;top:0;left:0;height:100%;width:420px;max-width:94vw;z-index:9001;background:rgba(8,8,13,.97);
+    backdrop-filter:blur(16px);border-right:1px solid #1d1d28;transform:translateX(-102%);transition:transform .35s cubic-bezier(.4,0,.2,1);
+    overflow-y:auto;padding:22px 22px 60px;font-family:'Space Mono',monospace;color:#e6e6ee;}
+  #dash-panel.open{transform:translateX(0);}
+  #dash-panel h3{font-family:'Space Grotesk',sans-serif;font-weight:900;font-size:18px;letter-spacing:.5px;margin-bottom:2px;}
+  #dash-panel .d-sub{font-size:9px;letter-spacing:2px;color:#5a5a68;text-transform:uppercase;margin-bottom:14px;}
+  #dash-panel .d-x{position:absolute;top:18px;right:18px;cursor:pointer;color:#888;font-size:18px;}
+  #dash-tabs{display:flex;margin:6px 0 14px;}
+  .d-tab{flex:1;text-align:center;font-size:9px;letter-spacing:1px;text-transform:uppercase;padding:9px 2px;cursor:pointer;color:#6a6a78;border-bottom:1px solid #20202c;}
+  .d-tab.on{color:#39d0ff;border-color:#39d0ff;}
+  #dash-body input,#dash-body textarea{width:100%;background:#0e0e16;border:1px solid #20202c;border-radius:8px;padding:9px 11px;color:#e6e6ee;font-family:inherit;font-size:12px;outline:none;}
+  #dash-body input:focus,#dash-body textarea:focus{border-color:#39d0ff;}
+  #dash-body textarea{resize:vertical;min-height:48px;line-height:1.5;}
+  .d-btn{width:100%;text-align:center;margin-top:10px;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:12px;letter-spacing:1px;text-transform:uppercase;border-radius:9px;padding:11px;cursor:pointer;border:none;background:#39d0ff;color:#06121a;}
+  .d-card{background:#11111a;border:1px solid #20202c;border-radius:10px;padding:11px 12px;margin-top:9px;font-size:12px;line-height:1.5;position:relative;}
+  .d-del{position:absolute;top:8px;right:10px;color:#555;cursor:pointer;font-size:13px;}
+  .d-del:hover{color:#ff6b6b;}
+  .d-pill{display:inline-block;font-size:9px;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:20px;cursor:pointer;}
+  .d-metric{display:inline-block;text-align:center;background:#11111a;border:1px solid #20202c;border-radius:10px;padding:12px 0;width:31%;margin-right:2%;}
+  .d-metric b{display:block;font-family:'Space Grotesk',sans-serif;font-size:26px;color:#39d0ff;}
+  .d-metric span{font-size:8px;letter-spacing:1px;color:#6a6a78;text-transform:uppercase;}
+  .d-world{display:flex;align-items:center;gap:10px;padding:11px 12px;border:1px solid #20202c;border-radius:10px;margin-top:9px;text-decoration:none;color:#e6e6ee;font-size:13px;}
+  .d-world:hover{border-color:#39d0ff;}
+  .d-world.soon{opacity:.5;cursor:default;}
+  .d-world .d-go{margin-left:auto;font-size:10px;color:#39d0ff;letter-spacing:1px;}
+  #world-view{position:fixed;inset:0;z-index:9002;background:rgba(5,5,9,.86);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;padding:24px;font-family:'Space Mono',monospace;}
+  #world-view.open{display:flex;}
+  #world-view .wv-card{position:relative;max-width:520px;width:100%;background:#0c0c14;border:1px solid #20202c;border-radius:16px;padding:30px 28px;color:#e6e6ee;}
+  #world-view .wv-x{position:absolute;top:16px;right:18px;cursor:pointer;color:#888;font-size:18px;}
+  #world-view .wv-status{display:inline-block;font-size:9px;letter-spacing:2px;padding:4px 10px;border-radius:20px;margin-bottom:12px;}
+  #world-view h2{font-family:'Space Grotesk',sans-serif;font-weight:900;font-size:30px;letter-spacing:.5px;margin:0 0 4px;}
+  #world-view .wv-sub{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#6a6a78;margin-bottom:22px;}
+  #world-view .wv-why-label{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#5a5a68;margin-bottom:7px;}
+  #world-view .wv-why{font-size:14px;line-height:1.65;color:#c6c6d2;}
+  #world-view .wv-road{font-size:12px;color:#8a8a98;margin-top:18px;padding:11px 13px;border:1px dashed #2a2a36;border-radius:9px;}
+  #world-view #wv-actions{display:flex;gap:10px;margin-top:22px;}
+  #world-view .wv-btn{flex:1;text-align:center;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:12px;letter-spacing:1px;text-transform:uppercase;border-radius:9px;padding:12px;cursor:pointer;}
+</style>
+<div id="dash-fab" onclick="DASH.toggle()">▦ Dashboard</div>
+<div id="dash-panel">
+  <span class="d-x" onclick="DASH.close()">✕</span>
+  <h3>UNIVERSE DASHBOARD</h3>
+  <div class="d-sub">Mission control · escribe y ejecuta de verdad</div>
+  <div id="dash-tabs">
+    <div class="d-tab on" id="dt-overview" onclick="DASH.tab('overview')">Resumen</div>
+    <div class="d-tab" id="dt-notes" onclick="DASH.tab('notes')">Notas</div>
+    <div class="d-tab" id="dt-tasks" onclick="DASH.tab('tasks')">Tareas</div>
+    <div class="d-tab" id="dt-worlds" onclick="DASH.tab('worlds')">Mundos</div>
+    <div class="d-tab" id="dt-projects" onclick="DASH.tab('projects')">Proyectos</div>
+    <div class="d-tab" id="dt-admin" onclick="DASH.tab('admin')">Admin</div>
+    <div class="d-tab" id="dt-exec" onclick="DASH.tab('exec')">Ejecutar</div>
+  </div>
+  <div id="dash-body"></div>
+</div>
+<div id="world-view"><div class="wv-card">
+  <span class="wv-x" onclick="DASH.closeWorld()">✕</span>
+  <div class="wv-status" id="wv-status"></div>
+  <h2 id="wv-title"></h2>
+  <div class="wv-sub" id="wv-sub"></div>
+  <div class="wv-why-label">Por qué está en el universo</div>
+  <div class="wv-why" id="wv-why"></div>
+  <div class="wv-road" id="wv-road"></div>
+  <div id="wv-list"></div>
+  <div id="wv-actions"></div>
+</div></div>
+<script>
+(function(){
+  const SB = (window.__nhCloud && window.__nhCloud.SB) || { url:'https://iiqhhglgjsbnuihythko.supabase.co/rest/v1', key:'sb_publishable_IAeknohtaw-n9fAgh7Zxlg_K9VN-kcM' };
+  const toast = (m)=>{ try{ (window.__nhToast||function(){})(m); }catch(e){} };
+  function H(rep){ const h={apikey:SB.key,Authorization:'Bearer '+SB.key,'Content-Type':'application/json','Content-Profile':'hk23','Accept-Profile':'hk23'}; if(rep) h.Prefer='return=representation'; return h; }
+  async function readKind(kind){ try{ const r=await fetch(SB.url+'/entities?select=id,name,summary,meta&meta->>nh=eq.1&meta->>kind=eq.'+kind+'&order=created_at.desc',{headers:H()}); if(!r.ok) return []; return await r.json(); }catch(e){ return []; } }
+  async function countEntities(){ try{ const r=await fetch(SB.url+'/entities?select=id',{headers:Object.assign({Prefer:'count=exact','Range-Unit':'items',Range:'0-0'},H())}); const cr=r.headers.get('content-range')||''; const tot=cr.split('/')[1]; return tot&&tot!=='*'?parseInt(tot,10):'—'; }catch(e){ return '—'; } }
+  async function add(kind, fields){ try{ const body=Object.assign({level:'node',kind:'system'},fields); body.meta=Object.assign({nh:'1',kind:kind}, fields.meta||{}); const r=await fetch(SB.url+'/entities',{method:'POST',headers:H(true),body:JSON.stringify(body)}); if(!r.ok) return null; const j=await r.json(); return j[0]||null; }catch(e){ return null; } }
+  async function patch(id, fields){ try{ const r=await fetch(SB.url+'/entities?id=eq.'+id,{method:'PATCH',headers:H(false),body:JSON.stringify(fields)}); return r.ok; }catch(e){ return false; } }
+  async function del(id){ try{ const r=await fetch(SB.url+'/entities?id=eq.'+id,{method:'DELETE',headers:H()}); return r.ok; }catch(e){ return false; } }
+  const esc=(s)=>String(s==null?'':s).replace(/</g,'&lt;');
+
+  const WORLDS=[
+    {id:'rugby-vice',label:'Rugby Vice',sub:'cartas · kick tracker',status:'build',url:'',roadmap:'Se integra como mundo en el incremento 3.',
+      why:'El mundo de performance de rugby: cartas coleccionables, evaluación 1–5 y kick tracker. Tu deporte convertido en sistema — y la puerta al desbloqueo de mentes (arma tu XV).'},
+    {id:'vicegolfer',label:'ViceGolfer',sub:'golf performance',status:'build',url:'',roadmap:'La app ya existe; falta conectarla como mundo (incr. 4).',
+      why:'Performance de golf — el gemelo de Rugby Vice: mismo motor, otro deporte. El primer Vice que validó el sistema.'},
+    {id:'atlas-x',label:'ATLAS X',sub:'motor de IA',status:'live',url:'https://atlas-x-app.vercel.app',gated:true,
+      roadmap:'Está EN VIVO, pero la app tiene candado de contraseña (Invalid/missing access password). Por eso no se abre directo: entra y mete tu clave, o quítale el password en Vercel para que abra libre.',
+      why:'El motor de IA del universo — el cerebro que va a potenciar los agentes (priorizar, generar, analizar).'},
+    {id:'cosmos',label:'Cosmos',sub:'front door',status:'live',url:'cosmos.html',
+      why:'La puerta principal del universo — el front door coleccionable / marketplace.'},
+    {id:'mundial',label:'Mundial 2026',sub:'dashboard · agente pro',status:'live',url:'mundial.html',
+      why:'Dashboard interactivo del Mundial 2026 con un agente analista: quién va quedando y sus probabilidades de título.'},
+    {id:'vice-gta6',label:'VICE.HUB GTA6',sub:'fan hub · experiencia',status:'live',url:'vice-gta6.html',
+      why:'El fan hub de GTA 6: money methods, crews, guías, easter eggs y base de vehículos. Primera experiencia vendible del universo — acceso por tier en la próxima fase.'},
+    {id:'multiverse',label:'Multiverse',sub:'galería de universos',status:'live',url:'multiverse.html',
+      why:'La galería del multiverso — todos los universos HK23 vistos desde afuera, en una sola página.'},
+    {id:'albatros',label:'Albatros',sub:'torneos de golf · SaaS',status:'live',url:'https://albatros.vercel.app',
+      why:'La app de torneos de golf para clubes: armá el torneo, cargá scores en vivo y compartí el leaderboard. El producto golf del universo que ya está EN VIVO.'},
+  ];
+  const WSTATUS={live:{c:'#2bd66a',label:'EN VIVO'},build:{c:'#FFD200',label:'EN CONSTRUCCIÓN'},idea:{c:'#b06bff',label:'IDEA'}};
+  // ── PUERTAS: cada nodo del universo tiene un destino asignable ──
+  const UDEST_KEY='hk23-udest';
+  let UDEST={}; try{ UDEST=JSON.parse(localStorage.getItem(UDEST_KEY)||'{}'); }catch(e){ UDEST={}; }
+  if(!UDEST['proj:projects_pl']) UDEST['proj:projects_pl']={type:'dashboard',value:'projects'};
+  const PROJ_STATUS={idea:{c:'#b06bff',label:'IDEA'},construyendo:{c:'#FFD200',label:'CONSTRUYENDO'},vivo:{c:'#2bd66a',label:'VIVO'},hecho:{c:'#39d0ff',label:'HECHO'}};
+  const PROJ_NEXT={idea:'construyendo',construyendo:'vivo',vivo:'hecho',hecho:'idea'};
+  const saveDest=()=>localStorage.setItem(UDEST_KEY,JSON.stringify(UDEST));
+  const DEST_TYPES=[['door','Puerta (info/idea)'],['url','Abrir link/mundo'],['dashboard','Pestaña dashboard'],['fractal','Red neural (vieja)'],['zone','Zona original']];
+  const DEST_SHORT={door:'puerta',url:'link',dashboard:'dashboard',fractal:'red neural',zone:'zona'};
+  function destLabel(d){ if(!d||!d.type) return 'puerta (default)'; return (DEST_SHORT[d.type]||d.type)+(d.value?(' · '+d.value):''); }
+  function routeNode(id, obj){ const d=UDEST[id];
+    if(d&&d.type==='url'&&d.value){ window.open(/^(https?:|\/|\.|[\w-]+\.html)/.test(d.value)?d.value:('https://'+d.value),'_blank','noopener'); return; }
+    if(d&&d.type==='dashboard'){ if(!document.getElementById('dash-panel').classList.contains('open')) DASH.toggle(); DASH.tab(d.value||'overview'); return; }
+    if(d&&d.type==='fractal'&&obj&&obj.universe&&DASH._origFractal){ DASH._origFractal(obj); return; }
+    if(d&&d.type==='zone'&&DASH._origGoTo){ DASH._origGoTo(id.replace(/^(gal|proj):/,'')); return; }
+    DASH.showDoor(id, obj); }
+  const STATUS={pendiente:{c:'#6a6a78',bg:'#1a1a24'},haciendo:{c:'#39d0ff',bg:'#0c2531'},hecho:{c:'#2bd66a',bg:'#0e2417'}};
+  const NEXT={pendiente:'haciendo',haciendo:'hecho',hecho:'pendiente'};
+  const PRIO={alta:{c:'#ff6b6b',bg:'#2a1416',label:'ALTA'},media:{c:'#FFD200',bg:'#2a2410',label:'MEDIA'},baja:{c:'#6a8a9a',bg:'#13202a',label:'BAJA'}};
+  const BUMP={baja:'media',media:'alta',alta:'baja'};
+  // local prioritization agent (heuristic) — upgradeable to ATLAS X via the Action Runner
+  function classify(line){ const s=line.toLowerCase();
+    if(/urgent|urgente|\bhoy\b|today|\bya\b|asap|ahora|\bnow\b|cr[ií]tic|deadline|vence|!!/.test(s)) return 'alta';
+    if(/importante|prioridad|priorit|pronto|esta semana|this week|soon|clave|\bkey\b/.test(s)) return 'media';
+    if(/alg[uú]n d[ií]a|someday|cuando pueda|later|opcional|optional|nice to have|backlog/.test(s)) return 'baja';
+    if(/!/.test(line)) return 'media';
+    return 'baja'; }
+  function parseLines(text){ return text.split(/\n|;|·|•/).map(l=>l.replace(/^\s*[-*\d.)\]]+\s*/,'').trim()).filter(l=>l.length>1); }
+  function renderTasks(tasks){ const el=document.getElementById('d-tasklist'); if(!el) return;
+    if(!tasks.length){ el.innerHTML='<div style="color:#6a6a78;font-size:11px">Sin tareas todavía.</div>'; return; }
+    let h=''; ['alta','media','baja'].forEach(p=>{ const grp=tasks.filter(t=>((t.meta&&t.meta.priority)||'baja')===p); if(!grp.length) return; const pc=PRIO[p];
+      h+=`<div style="margin:14px 0 4px;font-size:10px;letter-spacing:2px;color:${pc.c}">${pc.label} · ${grp.length}</div>`;
+      h+=grp.map(t=>{ const st=(t.meta&&t.meta.status)||'pendiente'; const c=STATUS[st]||STATUS.pendiente; return `<div class="d-card" style="border-left:3px solid ${pc.c}"><span class="d-del" onclick="DASH.del('task','${t.id}')">✕</span>${esc(t.name)}<br><span class="d-pill" style="margin-top:7px;color:${c.c};background:${c.bg}" onclick="DASH.cycle('${t.id}')">${st} ↻</span> <span class="d-pill" style="margin-top:7px;margin-left:5px;color:${pc.c};background:${pc.bg}" onclick="DASH.bump('${t.id}')">${pc.label} ↑</span></div>`; }).join(''); });
+    el.innerHTML=h; }
+  let state={notes:[],tasks:[]};
+
+  const panel=()=>document.getElementById('dash-panel');
+  const body=()=>document.getElementById('dash-body');
+  let tab='overview';
+
+  const DASH={
+    toggle(){ const p=panel(),f=document.getElementById('dash-fab'); p.classList.toggle('open'); f.classList.toggle('on'); if(p.classList.contains('open')) DASH.render(); },
+    close(){ panel().classList.remove('open'); document.getElementById('dash-fab').classList.remove('on'); },
+    tab(t){ tab=t; ['overview','notes','tasks','worlds','projects','admin','exec'].forEach(x=>document.getElementById('dt-'+x).classList.toggle('on',x===t)); DASH.render(); },
+    async render(){
+      const b=body(); if(!b) return;
+      if(tab==='overview'){ b.innerHTML='<div style="color:#6a6a78;font-size:11px">Cargando…</div>';
+        const [notes,tasks,ents]=await Promise.all([readKind('note'),readKind('task'),countEntities()]);
+        if(tab!=='overview') return;
+        state.notes=notes; state.tasks=tasks;
+        const done=tasks.filter(t=>(t.meta&&t.meta.status)==='hecho').length;
+        b.innerHTML=`<div style="margin:4px 0 8px">
+            <div class="d-metric"><b>${ents}</b><span>Entidades</span></div>
+            <div class="d-metric"><b>${notes.length}</b><span>Notas</span></div>
+            <div class="d-metric" style="margin-right:0"><b>${tasks.length}</b><span>Tareas</span></div>
+          </div>
+          <div class="d-card">Tareas hechas: <b style="color:#2bd66a">${done}/${tasks.length}</b></div>
+          <div class="d-card" style="color:#8a8a98">Todo lo que agregas aquí (notas, tareas, nodos) se guarda <b style="color:#39d0ff">de verdad</b> en Supabase. "Ejecutar" acciones reales llega en el Action Runner (incremento 2).</div>`;
+        return; }
+      if(tab==='notes'){ b.innerHTML=`<textarea id="d-note" placeholder="Escribe una nota… (se guarda en Supabase)"></textarea>
+          <button class="d-btn" onclick="DASH.addNote()">＋ Guardar nota</button><div id="d-notelist" style="margin-top:14px"><div style="color:#6a6a78;font-size:11px">Cargando…</div></div>`;
+        const notes=await readKind('note'); if(tab!=='notes') return; state.notes=notes;
+        document.getElementById('d-notelist').innerHTML = notes.length? notes.map(n=>`<div class="d-card"><span class="d-del" onclick="DASH.del('note','${n.id}')">✕</span>${esc(n.summary||n.name)}</div>`).join('') : '<div style="color:#6a6a78;font-size:11px">Sin notas todavía.</div>';
+        return; }
+      if(tab==='tasks'){ b.innerHTML=`
+          <div class="d-sub">Agente de prioridades</div>
+          <textarea id="d-bulk" placeholder="Pega tu lista o un texto con tareas… el agente las separa por prioridad" style="min-height:80px"></textarea>
+          <button class="d-btn" onclick="DASH.prioritize()">▶ Priorizar con agente</button>
+          <input id="d-task" placeholder="…o agrega una sola" style="margin-top:12px"><button class="d-btn" style="background:transparent;border:1px solid #2a2a36;color:#aab" onclick="DASH.addTask()">＋ Agregar una</button>
+          <div id="d-tasklist" style="margin-top:16px"><div style="color:#6a6a78;font-size:11px">Cargando…</div></div>`;
+        const tasks=await readKind('task'); if(tab!=='tasks') return; state.tasks=tasks; renderTasks(tasks);
+        return; }
+      if(tab==='worlds'){ b.innerHTML=`<div class="d-sub">Entra a un mundo del universo</div>`+ WORLDS.map(w=>{ const s=WSTATUS[w.status]||WSTATUS.idea; const go=w.status==='live'?'abrir →':'ver →';
+          return `<div class="d-world" onclick="DASH.openWorld('${w.id}')"><span style="width:8px;height:8px;border-radius:50%;background:${s.c};flex-shrink:0"></span><div><div>${w.label}</div><div style="font-size:10px;color:#6a6a78">${w.sub} · <span style="color:${s.c}">${s.label.toLowerCase()}</span></div></div><span class="d-go">${go}</span></div>`;
+        }).join('');
+        return; }
+      if(tab==='exec'){ b.innerHTML=`<div class="d-sub">Acciones reales</div>
+          <div class="d-card" style="color:#8a8a98">La ejecución real (correr un agente, llamar una API con secretos) corre por el <b style="color:#39d0ff">Action Runner</b> — un mini-backend en Vercel con allowlist + token.</div>
+          <div class="d-card soon" style="opacity:.55">▶ Correr VICE SELLER &nbsp;·&nbsp; <span style="color:#6a6a78">requiere Action Runner (incr. 2)</span></div>
+          <div class="d-card soon" style="opacity:.55">▶ Generar con ATLAS X &nbsp;·&nbsp; <span style="color:#6a6a78">requiere Action Runner (incr. 2)</span></div>`;
+        return; }
+      if(tab==='admin'){
+        const gals=(typeof NODES!=='undefined'?NODES:[]), projs=(typeof PROJECTS!=='undefined'?PROJECTS:[]), nexus=(typeof NEXUS_ORBITERS!=='undefined'?NEXUS_ORBITERS:[]);
+        const opt=(sel)=>DEST_TYPES.map(t=>`<option value="${t[0]}"${t[0]===(sel||'door')?' selected':''}>${t[1]}</option>`).join('');
+        const istyle="background:#0e0e16;border:1px solid #20202c;color:#cdd;border-radius:7px;padding:6px;font-size:11px;font-family:inherit";
+        const row=(id,label,kind)=>{ const d=UDEST[id]||{}; return `<div class="d-card" style="padding:10px 11px">
+          <div style="display:flex;justify-content:space-between;align-items:center"><b>${label}</b><span style="font-size:9px;color:#5a5a68">${kind}</span></div>
+          <div style="display:flex;gap:6px;margin-top:8px">
+            <select id="ad-t-${id}" style="${istyle};flex:1">${opt(d.type)}</select>
+            <input id="ad-v-${id}" value="${(d.value||'').replace(/"/g,'')}" placeholder="url / pestaña" style="${istyle};flex:1;min-width:0">
+            <button onclick="DASH.setDest('${id}')" style="background:#39d0ff;color:#06121a;border:none;border-radius:7px;padding:6px 11px;cursor:pointer;font-weight:700">✓</button>
+          </div>
+          <div style="font-size:9px;color:#5a5a68;margin-top:5px">→ ${destLabel(UDEST[id])}</div></div>`; };
+        b.innerHTML=`<div class="d-sub">Todo el universo · asígnale a cada cosa su función</div>
+          <button class="d-btn" onclick="DASH.newGalaxy()">＋ Crear galaxia</button>
+          <div style="margin:16px 0 4px;font-size:10px;letter-spacing:2px;color:#39d0ff">GALAXIAS · ${gals.length}</div>
+          ${gals.map(g=>row('gal:'+g.id, g.label, 'galaxia')).join('')}
+          <div style="margin:16px 0 4px;font-size:10px;letter-spacing:2px;color:#39d0ff">PLANETAS / PROYECTOS · ${projs.length}</div>
+          ${projs.map(p=>row('proj:'+p.id, p.label, 'planeta')).join('')}
+          <div style="margin:16px 0 4px;font-size:10px;letter-spacing:2px;color:#39d0ff">ORBITADORES · ${nexus.length}</div>
+          ${nexus.map(n=>row('nexus:'+n.id, n.label, 'orbitador')).join('')}`;
+        return; }
+      if(tab==='projects'){ b.innerHTML=`<div class="d-sub">Tus proyectos · estado + progreso (persiste)</div>
+          <input id="d-proj" placeholder="Nuevo proyecto…"><button class="d-btn" onclick="DASH.projAdd()">＋ Proyecto</button>
+          <div id="d-projlist" style="margin-top:14px"><div style="color:#6a6a78;font-size:11px">Cargando…</div></div>`;
+        const tracked=await readKind('project'); const byPid={};
+        tracked.forEach(t=>{ const pid=(t.meta&&t.meta.pid)||('c:'+t.id); byPid[pid]={id:t.id,status:(t.meta&&t.meta.status)||'idea',progress:+((t.meta&&t.meta.progress)||0),label:t.name}; });
+        const uni=(typeof PROJECTS!=='undefined'?PROJECTS:[]); const rows={};
+        uni.forEach(p=>{ const pid='u:'+p.id, t=byPid[pid]; rows[pid]={pid,label:p.label,status:t?t.status:'idea',progress:t?t.progress:0,id:t?t.id:null}; });
+        Object.keys(byPid).forEach(pid=>{ if(!rows[pid]){ const t=byPid[pid]; rows[pid]={pid,label:t.label,status:t.status,progress:t.progress,id:t.id}; } });
+        state.projRows=rows;
+        document.getElementById('d-projlist').innerHTML=Object.keys(rows).map(pid=>{ const r=rows[pid], s=PROJ_STATUS[r.status]||PROJ_STATUS.idea; return `<div class="d-card">
+          <div style="display:flex;justify-content:space-between;align-items:center"><b>${esc(r.label)}</b><span class="d-pill" style="color:${s.c};background:${s.c}22" onclick="DASH.projCycle('${pid}')">${s.label} ↻</span></div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:9px">
+            <div style="flex:1;height:7px;background:#0c1218;border-radius:6px;overflow:hidden"><i style="display:block;height:100%;width:${r.progress}%;background:${s.c};border-radius:6px"></i></div>
+            <span style="font-size:11px;color:${s.c};width:34px;text-align:right">${r.progress}%</span>
+            <button onclick="DASH.projProg('${pid}',-10)" style="background:#161c22;border:1px solid #20202c;color:#aab;border-radius:6px;width:26px;height:26px;cursor:pointer">−</button>
+            <button onclick="DASH.projProg('${pid}',10)" style="background:#161c22;border:1px solid #20202c;color:#aab;border-radius:6px;width:26px;height:26px;cursor:pointer">＋</button>
+          </div></div>`; }).join('');
+        return; }
+    },
+    async addNote(){ const el=document.getElementById('d-note'); const v=(el.value||'').trim(); if(!v) return; el.value='';
+      const row=await add('note',{name:v.slice(0,48),summary:v,meta:{body:v}}); toast(row?'Nota guardada ✓ DB':'Error de red'); DASH.render(); },
+    async addTask(){ const el=document.getElementById('d-task'); const v=(el.value||'').trim(); if(!v) return; el.value='';
+      const row=await add('task',{name:v,meta:{status:'pendiente',priority:classify(v)}}); toast(row?'Tarea agregada ✓ DB':'Error de red'); DASH.render(); },
+    async prioritize(){ const el=document.getElementById('d-bulk'); const txt=(el.value||'').trim(); if(!txt) return; const lines=parseLines(txt); if(!lines.length) return; el.value='';
+      toast('Priorizando '+lines.length+'…'); let ok=0;
+      for(const line of lines){ const r=await add('task',{name:line,meta:{status:'pendiente',priority:classify(line)}}); if(r) ok++; }
+      toast('✓ '+ok+' tareas priorizadas'); DASH.render(); },
+    async bump(id){ const t=state.tasks.find(x=>x.id===id); if(!t) return; const cur=(t.meta&&t.meta.priority)||'baja'; const np=BUMP[cur];
+      const ok=await patch(id,{meta:Object.assign({},t.meta,{nh:'1',kind:'task',priority:np})}); toast(ok?('Prioridad: '+np):'Error'); DASH.render(); },
+    async cycle(id){ const t=state.tasks.find(x=>x.id===id); if(!t) return; const st=(t.meta&&t.meta.status)||'pendiente'; const ns=NEXT[st];
+      const ok=await patch(id,{meta:Object.assign({},t.meta,{nh:'1',kind:'task',status:ns})}); toast(ok?('→ '+ns+' ✓'):'Error'); DASH.render(); },
+    async del(kind,id){ const ok=await del(id); toast(ok?'Borrado ✓':'Error'); DASH.render(); },
+    async saveProj(pid,label,status,progress){ const r=state.projRows&&state.projRows[pid]; const meta={nh:'1',kind:'project',pid:pid,status:status,progress:progress};
+      if(r&&r.id){ await patch(r.id,{name:label,meta:meta}); } else { const row=await add('project',{name:label,meta:meta}); if(row&&state.projRows&&state.projRows[pid]) state.projRows[pid].id=row.id; }
+      toast('Proyecto guardado ✓'); DASH.render(); },
+    async projCycle(pid){ const r=state.projRows&&state.projRows[pid]; if(!r) return; await DASH.saveProj(pid,r.label,PROJ_NEXT[r.status]||'construyendo',r.progress); },
+    async projProg(pid,d){ const r=state.projRows&&state.projRows[pid]; if(!r) return; const np=Math.max(0,Math.min(100,r.progress+d)); await DASH.saveProj(pid,r.label,np>=100?'hecho':r.status,np); },
+    async projAdd(){ const el=document.getElementById('d-proj'); const v=(el.value||'').trim(); if(!v) return; el.value=''; const pid='c:'+Date.now(); state.projRows=state.projRows||{}; state.projRows[pid]={pid,label:v,status:'idea',progress:0,id:null}; await DASH.saveProj(pid,v,'idea',0); },
+    openWorld(id){ const w=WORLDS.find(x=>x.id===id); if(!w) return;
+      if(w.status==='live'&&w.url&&!w.gated){ window.open(w.url,'_blank','noopener'); return; }
+      DASH.showWorld(w); },
+    showWorld(w){ const s=WSTATUS[w.status]||WSTATUS.idea; const st=document.getElementById('wv-status');
+      st.textContent=s.label; st.style.color=s.c; st.style.background=s.c+'22'; st.style.border='1px solid '+s.c+'55';
+      document.getElementById('wv-title').textContent=w.label; document.getElementById('wv-sub').textContent=w.sub;
+      document.getElementById('wv-why').textContent=w.why||''; const _rd=document.getElementById('wv-road'); _rd.style.display=''; _rd.textContent=w.roadmap||'Aún sin fecha — es una idea viva en el universo.';
+      document.getElementById('wv-actions').innerHTML = (w.url? `<button class="wv-btn" style="background:#39d0ff;color:#06121a" onclick="window.open('${w.url}','_blank','noopener')">Entrar →</button>`:'') + `<button class="wv-btn" style="background:transparent;border:1px solid #2a2a36;color:#aab" onclick="DASH.closeWorld()">Volver al universo</button>`;
+      document.getElementById('world-view').classList.add('open'); },
+    closeWorld(){ document.getElementById('world-view').classList.remove('open'); },
+    setDest(id){ const ts=document.getElementById('ad-t-'+id), vs=document.getElementById('ad-v-'+id); if(!ts) return;
+      UDEST[id]={type:ts.value, value:(vs.value||'').trim()}; saveDest(); toast('Destino asignado ✓'); DASH.render(); },
+    newGalaxy(){ let _n=0; try{ _n=(JSON.parse(localStorage.getItem('hk23nh-overrides')||'{}').newGalaxies||[]).length; }catch(_){} if(_n>=1 && window.HK23TIER && !HK23TIER.require(1,'Crear más galaxias')) return; if(window.NH){ if(!document.getElementById('nh-editor').classList.contains('open')) NH.toggle(); NH.tab('new'); toast('Crea tu galaxia en NeuralHub →'); } else toast('NeuralHub no disponible'); },
+    showDoor(id, obj){ obj=obj||(DASH._doorObj&&DASH._doorObj[id]); DASH._doorObj=DASH._doorObj||{}; if(obj) DASH._doorObj[id]=obj;
+      const label=(obj&&obj.label)||id; const uni=obj&&obj.universe; const nodes=(uni&&uni.nodes)||[];
+      const st=document.getElementById('wv-status'); st.textContent=id.indexOf('proj:')===0?'PLANETA':id.indexOf('gal:')===0?'GALAXIA':id.indexOf('nexus:')===0?'ORBITADOR':'NODO';
+      st.style.color='#39d0ff'; st.style.background='#39d0ff22'; st.style.border='1px solid #39d0ff55';
+      document.getElementById('wv-title').textContent=label;
+      document.getElementById('wv-sub').textContent=(uni&&uni.title)||(obj&&obj.sub)||'planeta del universo';
+      document.getElementById('wv-road').style.display='none';
+      const lbl=document.querySelector('#world-view .wv-why-label'), why=document.getElementById('wv-why'), list=document.getElementById('wv-list');
+      if(nodes.length){
+        lbl.textContent='Contenido · '+nodes.length+' dentro'; why.textContent='Entra a cualquiera para ver su ficha completa.';
+        list.innerHTML=nodes.map((n,i)=>{ const d=n.detail||{}; const sc={live:'#2bd66a',build:'#FFD200',soon:'#b06bff'}[d.status]||'#6a6a78'; return `<div onclick="DASH.showFicha('${id}',${i})" style="display:flex;align-items:center;gap:9px;padding:10px 11px;border:1px solid #20202c;border-radius:9px;margin-top:7px;cursor:pointer" onmouseover="this.style.borderColor='#39d0ff'" onmouseout="this.style.borderColor='#20202c'"><span style="width:7px;height:7px;border-radius:50%;background:${n.color||sc};flex-shrink:0"></span><span style="flex:1;font-size:13px">${((d.title||n.label||'')+'').replace(/\\n/g,' ')}</span><span style="font-size:9px;letter-spacing:1px;color:${sc}">${(d.status||'').toUpperCase()}</span><span style="color:#39d0ff">→</span></div>`; }).join('');
+        document.getElementById('wv-actions').innerHTML='<button class="wv-btn" style="background:#00F0FF;color:#06121a" onclick="DASH.runDoor(\''+id+'\')">▶ Ejecutar con agente</button><button class="wv-btn" style="background:transparent;border:1px solid #2a2a36;color:#aab" onclick="DASH.closeWorld()">Volver</button>';
+      } else {
+        lbl.textContent='Qué es'; why.textContent=(obj&&obj.sub)||'Este nodo aún no tiene contenido. Ejecútalo con el agente o asígnale un destino desde el Admin.'; list.innerHTML='';
+        document.getElementById('wv-actions').innerHTML='<button class="wv-btn" style="background:#00F0FF;color:#06121a" onclick="DASH.runDoor(\''+id+'\')">▶ Ejecutar con agente</button><button class="wv-btn" style="background:transparent;border:1px solid #2a2a36;color:#aab" onclick="DASH.closeWorld()">Volver</button>';
+      }
+      document.getElementById('world-view').classList.add('open'); },
+    showFicha(id, idx){ const obj=DASH._doorObj&&DASH._doorObj[id]; if(!obj||!obj.universe) return; const n=obj.universe.nodes[idx]; if(!n) return; const d=n.detail||{};
+      const benef=Array.isArray(d.benefits)?d.benefits.join(' · '):(d.benefits||''); const stats=Array.isArray(d.stats)?d.stats.map(s=>(s&&typeof s==='object')?((s.l||'')+': '+(s.v||'')):s).join(' · '):(d.stats||'');
+      const st=document.getElementById('wv-status'); const sc={live:'#2bd66a',build:'#FFD200',soon:'#b06bff'}[d.status]||'#39d0ff';
+      st.textContent=(d.status||'NODO').toUpperCase(); st.style.color=sc; st.style.background=sc+'22'; st.style.border='1px solid '+sc+'55';
+      document.getElementById('wv-title').textContent=((d.title||n.label||'')+'').replace(/\n/g,' ');
+      document.getElementById('wv-sub').textContent=(d.eyebrow||obj.label||'');
+      document.querySelector('#world-view .wv-why-label').textContent='Detalle';
+      document.getElementById('wv-why').innerHTML=(d.desc||'')+(d.howTo?('<br><br><b style="color:#39d0ff">Cómo:</b> '+d.howTo):'')+(benef?('<br><br><b style="color:#39d0ff">Beneficios:</b> '+benef):'')+(stats?('<br><br><b style="color:#39d0ff">Stats:</b> '+stats):'');
+      document.getElementById('wv-list').innerHTML='';
+      const acts=[]; if(d.link) acts.push('<button class="wv-btn" style="background:#39d0ff;color:#06121a" onclick="window.open(\''+d.link+'\',\'_blank\',\'noopener\')">'+(d.action||'Abrir')+' →</button>');
+      acts.push('<button class="wv-btn" style="background:transparent;border:1px solid #2a2a36;color:#aab" onclick="DASH.showDoor(\''+id+'\')">← Volver</button>');
+      document.getElementById('wv-actions').innerHTML=acts.join(''); },
+    runDoor(id){ const obj=DASH._doorObj&&DASH._doorObj[id]; const label=(obj&&obj.label)||id;
+      let ctx='Planeta: '+label+(obj&&obj.sub?(' — '+obj.sub):'');
+      const nodes=(obj&&obj.universe&&obj.universe.nodes)||[];
+      if(nodes.length) ctx+='\nContenido: '+nodes.map(n=>{const d=n.detail||{}; return ((d.title||n.label||'')+'').replace(/\n/g,' ')+(d.desc?(' ('+d.desc.slice(0,90)+')'):'');}).join('; ');
+      DASH.closeWorld(); RUNNER.open('Dame los próximos pasos concretos para avanzar "'+label+'".', gatherContext(ctx)); },
+  };
+  window.DASH=DASH;
+  // ── ACTION RUNNER: ejecutar agentes de verdad (IA vía /api/run) ──
+  const RUN_TOKEN='hk23-run-9x';
+  const AGENTS_UI=[['prioritizer','Priorizador'],['strategist','Estratega'],['writer','Copywriter'],['analyst','Analista']];
+  let curAgent='strategist';
+  function gatherContext(extra){
+    let c='';
+    try{ const projs=(typeof PROJECTS!=='undefined')?PROJECTS.map(p=>p.label+(p.universe&&p.universe.title?(' — '+p.universe.title):'')).join('; '):'';
+      const gals=(typeof NODES!=='undefined')?NODES.map(n=>n.label).join(', '):'';
+      c='Galaxias: '+gals+'\nPlanetas/proyectos: '+projs; }catch(e){}
+    if(extra) c=extra+'\n\n'+c;
+    return c.slice(0,4500);
+  }
+  const RUNNER={
+    open(preset, context){ RUNNER._ctx = context || gatherContext();
+      document.getElementById('ar-agents').innerHTML=AGENTS_UI.map(a=>`<span class="ar-agent ${a[0]===curAgent?'on':''}" onclick="RUNNER.pick('${a[0]}')">${a[1]}</span>`).join('');
+      const inp=document.getElementById('ar-input'); if(preset && inp) inp.value=preset;
+      document.getElementById('agents-run').classList.add('open');
+      if(window.ARAgent){ ARAgent.start(); ARAgent.setAgent(curAgent); ARAgent.setState('idle'); }
+      setTimeout(()=>{ if(inp) inp.focus(); },60); },
+    close(){ document.getElementById('agents-run').classList.remove('open'); if(window.ARAgent) ARAgent.stop(); },
+    pick(a){ curAgent=a; document.querySelectorAll('#ar-agents .ar-agent').forEach((e,i)=>e.classList.toggle('on', AGENTS_UI[i][0]===a)); if(window.ARAgent) ARAgent.setAgent(a); },
+    async go(){ const input=(document.getElementById('ar-input').value||'').trim(), out=document.getElementById('ar-out'), btn=document.getElementById('ar-runbtn'); if(!input){ out.textContent='Escribe una tarea primero.'; return; }
+      btn.textContent='INVOCANDO…'; btn.disabled=true; out.textContent='⏳ El agente está procesando…'; if(window.ARAgent) ARAgent.setState('think');
+      try{ const hdrs={'Content-Type':'application/json','x-run-token':RUN_TOKEN}; if(window.HK23AUTH&&HK23AUTH.token()) hdrs['Authorization']='Bearer '+HK23AUTH.token();
+        const r=await fetch('/api/run',{method:'POST',headers:hdrs,body:JSON.stringify({action:'agent',agent:curAgent,input:input,context:RUNNER._ctx||''})}); const j=await r.json(); out.textContent=j.ok?j.text:('⚠️ '+(j.error||'falló')); if(window.ARAgent) ARAgent.setState('speak'); }
+      catch(e){ out.textContent='⚠️ Error de red: '+e; if(window.ARAgent) ARAgent.setState('idle'); }
+      btn.textContent='▶ INVOCAR'; btn.disabled=false; },
+  };
+  window.RUNNER=RUNNER;
+  // ── WHITE HOLE: genera una idea NUEVA de verdad (agente) y la siembra en el universo ──
+  window.whiteHoleGenerate = async function(){
+    const t=(window.showCmdToast||function(){}); t('⌘ WHITE HOLE — generando idea…', '#ffffff');
+    try{
+      const whHdrs={'Content-Type':'application/json','x-run-token':RUN_TOKEN}; if(window.HK23AUTH&&HK23AUTH.token()) whHdrs['Authorization']='Bearer '+HK23AUTH.token();
+      const r=await fetch('/api/run',{method:'POST',headers:whHdrs,body:JSON.stringify({action:'agent',agent:'strategist',input:'Genera UNA idea nueva, concreta y original para el ecosistema HK23. Responde SOLO en una línea con formato: TÍTULO CORTO — descripción breve.',context:gatherContext()})});
+      const j=await r.json(); if(!j.ok){ t('⌘ falló: '+(j.error||''), '#ff5b6b'); return; }
+      const text=(j.text||'').trim(); const title=(text.split(/—|:|-/)[0]||'IDEA').trim().slice(0,26); const desc=text.slice(0,220);
+      if(typeof IDEAS_PLANET!=='undefined' && IDEAS_PLANET.ideas){ IDEAS_PLANET.ideas.push({ label:title.toUpperCase().slice(0,16), mr:48+Math.random()*34, ma:Math.random()*6.28, ms:(Math.random()>.5?1:-1)*0.0018, sz:5, col:'#ffffff', px:0, py:0, detail:{ title:title, desc:desc } }); }
+      t('⌘ WHITE HOLE → idea: '+title, '#ffffff');
+      if(window.__nhCloud && window.__nhCloud.sbEntity) window.__nhCloud.sbEntity('idea:'+Date.now(),{name:title,slug:'wh-idea',level:'node',kind:'system',summary:desc,meta:{nh:'1',kind:'idea',source:'whitehole'}});
+    }catch(e){ t('⌘ error de red','#ff5b6b'); }
+  };
+  // ── PUERTAS: interceptar clicks de planetas (sin red neural por default) y galaxias ──
+  try{
+    if(typeof openFractalUniverse==='function'){ DASH._origFractal=openFractalUniverse; window.openFractalUniverse=function(project){ routeNode('proj:'+project.id, project); }; }
+    if(typeof goTo==='function'){ DASH._origGoTo=goTo; window.goTo=function(id){ if(id==='agents'){ RUNNER.open(); return; } if(UDEST['gal:'+id]){ const g=(typeof NODES!=='undefined')?NODES.find(n=>n.id===id):null; routeNode('gal:'+id, g); return; } return DASH._origGoTo(id); }; }
+    if(typeof openAgentBasePanel==='function'){ window.openAgentBasePanel=function(){ RUNNER.open(); }; }
+  }catch(e){}
+  // ── QUE TODO FUNCIONE: orbitadores + lunas flotantes → abren su puerta (no más clicks muertos) ──
+  try{
+    const mc=(typeof mapCanvas!=='undefined'&&mapCanvas)||null;
+    if(mc){ mc.addEventListener('click',function(e){
+      if(window.MOVE&&window.MOVE.on&&window.MOVE.on()) return;
+      const mx=e.clientX,my=e.clientY; let hit=null;
+      if(typeof NEXUS_ORBITERS!=='undefined'){ for(const n of NEXUS_ORBITERS){ if(Math.hypot(mx-n.px,my-n.py)<((n.size||10)+12)){ hit={id:'nexus:'+n.id,label:n.label}; break; } } }
+      if(!hit&&typeof ORBITAL_MOONS!=='undefined'){ for(const pid in ORBITAL_MOONS){ for(const m of ORBITAL_MOONS[pid]){ if(m.px&&Math.hypot(mx-m.px,my-m.py)<((m.sz||5)+12)){ hit={id:'moon:'+pid+'/'+((m.label||'').replace(/\s+/g,'-')),label:(m.label||'').replace(/\n/g,' ')}; break; } } if(hit)break; } }
+      if(hit){ e.stopImmediatePropagation(); e.preventDefault(); routeNode(hit.id,{label:hit.label}); }
+    },true); }
+  }catch(e){}
+})();
+</script>
+<!-- ═══════ DASHBOARD: ejecutar de verdad · vender cualquier cosa · referidos ═══════ -->
+<style id="dx-style">
+  #dash-panel .dx-h{ font-size:10px; letter-spacing:3px; color:#6a6a78; margin:16px 0 8px;
+    border-bottom:1px solid #1c1c26; padding-bottom:6px; }
+  #dash-panel .dx-in,#dash-panel .dx-ta{ width:100%; background:#0e0e16; border:1px solid #20202c;
+    color:#cdd; border-radius:7px; padding:11px; font:400 12px inherit; min-height:44px; margin-bottom:8px; }
+  #dash-panel .dx-ta{ min-height:86px; line-height:1.7; resize:vertical; }
+  #dash-panel .dx-in:focus-visible,#dash-panel .dx-ta:focus-visible{ outline:2px solid #39d0ff; outline-offset:1px; }
+  #dash-panel .dx-ag{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
+  #dash-panel .dx-ag button{ font-size:10px; letter-spacing:1px; background:transparent; border:1px solid #2a2a36;
+    color:#8a8a98; border-radius:6px; padding:9px 11px; cursor:pointer; min-height:44px; }
+  #dash-panel .dx-ag button.on{ background:#39d0ff; color:#06060a; border-color:#39d0ff; font-weight:700; }
+  #dash-panel .dx-b{ background:#39d0ff; color:#06060a; border:none; border-radius:7px; padding:12px 15px;
+    font:700 11px inherit; letter-spacing:2px; cursor:pointer; min-height:44px; }
+  #dash-panel .dx-b[disabled]{ opacity:.5; cursor:progress; }
+  #dash-panel .dx-b2{ background:transparent; border:1px solid #2a2a36; color:#8a8a98; border-radius:7px;
+    padding:11px 13px; font:400 10px inherit; letter-spacing:1px; cursor:pointer; min-height:44px; }
+  #dash-panel .dx-out{ white-space:pre-wrap; line-height:1.75; font-size:12px; color:#cdd;
+    background:#0b0b12; border:1px solid #1c1c26; border-radius:9px; padding:14px; margin-top:12px; }
+  #dash-panel .dx-out.err{ border-color:#5a2020; color:#ff8a6a; }
+  #dash-panel .dx-row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  #dash-panel .dx-it{ background:#0e0e16; border:1px solid #20202c; border-radius:9px; padding:11px 12px; margin-bottom:8px; }
+  #dash-panel .dx-it b{ font-size:12px; color:#cdd; display:block; }
+  #dash-panel .dx-it i{ font-size:10px; color:#6a6a78; font-style:normal; display:block; margin-top:3px; }
+  #dash-panel .dx-it .dx-row{ margin-top:9px; }
+  #dash-panel .dx-tag{ font-size:9px; letter-spacing:1px; color:#06060a; background:#2bd66a;
+    border-radius:4px; padding:3px 7px; font-weight:700; }
+</style>
+<script>
+// ═══ El dashboard deja de ser un cartel: ejecuta, vende y reparte ═══
+(function(){
+  function esperar(){ if(typeof window.DASH!=='object'||!window.DASH.render){ return setTimeout(esperar,300); } armar(); }
+  esperar();
+
+  function armar(){
+    const D=window.DASH;
+    const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    const safeUrl=u=>/^https?:\/\//i.test(u||'')?encodeURI(u):'';
+    const SB=(window.__nhCloud&&window.__nhCloud.SB)||
+      { url:'https://iiqhhglgjsbnuihythko.supabase.co/rest/v1', key:'sb_publishable_IAeknohtaw-n9fAgh7Zxlg_K9VN-kcM' };
+    const H=rep=>{ const h={apikey:SB.key,Authorization:'Bearer '+SB.key,'Content-Type':'application/json',
+      'Content-Profile':'hk23','Accept-Profile':'hk23'}; if(rep) h.Prefer='return=representation'; return h; };
+    const leer=async k=>{ try{ const r=await fetch(SB.url+'/entities?select=id,name,summary,meta&meta->>nh=eq.1&meta->>kind=eq.'+k+'&order=created_at.desc',{headers:H()});
+      return r.ok? await r.json() : []; }catch(e){ return []; } };
+    const crear=async(k,f)=>{ try{ const b=Object.assign({level:'node',kind:'system'},f);
+      b.meta=Object.assign({nh:'1',kind:k}, f.meta||{});
+      const r=await fetch(SB.url+'/entities',{method:'POST',headers:H(1),body:JSON.stringify(b)});
+      return r.ok; }catch(e){ return false; } };
+    const body=()=>document.getElementById('dash-body');
+
+    // ── pestañas nuevas ──
+    const barra=document.querySelector('#dash-panel .d-tabs')||document.getElementById('dt-exec').parentElement;
+    [['vender','Vender'],['referidos','Referidos']].forEach(([k,l])=>{
+      if(document.getElementById('dt-'+k)) return;
+      const b=document.createElement('div'); b.className='d-tab'; b.id='dt-'+k; b.textContent=l;
+      b.onclick=()=>ir(k); barra.appendChild(b);
+    });
+    let mio=null;
+    const TABS=['overview','notes','tasks','worlds','projects','admin','exec','vender','referidos'];
+    const marcar=t=>TABS.forEach(x=>{ const e=document.getElementById('dt-'+x); if(e) e.classList.toggle('on',x===t); });
+    function ir(t){ mio=t; marcar(t); pintar(t); }
+    const tabOrig=D.tab.bind(D);
+    D.tab=function(t){ mio=null; tabOrig(t); };
+    const renderOrig=D.render.bind(D);
+    D.render=async function(){ if(mio){ marcar(mio); return pintar(mio); } await renderOrig();
+      // la pestaña EJECUTAR del original es un cartel: la reemplazo por la de verdad
+      if(document.getElementById('dt-exec')&&document.getElementById('dt-exec').classList.contains('on')) pintarExec(); };
+
+    // ── EJECUTAR de verdad: contra /api/run, que ya está desplegado ──
+    const AGENTES=[['prioritizer','PRIORIZAR'],['strategist','ESTRATEGIA'],['writer','ESCRIBIR'],
+                   ['analyst','ANALIZAR'],['aduanero','ADUANERO'],['futures','FUTUROS'],['gta6','GTA6']];
+    let agSel='prioritizer';
+    function pintarExec(){
+      const b=body(); if(!b) return;
+      b.innerHTML='<div class="dx-h">EJECUTAR · CORRE DE VERDAD</div>'+
+        '<div class="dx-ag">'+AGENTES.map(([k,l])=>
+          '<button data-ag="'+k+'"'+(k===agSel?' class="on"':'')+'>'+l+'</button>').join('')+'</div>'+
+        '<textarea class="dx-ta" id="dx-p" placeholder="Escribí acá lo que querés que haga el agente…"></textarea>'+
+        '<div class="dx-row"><button class="dx-b" id="dx-go">▶ EJECUTAR</button>'+
+        '<button class="dx-b2" id="dx-save" style="display:none">＋ GUARDAR COMO NOTA</button></div>'+
+        '<div id="dx-out"></div>';
+      b.querySelectorAll('[data-ag]').forEach(x=>x.onclick=()=>{ agSel=x.dataset.ag;
+        b.querySelectorAll('[data-ag]').forEach(y=>y.classList.toggle('on',y===x)); });
+      document.getElementById('dx-go').onclick=correr;
+    }
+    let ultimo='';
+    async function correr(){
+      const p=(document.getElementById('dx-p').value||'').trim();
+      const out=document.getElementById('dx-out'), go=document.getElementById('dx-go');
+      if(!p){ out.className='dx-out err'; out.textContent='Escribí algo primero.'; return; }
+      go.disabled=true; go.textContent='CORRIENDO…';
+      out.className='dx-out'; out.textContent='…';
+      try{
+        const r=await fetch('/api/run',{ method:'POST',
+          headers:{'Content-Type':'application/json','x-run-token':'hk23-run-9x'},
+          body:JSON.stringify({ action:'agent', agent:agSel, prompt:p }) });
+        const j=await r.json().catch(()=>({}));
+        if(!r.ok){ out.className='dx-out err';
+          out.textContent='No corrió. HTTP '+r.status+(j.error?' — '+j.error:'')+
+            (r.status===401?'\n\nEl runner pide sesión o token. Está desplegado, pero no me dejó entrar.':'')+
+            (r.status===404?'\n\n/api/run no existe en este despliegue.':'');
+          return; }
+        ultimo=(j.text||j.output||j.result||JSON.stringify(j,null,2));
+        out.className='dx-out'; out.textContent=ultimo;
+        const sv=document.getElementById('dx-save');
+        sv.style.display=''; sv.onclick=async()=>{
+          const ok=await crear('note',{ name:agSel.toUpperCase()+' · '+p.slice(0,40), summary:ultimo });
+          sv.textContent= ok? '✓ GUARDADO EN SUPABASE' : '✕ NO SE PUDO GUARDAR'; };
+      }catch(e){ out.className='dx-out err'; out.textContent='No se pudo llamar al runner: '+(e&&e.message||e); }
+      finally{ go.disabled=false; go.textContent='▶ EJECUTAR'; }
+    }
+
+    // ── VENDER: cualquier nota o tarea se convierte en algo que se vende ──
+    async function pintarVender(){
+      const b=body(); if(!b) return;
+      b.innerHTML='<div class="dx-h">VENDER · CARGANDO…</div>';
+      const [notas,tareas,prods]=await Promise.all([leer('note'),leer('task'),leer('product')]);
+      if(mio!=='vender') return;
+      const ref=(localStorage.getItem('hk23_mi_ref')||'').trim();
+      const item=(o,tipo)=>'<div class="dx-it"><b>'+esc(o.name||o.summary||'—')+'</b>'+
+        '<i>'+esc(tipo)+'</i><div class="dx-row">'+
+        '<input class="dx-in" style="flex:1;min-width:90px;margin:0" placeholder="precio" data-p="'+esc(o.id)+'">'+
+        '<input class="dx-in" style="flex:2;min-width:130px;margin:0" placeholder="link de pago" data-l="'+esc(o.id)+'">'+
+        '<button class="dx-b" data-v="'+esc(o.id)+'">VENDER</button></div></div>';
+      b.innerHTML='<div class="dx-h">YA A LA VENTA ('+prods.length+')</div>'+
+        (prods.length? prods.map(p=>{ const m=p.meta||{}; const u=safeUrl(m.link);
+            const link=u? u+(ref?(u.indexOf('?')>=0?'&':'?')+'ref='+encodeURIComponent(ref):'') : '';
+            return '<div class="dx-it"><b>'+esc(p.name||'—')+'</b>'+
+              '<i>'+esc(m.precio||'sin precio')+'</i><div class="dx-row">'+
+              '<span class="dx-tag">A LA VENTA</span>'+
+              (link?'<button class="dx-b2" data-copiar="'+esc(link)+'">COPIAR MI LINK</button>':
+                    '<span style="font-size:10px;color:#6a6a78">sin link de pago</span>')+
+              '</div></div>'; }).join('')
+          : '<div class="dx-it"><i>Nada a la venta todavía.</i></div>')+
+        '<div class="dx-h">CONVERTIR EN PRODUCTO</div>'+
+        (notas.length||tareas.length
+          ? notas.map(n=>item(n,'nota')).join('')+tareas.map(t=>item(t,'tarea')).join('')
+          : '<div class="dx-it"><i>No hay notas ni tareas para vender. Creá una primero.</i></div>');
+      b.querySelectorAll('[data-v]').forEach(btn=>btn.onclick=async()=>{
+        const id=btn.dataset.v;
+        const src=[...notas,...tareas].find(o=>o.id===id); if(!src) return;
+        const precio=(b.querySelector('[data-p="'+CSS.escape(id)+'"]')||{}).value||'';
+        const link=(b.querySelector('[data-l="'+CSS.escape(id)+'"]')||{}).value||'';
+        if(!precio.trim()){ btn.textContent='PONÉ PRECIO'; setTimeout(()=>btn.textContent='VENDER',1600); return; }
+        btn.disabled=true; btn.textContent='…';
+        const ok=await crear('product',{ name:src.name||src.summary||'—', summary:src.summary||'',
+          meta:{ precio:precio.trim(), link:link.trim(), origen:id } });
+        btn.textContent= ok?'✓ PUBLICADO':'✕ NO SE PUDO';
+        if(ok) setTimeout(()=>{ if(mio==='vender') pintarVender(); },700);
+      });
+      b.querySelectorAll('[data-copiar]').forEach(x=>x.onclick=()=>{
+        try{ navigator.clipboard.writeText(x.dataset.copiar); x.textContent='✓ COPIADO';
+          setTimeout(()=>x.textContent='COPIAR MI LINK',1600); }catch(e){} });
+    }
+
+    // ── REFERIDOS: el código de cada uno, y el link que le corresponde ──
+    async function pintarReferidos(){
+      const b=body(); if(!b) return;
+      b.innerHTML='<div class="dx-h">REFERIDOS · CARGANDO…</div>';
+      const [refs,prods]=await Promise.all([leer('referido'),leer('product')]);
+      if(mio!=='referidos') return;
+      const mio_=(localStorage.getItem('hk23_mi_ref')||'');
+      b.innerHTML=
+        '<div class="dx-h">MI CÓDIGO</div>'+
+        '<div class="dx-row"><input class="dx-in" id="dx-miref" style="flex:1;margin:0" '+
+          'placeholder="tu propio código (ej. HK23)" value="'+esc(mio_)+'">'+
+          '<button class="dx-b2" id="dx-miref-ok">GUARDAR</button></div>'+
+        '<div class="dx-h">SUMAR UN REFERIDO</div>'+
+        '<input class="dx-in" id="dx-rn" placeholder="nombre">'+
+        '<div class="dx-row"><input class="dx-in" id="dx-rc" style="flex:2;margin:0" placeholder="su código">'+
+        '<input class="dx-in" id="dx-rp" style="flex:1;min-width:80px;margin:0" placeholder="% suyo"></div>'+
+        '<div class="dx-row" style="margin-top:8px"><button class="dx-b" id="dx-radd">＋ AGREGAR</button></div>'+
+        '<div class="dx-h">MIS REFERIDOS ('+refs.length+')</div>'+
+        (refs.length? refs.map(r=>{ const m=r.meta||{};
+            const cod=m.codigo||''; const base=location.origin+location.pathname;
+            const link=base+'?ref='+encodeURIComponent(cod);
+            return '<div class="dx-it"><b>'+esc(r.name||'—')+'</b>'+
+              '<i>código '+esc(cod||'—')+(m.pct?' · '+esc(m.pct)+'% para él':'')+
+              ' · '+prods.length+' producto(s) para repartir</i>'+
+              '<div class="dx-row">'+(cod?'<button class="dx-b2" data-cp="'+esc(link)+'">COPIAR SU LINK</button>':
+                '<span style="font-size:10px;color:#ff8a6a">sin código: no se le puede atribuir nada</span>')+
+              '</div></div>'; }).join('')
+          : '<div class="dx-it"><i>Todavía no cargaste ningún referido.</i></div>')+
+        '<div class="dx-it" style="border-color:#1c1c26"><i>El link lleva <b>?ref=&lt;código&gt;</b>. '+
+        'El universo lo guarda en el aparato de quien entra, y desde ahí se puede atribuir la venta. '+
+        'El cobro y el reparto de plata no viven acá — eso lo hace tu pasarela de pago.</i></div>';
+      document.getElementById('dx-miref-ok').onclick=()=>{
+        const v=(document.getElementById('dx-miref').value||'').trim();
+        try{ localStorage.setItem('hk23_mi_ref',v); }catch(e){}
+        const leido=(localStorage.getItem('hk23_mi_ref')||'');
+        document.getElementById('dx-miref-ok').textContent = leido===v? '✓ GUARDADO' : '✕ NO SE GUARDÓ';
+        setTimeout(()=>{ const e=document.getElementById('dx-miref-ok'); if(e) e.textContent='GUARDAR'; },1800); };
+      document.getElementById('dx-radd').onclick=async()=>{
+        const n=(document.getElementById('dx-rn').value||'').trim();
+        const c=(document.getElementById('dx-rc').value||'').trim();
+        const p=(document.getElementById('dx-rp').value||'').trim();
+        const btn=document.getElementById('dx-radd');
+        if(!n||!c){ btn.textContent='FALTA NOMBRE Y CÓDIGO'; setTimeout(()=>btn.textContent='＋ AGREGAR',1800); return; }
+        btn.disabled=true; btn.textContent='…';
+        const ok=await crear('referido',{ name:n, summary:'referido con código '+c, meta:{ codigo:c, pct:p } });
+        btn.disabled=false; btn.textContent= ok?'✓ AGREGADO':'✕ NO SE PUDO';
+        if(ok) setTimeout(()=>{ if(mio==='referidos') pintarReferidos(); },700);
+      };
+      b.querySelectorAll('[data-cp]').forEach(x=>x.onclick=()=>{
+        try{ navigator.clipboard.writeText(x.dataset.cp); x.textContent='✓ COPIADO';
+          setTimeout(()=>x.textContent='COPIAR SU LINK',1600); }catch(e){} });
+    }
+
+    // el código de quien te trajo queda guardado apenas entra
+    try{ const r=new URLSearchParams(location.search).get('ref');
+      if(r) localStorage.setItem('hk23_vino_por', r); }catch(e){}
+
+    function pintar(t){ if(t==='vender') return pintarVender();
+      if(t==='referidos') return pintarReferidos(); if(t==='exec') return pintarExec(); }
+
+    window.DASHX={ exec:()=>ir('exec'), vender:()=>ir('vender'), referidos:()=>ir('referidos'),
+      correr, version:'1' };
+  }
+})();
+</script>
 </body>
 </html>
