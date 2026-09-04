@@ -1,0 +1,127 @@
+<script>
+// ═══ VICEGOLFER — el green se juega. El putt de verdad, con caída y con registro. ═══
+(function(){
+  const $=id=>document.getElementById(id);
+  const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  const log=(a,b)=>{ try{ (window.hkLog||function(){})(a,b); }catch(e){} };
+  const TAU=Math.PI*2;
+  const st={ get(k,d){ try{ return JSON.parse(localStorage.getItem(k)) ?? d; }catch(e){ return d; } },
+    set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); return true; }catch(e){ return false; } } };
+
+  // ── el protocolo: las distancias de tu app ──
+  const DISTS=[['2FT',2],['3FT',3],['4FT',4],['5FT',5],['MT',9]];
+  let dist='3FT';
+  const hoy=()=>new Date().toISOString().slice(0,10);
+  const prot=()=>st.get('hk23_vg_prot',{});
+  function anotar(hecho){
+    const p=prot(); const d=p[hoy()]=p[hoy()]||{};
+    const r=d[dist]=d[dist]||{m:0,a:0};
+    r.a++; if(hecho) r.m++;
+    st.set('hk23_vg_prot',p); hud();
+  }
+
+  // ── el green: física de putt con caída ──
+  const cv=$('vg-cv'), g=cv.getContext('2d');
+  let W=0,H=0,DPR=1, corriendo=false;
+  function fit(){ const r=cv.getBoundingClientRect(); DPR=Math.min(2,window.devicePixelRatio||1);
+    const w=Math.round(r.width*DPR), h=Math.round(r.height*DPR);
+    if(cv.width!==w||cv.height!==h){ cv.width=w; cv.height=h; } W=cv.width; H=cv.height; }
+  addEventListener('resize',fit);
+
+  // mundo: x lateral [-1,1] · z profundidad [0..D]. La caída empuja en x.
+  const M={ D:10, hx:0, caida:0, bola:{x:0,z:0,vx:0,vz:0,viva:false}, resultado:'', racha:0, mejor:st.get('hk23_vg_racha',0) };
+  function servir(){
+    const dd=DISTS.find(d=>d[0]===dist)[1];
+    M.D=dd+2; M.hx=(Math.random()*2-1)*Math.min(0.5,dd*0.06);
+    M.caida=(Math.random()*2-1)*0.9;              // la pendiente de este putt
+    M.bola={x:0,z:0,vx:0,vz:0,viva:false}; M.resultado='';
+  }
+  function proy(x,z){                              // perspectiva: lejos = angosto y alto
+    const t=z/M.D, per=1-0.62*t;
+    return { x: W/2 + x*(W*0.34)*per, y: H*0.82 - t*(H*0.58), per };
+  }
+  function fisica(dt){
+    const b=M.bola; if(!b.viva) return;
+    b.vx += M.caida*0.16*dt;                       // la caída trabaja todo el camino
+    b.x += b.vx*dt; b.z += b.vz*dt;
+    const fr=Math.exp(-1.15*dt); b.vx*=fr; b.vz*=fr;
+    const v=Math.hypot(b.vx,b.vz);
+    const dh=Math.hypot((b.x-M.hx)*1.0,(b.z-(M.D-0.55))*1.0);
+    if(dh<0.16 && v<2.1){ b.viva=false; M.resultado='ADENTRO';
+      M.racha++; if(M.racha>M.mejor){ M.mejor=M.racha; st.set('hk23_vg_racha',M.mejor); }
+      anotar(true); avisar('Adentro. Racha '+M.racha+'.'); setTimeout(servir,900); return; }
+    if(dh<0.16 && v>=2.1){ b.vx+=(b.x-M.hx)*3; }   // muy fuerte: escupida
+    if(v<0.07 || b.z>M.D+0.6 || Math.abs(b.x)>1.4){ b.viva=false;
+      M.resultado = b.z<M.D-1.2 ? 'CORTO' : (b.z>M.D+0.2?'LARGO':'AFUERA');
+      M.racha=0; anotar(false); avisar(M.resultado+'.'); setTimeout(servir,900); }
+  }
+  let t0=null, arrastre=null;
+  function pintar(ts){
+    if(!corriendo) return;
+    requestAnimationFrame(pintar);
+    fit(); const dt=t0?Math.min(0.05,(ts-t0)/1000):0.016; t0=ts; fisica(dt);
+    // cielo nocturno de tu marca
+    g.fillStyle='#060608'; g.fillRect(0,0,W,H);
+    for(let i=0;i<70;i++){ const a=Math.sin(i*12.9898)*43758.5453,b2=Math.sin(i*78.233)*12345.6789;
+      g.globalAlpha=0.05+((Math.sin(i*3.17)+1)/2)*0.22; g.fillStyle='#e8e8ec';
+      g.beginPath(); g.arc((a-Math.floor(a))*W,(b2-Math.floor(b2))*H*0.4,Math.max(0.6,W*0.0006),0,TAU); g.fill(); }
+    g.globalAlpha=1;
+    // el green en perspectiva
+    const p00=proy(-1.15,0), p10=proy(1.15,0), p01=proy(-1.15,M.D), p11=proy(1.15,M.D);
+    const grd=g.createLinearGradient(0,p01.y,0,p00.y);
+    grd.addColorStop(0,'#0c2416'); grd.addColorStop(1,'#123420');
+    g.beginPath(); g.moveTo(p00.x,p00.y); g.lineTo(p10.x,p10.y); g.lineTo(p11.x,p11.y); g.lineTo(p01.x,p01.y);
+    g.closePath(); g.fillStyle=grd; g.fill();
+    g.strokeStyle='#C6A15B33'; g.lineWidth=Math.max(1,W*0.001); g.stroke();
+    for(let i=1;i<5;i++){ const a=proy(-1.15,M.D*i/5), b3=proy(1.15,M.D*i/5);
+      g.beginPath(); g.moveTo(a.x,a.y); g.lineTo(b3.x,b3.y); g.strokeStyle='rgba(230,240,235,.045)'; g.stroke(); }
+    // la caída, dicha con flechas — no adivinás: leés
+    for(let i=0;i<3;i++){ const p=proy(M.caida>0?-0.55:0.55, M.D*(0.35+i*0.18));
+      g.font='700 '+Math.max(11,W*0.012)+'px "JetBrains Mono",monospace';
+      g.fillStyle='rgba(198,161,91,.5)'; g.textAlign='center';
+      g.fillText(M.caida>0?'→':'←', p.x + (M.caida>0?1:-1)*i*W*0.012, p.y); }
+    // el hoyo y la bandera
+    const ph=proy(M.hx,M.D-0.55);
+    g.beginPath(); g.ellipse(ph.x,ph.y,Math.max(5,W*0.011)*ph.per,Math.max(2.4,W*0.0052)*ph.per,0,0,TAU);
+    g.fillStyle='#04070a'; g.fill();
+    g.beginPath(); g.moveTo(ph.x,ph.y); g.lineTo(ph.x,ph.y-H*0.075*ph.per);
+    g.strokeStyle='#e8e8ec'; g.lineWidth=Math.max(1.2,W*0.0014); g.stroke();
+    g.beginPath(); g.moveTo(ph.x,ph.y-H*0.075*ph.per); g.lineTo(ph.x+W*0.022*ph.per,ph.y-H*0.062*ph.per);
+    g.lineTo(ph.x,ph.y-H*0.05*ph.per); g.closePath(); g.fillStyle='#ef4444'; g.fill();
+    // la bola
+    const pb=proy(M.bola.x,M.bola.z);
+    if(arrastre){ g.beginPath(); g.moveTo(pb.x,pb.y);
+      g.lineTo(pb.x-(arrastre.dx)*1.6, pb.y-(arrastre.dy)*1.6);
+      g.strokeStyle='#C6A15B'; g.lineWidth=Math.max(1.5,W*0.0018); g.setLineDash([6,5]); g.stroke(); g.setLineDash([]); }
+    g.beginPath(); g.arc(pb.x,pb.y,Math.max(4.5,W*0.0075)*pb.per,0,TAU);
+    g.fillStyle='#F5F5F5'; g.fill();
+    g.beginPath(); g.arc(pb.x-1.5,pb.y-1.5,Math.max(1.6,W*0.0026)*pb.per,0,TAU);
+    g.fillStyle='#ffffff'; g.fill();
+    if(M.resultado){ g.font='400 '+Math.max(30,W*0.05)+'px "Bebas Neue",sans-serif'; g.textAlign='center';
+      g.fillStyle=M.resultado==='ADENTRO'?'#C6A15B':'#ef4444';
+      g.fillText(M.resultado, W/2, H*0.30); }
+  }
+  // patear: arrastrás desde la bola hacia atrás y soltás
+  cv.addEventListener('pointerdown',e=>{ if(M.bola.viva) return;
+    const r=cv.getBoundingClientRect(); const pb=proy(M.bola.x,M.bola.z);
+    const sx=(e.clientX-r.left)*(W/r.width), sy=(e.clientY-r.top)*(H/r.height);
+    if(Math.hypot(sx-pb.x,sy-pb.y)<Math.max(44*DPR, W*0.06)){ arrastre={x0:sx,y0:sy,dx:0,dy:0};
+      cv.setPointerCapture(e.pointerId); } });
+  cv.addEventListener('pointermove',e=>{ if(!arrastre) return;
+    const r=cv.getBoundingClientRect();
+    arrastre.dx=(e.clientX-r.left)*(W/r.width)-arrastre.x0;
+    arrastre.dy=(e.clientY-r.top)*(H/r.height)-arrastre.y0; });
+  cv.addEventListener('pointerup',()=>{ if(!arrastre) return;
+    const fuerza=Math.hypot(arrastre.dx,arrastre.dy)/(H*0.28);
+    if(fuerza>0.08){ M.bola.vz=Math.min(2.6,fuerza*1.9)*(M.D*0.62);
+      M.bola.vx=(-arrastre.dx/(W*0.3))*2.2; M.bola.viva=true; M.resultado=''; }
+    arrastre=null; });
+  function hud(){
+    const p=prot()[hoy()]||{}; const r=p[dist]||{m:0,a:0};
+    const tot=Object.values(p).reduce((s,x)=>({m:s.m+x.m,a:s.a+x.a}),{m:0,a:0});
+    $('vg-hud').innerHTML='<b>'+dist+'</b> hoy: <b>'+r.m+'/'+r.a+'</b><br>'+
+      'protocolo hoy: <b>'+tot.m+'/'+tot.a+'</b> de 100<br>'+
+      'racha: <b>'+M.racha+'</b> · mejor: <b>'+M.mejor+'</b><br>'+
+      'caída: <b>'+(M.caida>0?'IZQ → DER':'DER → IZQ')+'</b>';
+  }

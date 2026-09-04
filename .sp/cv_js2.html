@@ -1,0 +1,93 @@
+
+    // ── PREGUNTÁ — el agente que enseña, no el que te vende ──
+    function pintarAsk(){
+      const p=$('cvx-ask');
+      p.innerHTML='<div class="cvx-w">'+
+        '<div class="cvx-eye">CRYPTO VICE · PREGUNTÁ SIN VERGÜENZA</div>'+
+        '<h2 class="cvx-t">NO HAY PREGUNTA<br><em>tonta.</em></h2>'+
+        '<p class="cvx-sub">Preguntá cualquier cosa. El que enseña acá te dice primero el riesgo, '+
+        'después la respuesta, y al final qué te conviene aprender enseguida. Nunca te va a decir "seguro".</p>'+
+        '<div class="cvx-ag">'+
+          '<button data-a="cryptoguia" class="on">◈ EMPEZANDO</button>'+
+          '<button data-a="futures">⚡ FUTUROS</button>'+
+          '<button data-a="analyst">◎ ANALIZAR</button>'+
+        '</div>'+
+        '<textarea class="cvx-ta" id="cvx-q" placeholder="¿qué es un stop loss y por qué todos dicen que lo use?"></textarea>'+
+        '<div class="cvx-row"><button class="cvx-b" id="cvx-qgo">▶ PREGUNTAR</button>'+
+        '<button class="cvx-b2" id="cvx-qcp" style="display:none">COPIAR RESPUESTA</button></div>'+
+        '<div class="cvx-h">SI RECIÉN EMPEZÁS, PROBÁ CON ESTAS</div>'+
+        ['¿qué es una frase semilla y por qué no se comparte?',
+         '¿cómo sé si una moneda es una estafa?',
+         'quiero poner 50 lucas, ¿por dónde empiezo sin cagarla?',
+         '¿qué significa apalancamiento 10x en la práctica?'].map(q=>
+          '<div class="cvx-card" data-q="'+esc(q)+'" style="cursor:pointer"><b>'+esc(q)+'</b>'+
+          '<i>tocá para preguntarla</i></div>').join('')+
+        '<div id="cvx-qout"></div>'+
+        '<div class="cvx-warn">Esto enseña; no es consejo financiero. Nadie que te quiera bien te va a pedir '+
+        'tu frase semilla, ni acá ni en ningún lado.</div></div>';
+      let ag='cryptoguia';
+      p.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{ ag=b.dataset.a;
+        p.querySelectorAll('[data-a]').forEach(x=>x.classList.toggle('on',x===b)); });
+      p.querySelectorAll('[data-q]').forEach(c=>c.onclick=()=>{ $('cvx-q').value=c.dataset.q; $('cvx-qgo').click(); });
+      $('cvx-qgo').onclick=async()=>{
+        const q=($('cvx-q').value||'').trim(); const out=$('cvx-qout');
+        if(!q){ out.className='cvx-out err'; out.textContent='Escribí la pregunta primero.'; return; }
+        const t=await correr(ag,q,out,$('cvx-qgo'),'▶ PREGUNTAR');
+        const cp=$('cvx-qcp');
+        if(t){ cp.style.display=''; cp.onclick=()=>{ try{ navigator.clipboard.writeText(t); cp.textContent='✓ COPIADA';
+          setTimeout(()=>cp.textContent='COPIAR RESPUESTA',1600); }catch(e){} }; }
+      };
+    }
+
+    // ── EL GUARDIA — no te dice que algo es seguro. Te dice qué huele mal. ──
+    const CHECKS=[
+      ['¿Te prometieron un rendimiento fijo o garantizado?', 1],
+      ['¿Te apuran? ("queda poco", "cierra hoy", "últimos cupos")', 1],
+      ['¿Te pidieron tu frase semilla, tu clave o una captura de tu billetera?', 1],
+      ['¿Llegaste por un mensaje directo, un influencer o un grupo que no buscaste?', 1],
+      ['¿Te piden depositar primero para poder retirar?', 1],
+      ['¿El proyecto tiene equipo con nombre y cara públicos?', 0],
+      ['¿Podés retirar una parte chica antes de poner más?', 0],
+      ['¿Entendés vos mismo de dónde sale la ganancia?', 0]
+    ];
+    function pintarGuard(){
+      const p=$('cvx-guard');
+      p.innerHTML='<div class="cvx-w">'+
+        '<div class="cvx-eye">CRYPTO VICE · EL GUARDIA</div>'+
+        '<h2 class="cvx-t">NO TE DIGO QUE ES<br><em>seguro.</em></h2>'+
+        '<p class="cvx-sub">Nadie honesto puede decirte eso desde afuera. Lo que sí puedo hacer es '+
+        'encontrar lo que huele mal, y decirte en voz alta lo que no se puede verificar. '+
+        'Si ya mandaste plata o entregaste tu frase, decilo y eso va primero.</p>'+
+        '<div class="cvx-h">CHEQUEO RÁPIDO — 30 SEGUNDOS</div>'+
+        CHECKS.map(([t,malo],i)=>'<label class="cvx-chk'+(malo?' malo':'')+'">'+
+          '<input type="checkbox" data-i="'+i+'"><span>'+esc(t)+'</span></label>').join('')+
+        '<div id="cvx-score" class="cvx-warn" style="display:none"></div>'+
+        '<div class="cvx-h">CONTAME EL CASO</div>'+
+        '<textarea class="cvx-ta" id="cvx-g" placeholder="qué te ofrecieron, quién, por dónde te llegó, qué te piden…"></textarea>'+
+        '<div class="cvx-row"><button class="cvx-b" id="cvx-ggo">🛡 REVISAR</button></div>'+
+        '<div id="cvx-gout"></div>'+
+        '<div class="cvx-warn"><b>Regla sin excepciones:</b> tu frase semilla no se comparte nunca, con nadie, '+
+        'por ningún motivo. Ni soporte, ni un admin, ni yo. Si alguien te la pidió, eso es una estafa y no hay matiz.</div>'+
+        '</div>';
+      const score=()=>{
+        const marcadas=[...p.querySelectorAll('[data-i]')].filter(c=>c.checked).map(c=>+c.dataset.i);
+        const rojas=marcadas.filter(i=>CHECKS[i][1]===1).length;
+        const buenas=marcadas.filter(i=>CHECKS[i][1]===0).length;
+        const el=$('cvx-score');
+        if(!marcadas.length){ el.style.display='none'; return; }
+        el.style.display='';
+        el.innerHTML = rojas
+          ? '<b>'+rojas+' señal(es) de alarma.</b> Cada una por separado ya es motivo para frenar. '+
+            'No pongas un peso hasta entender por qué está ahí. Contame el caso acá abajo.'
+          : '<b>No marcaste ninguna señal de alarma</b> — y eso <u>no</u> significa que sea seguro. '+
+            'Significa que estas ocho preguntas no lo agarraron. '+(buenas?'':'Todavía no confirmaste nada a favor tampoco. ');
+      };
+      p.querySelectorAll('[data-i]').forEach(c=>c.onchange=score);
+      $('cvx-ggo').onclick=()=>{
+        const g=($('cvx-g').value||'').trim(); const out=$('cvx-gout');
+        if(!g){ out.className='cvx-out err'; out.textContent='Contame qué pasó y lo reviso.'; return; }
+        const marcadas=[...p.querySelectorAll('[data-i]')].filter(c=>c.checked)
+          .map(c=>'- '+CHECKS[+c.dataset.i][0]+' → SÍ').join('\n');
+        correr('scamwatch', g+(marcadas?'\n\nChequeo que ya marcó el usuario:\n'+marcadas:''), out, $('cvx-ggo'),'🛡 REVISAR');
+      };
+    }

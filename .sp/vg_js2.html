@@ -1,0 +1,158 @@
+
+  // ── las secciones: tarjetas, tiros, la línea al 2030, shop, book ──
+  const TABS=[['green','⛳ GREEN'],['cards','▤ TARJETAS'],['tiros','★ MIS TIROS'],
+              ['linea','→ 2030'],['shop','◈ PRO SHOP'],['book','◷ BOOK ME']];
+  let tab='green';
+  function avisar(t){ let el=$('vg-live');
+    if(!el){ el=document.createElement('div'); el.id='vg-live'; el.setAttribute('aria-live','polite');
+      el.style.cssText='position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)'; $('vg').appendChild(el); }
+    el.textContent=t; }
+  function ir(t){ tab=t;
+    document.querySelectorAll('#vg-tabs .vg-t').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
+    const enGreen=t==='green';
+    $('vg-p').classList.toggle('show',!enGreen);
+    $('vg-dists').style.display=enGreen?'':'none';
+    $('vg-hud').style.display=enGreen?'':'none';
+    if(!enGreen) pinta(t); }
+
+  const lee=k=>st.get(k,[]);
+  function formCard(){
+    return '<div class="vp-h">NUEVA TARJETA</div>'+
+      '<input class="vp-in" id="vc-c" placeholder="cancha">'+
+      '<div class="vp-row"><input class="vp-in" id="vc-f" type="date" style="flex:1;min-width:130px">'+
+      '<input class="vp-in" id="vc-s" placeholder="score" inputmode="numeric" style="flex:1;min-width:90px">'+
+      '<input class="vp-in" id="vc-p" placeholder="putts" inputmode="numeric" style="flex:1;min-width:90px"></div>'+
+      '<button class="vp-b" id="vc-ok">＋ GUARDAR RONDA</button>';
+  }
+  function pinta(t){
+    const P=$('vg-p');
+    if(t==='cards'){
+      const C=lee('hk23_vg_cards');
+      P.innerHTML='<div class="vp-w"><div class="vp-eye">VICEGOLFER · SCORECARDS</div>'+
+        '<h2 class="vp-t">TUS <em>RONDAS.</em></h2>'+
+        (C.length? C.slice().reverse().map(c=>'<div class="vp-card"><b>'+esc(c.c||'—')+
+          ' <span class="vp-stat" style="background:#C6A15B;color:#060608">'+esc(c.s||'—')+'</span></b>'+
+          '<i>'+esc(c.f||'')+' · '+esc(c.p||'—')+' putts</i></div>').join('')
+        : '<div class="vp-card"><p>Sin rondas todavía. La primera tarjeta se carga acá abajo — real, no de ejemplo.</p></div>')+
+        formCard()+'</div>';
+      $('vc-ok').onclick=()=>{ const c={c:($('vc-c').value||'').trim(), f:$('vc-f').value,
+          s:($('vc-s').value||'').trim(), p:($('vc-p').value||'').trim()};
+        if(!c.c||!c.s){ avisar('Cancha y score, mínimo.'); return; }
+        const C2=lee('hk23_vg_cards'); C2.push(c); st.set('hk23_vg_cards',C2);
+        avisar(lee('hk23_vg_cards').length===C2.length?'Ronda guardada.':'No se pudo guardar.'); pinta('cards'); };
+      return;
+    }
+    if(t==='tiros'){
+      const T=lee('hk23_vg_tiros');
+      P.innerHTML='<div class="vp-w"><div class="vp-eye">VICEGOLFER · DOCUMENTADOS</div>'+
+        '<h2 class="vp-t">MIS MEJORES <em>TIROS.</em></h2>'+
+        (T.length? T.slice().reverse().map(x=>'<div class="vp-card"><b>'+esc(x.t||'—')+'</b>'+
+          '<i>'+esc(x.d||'')+(x.pa?' · '+esc(x.pa):'')+'</i><p>'+esc(x.n||'')+'</p>'+
+          (x.u?'<p><a href="'+esc(x.u)+'" target="_blank" rel="noopener" style="color:#C6A15B">▸ VER EL VIDEO</a></p>':'')+
+          '</div>').join('')
+        : '<div class="vp-card"><p>Ninguno documentado todavía. El primero que cargues queda acá para siempre.</p></div>')+
+        '<div class="vp-h">DOCUMENTAR UNO</div>'+
+        '<input class="vp-in" id="vt-t" placeholder="el tiro — ej: hierro 7 al green del 12">'+
+        '<div class="vp-row"><input class="vp-in" id="vt-d" placeholder="dónde" style="flex:2;min-width:130px">'+
+        '<input class="vp-in" id="vt-p" placeholder="cuándo" style="flex:1;min-width:100px"></div>'+
+        '<input class="vp-in" id="vt-u" placeholder="link al video (si hay)">'+
+        '<textarea class="vp-ta" id="vt-n" placeholder="qué pasó — contalo como fue"></textarea>'+
+        '<button class="vp-b" id="vt-ok">★ DOCUMENTARLO</button></div>';
+      $('vt-ok').onclick=()=>{ const x={t:($('vt-t').value||'').trim(), d:($('vt-d').value||'').trim(),
+          pa:($('vt-p').value||'').trim(), n:($('vt-n').value||'').trim(),
+          u:/^https?:\/\//i.test($('vt-u').value||'')?encodeURI($('vt-u').value):''};
+        if(!x.t){ avisar('Contame cuál fue el tiro.'); return; }
+        const T2=lee('hk23_vg_tiros'); T2.push(x); st.set('hk23_vg_tiros',T2);
+        avisar('Tiro documentado.'); pinta('tiros'); };
+      return;
+    }
+    if(t==='linea'){
+      let H=st.get('hk23_vg_hitos',null);
+      if(!H){ H=[ {a:'2026',t:'CONSTRUIR CORE DE PERFORMANCE',hecho:false,bp:true},
+                  {a:'2027',t:'LANZAR APP MVP',hecho:false,bp:true} ];
+        st.set('hk23_vg_hitos',H); }
+      P.innerHTML='<div class="vp-w"><div class="vp-eye">VICEGOLFER · LA LÍNEA</div>'+
+        '<h2 class="vp-t">DE ACÁ AL <em>2030.</em></h2>'+
+        '<div class="vg-tl">'+H.map((h,i)=>'<div class="vg-hito'+(h.hecho?' hecho':'')+'">'+
+          '<div class="anio">'+esc(h.a)+'</div><div class="vp-card" style="margin:6px 0 0">'+
+          '<b>'+esc(h.t)+'</b>'+(h.bp?'<i>de tu blueprint</i>':'')+
+          '<div class="vp-row" style="margin-top:8px">'+
+          '<button class="vp-b2" data-th="'+i+'">'+(h.hecho?'✓ LOGRADO':'MARCAR LOGRADO')+'</button>'+
+          '<button class="vp-b2" data-xh="'+i+'">✕</button></div></div></div>').join('')+'</div>'+
+        '<div class="vp-h">SUMAR UN HITO</div>'+
+        '<div class="vp-row"><input class="vp-in" id="vh-a" placeholder="año" inputmode="numeric" style="flex:0 0 90px">'+
+        '<input class="vp-in" id="vh-t" placeholder="el hito" style="flex:1;min-width:160px"></div>'+
+        '<button class="vp-b" id="vh-ok">＋ PONERLO EN LA LÍNEA</button>'+
+        '<p class="vp-note">Los dos primeros salen de tu blueprint — el resto de las fases no pude leerlas '+
+        'del archivo, así que no las inventé. Cargalas como son.</p></div>';
+      P.querySelectorAll('[data-th]').forEach(b=>b.onclick=()=>{ const H2=st.get('hk23_vg_hitos',[]);
+        H2[+b.dataset.th].hecho=!H2[+b.dataset.th].hecho; st.set('hk23_vg_hitos',H2); pinta('linea'); });
+      P.querySelectorAll('[data-xh]').forEach(b=>b.onclick=()=>{ const H2=st.get('hk23_vg_hitos',[]);
+        H2.splice(+b.dataset.xh,1); st.set('hk23_vg_hitos',H2); pinta('linea'); });
+      $('vh-ok').onclick=()=>{ const a=($('vh-a').value||'').trim(), t2=($('vh-t').value||'').trim();
+        if(!a||!t2){ avisar('Año y qué.'); return; }
+        const H2=st.get('hk23_vg_hitos',[]); H2.push({a,t:t2,hecho:false});
+        H2.sort((x,y)=>String(x.a).localeCompare(String(y.a))); st.set('hk23_vg_hitos',H2); pinta('linea'); };
+      return;
+    }
+    if(t==='shop'){
+      P.innerHTML='<div class="vp-w"><div class="vp-eye">VICEGOLFER · MERCH</div>'+
+        '<h2 class="vp-t">PRO <em>SHOP.</em></h2>'+
+        '<div class="vp-card"><p>El estante existe y está vacío — no te voy a mostrar merch inventado. '+
+        'Los productos se crean desde el DASHBOARD → pestaña VENDER, con precio y link de pago, '+
+        'y van a aparecer acá cuando existan.</p>'+
+        '<div class="vp-row" style="margin-top:10px"><button class="vp-b" id="vs-go">▦ ABRIR VENDER</button></div></div></div>';
+      $('vs-go').onclick=()=>{ cerrar(); setTimeout(()=>{ try{ window.DASH.toggle(); window.DASHX.vender(); }catch(e){} },160); };
+      return;
+    }
+    if(t==='book'){
+      const gset=st.get('hk23_vg_book',null);
+      P.innerHTML='<div class="vp-w"><div class="vp-eye">VICEGOLFER · UNO A UNO</div>'+
+        '<h2 class="vp-t">SESIÓN <em>CONMIGO.</em></h2>'+
+        '<div class="vp-card"><b>QUÉ INCLUYE</b><p>· Tu swing filmado y leído<br>'+
+        '· El 100 Putts Protocol calibrado a tu distancia débil<br>'+
+        '· Un plan de entrenamiento que cabe en tu semana</p></div>'+
+        '<input class="vp-in" id="vb-n" placeholder="tu nombre" value="'+esc((gset&&gset.n)||'')+'">'+
+        '<input class="vp-in" id="vb-c" placeholder="correo o WhatsApp" value="'+esc((gset&&gset.c)||'')+'">'+
+        '<textarea class="vp-ta" id="vb-q" placeholder="tu hándicap, qué te cuesta, qué querés lograr">'+esc((gset&&gset.q)||'')+'</textarea>'+
+        '<button class="vp-b" id="vb-ok">◷ PEDIR LA SESIÓN</button><div id="vb-out"></div></div>';
+      $('vb-ok').onclick=()=>{ const n=($('vb-n').value||'').trim(), c=($('vb-c').value||'').trim();
+        const out=$('vb-out');
+        if(!n||!c){ out.innerHTML='<p class="vp-note" style="color:#ef4444">Nombre y contacto, mínimo.</p>'; return; }
+        const row={n,c,q:($('vb-q').value||'').trim(),cuando:new Date().toISOString()};
+        const ok=st.set('hk23_vg_book',row);
+        out.innerHTML='<p class="vp-note">'+(ok&&st.get('hk23_vg_book',null)
+          ? 'Pedido anotado en este dispositivo. Todavía no viaja solo — copiámelo o esperá a que lo conecte.'
+          : 'No se pudo guardar acá. Copiá tus datos y mandámelos directo.')+'</p>';
+        log('golf','pidió sesión'); };
+      return;
+    }
+  }
+
+  // ── armar y abrir ──
+  $('vg-tabs').innerHTML=TABS.map(([k,l])=>'<button class="vg-t'+(k==='green'?' on':'')+'" data-t="'+k+'">'+l+'</button>').join('');
+  document.querySelectorAll('#vg-tabs .vg-t').forEach(b=>b.onclick=()=>ir(b.dataset.t));
+  $('vg-dists').innerHTML=DISTS.map(([k])=>'<button class="vg-d'+(k===dist?' on':'')+'" data-d="'+k+'">'+k+'</button>').join('');
+  document.querySelectorAll('.vg-d').forEach(b=>b.onclick=()=>{ dist=b.dataset.d;
+    document.querySelectorAll('.vg-d').forEach(x=>x.classList.toggle('on',x===b)); servir(); hud(); });
+
+  let ultimo=null;
+  function abrir(){ const el=$('vg'); if(el.classList.contains('open')) return;
+    el.classList.add('open'); ultimo=document.activeElement;
+    corriendo=true; t0=null; fit(); servir(); hud(); ir('green'); requestAnimationFrame(pintar);
+    setTimeout(()=>{ const b=$('vg-close'); if(b) b.focus(); },30);
+    log('golf','entró a VICEGOLFER'); }
+  function cerrar(){ const el=$('vg'); if(!el.classList.contains('open')) return;
+    corriendo=false; el.classList.remove('open');
+    if(ultimo&&ultimo.focus) ultimo.focus(); ultimo=null; }
+  $('vg-close').onclick=cerrar;
+  addEventListener('keydown',e=>{
+    if(/INPUT|TEXTAREA|SELECT/.test((document.activeElement||{}).tagName||'')) return;
+    if(!$('vg').classList.contains('open')) return;
+    if(e.key==='Escape'){ e.stopImmediatePropagation();
+      if(tab!=='green') ir('green'); else cerrar(); }
+  }, true);
+
+  window.ViceGolfer={ open:abrir, close:cerrar, ir, protocolo:()=>st.get('hk23_vg_prot',{}), version:'1' };
+})();
+</script>

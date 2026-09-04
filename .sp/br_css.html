@@ -1,0 +1,45 @@
+<!-- ═══════════ BACKROOMS v2 — más hondo, más trauma, más cosas caminando ═══════════ -->
+<style id="br2-style">
+  /* el trauma del cambio de sala: el mundo entero se rompe medio segundo */
+  #backrooms.br-trauma{ animation: brTrauma .55s steps(2,end) 1; }
+  @keyframes brTrauma{
+    0%{ filter:invert(1) hue-rotate(60deg); transform:translate(-7px,3px) scale(1.02); }
+    22%{ filter:none; transform:translate(6px,-4px); }
+    40%{ filter:invert(1) saturate(3); transform:translate(-4px,0) scale(.985); }
+    62%{ filter:contrast(3) brightness(.35); transform:translate(3px,5px); }
+    80%{ filter:invert(1); transform:none; }
+    100%{ filter:none; }
+  }
+  /* cada piso es peor que el anterior */
+  #backrooms[data-piso="2"]{ filter:hue-rotate(-18deg) brightness(.86); }
+  #backrooms[data-piso="3"]{ filter:hue-rotate(-55deg) saturate(.75) brightness(.72); }
+  #backrooms[data-piso="4"]{ filter:hue-rotate(-90deg) saturate(.55) brightness(.58) contrast(1.15); }
+  #backrooms[data-piso="5"]{ filter:grayscale(.65) brightness(.42) contrast(1.3); }
+  #br-white{ position:absolute; inset:0; z-index:60; background:#fff; opacity:0;
+    pointer-events:none; transition:opacity .12s; }
+  #br-piso{ position:absolute; left:10px; top:104px; z-index:20;
+    font-family:'Space Mono',monospace; font-size:11px; letter-spacing:3px; color:#3a3520; }
+  /* la escalera que baja: más oscura que cualquier puerta */
+  .br-trap{ position:absolute; bottom:6vh; width:76px; height:110px; z-index:12; cursor:pointer;
+    background:linear-gradient(#0d0b04 20%, #000 100%); border:2px solid #201c0c;
+    box-shadow:inset 0 -30px 40px #000, 0 0 24px #00000088; }
+  .br-trap:before{ content:'↓'; position:absolute; left:50%; top:38%; transform:translateX(-50%);
+    color:#4a4020; font:700 26px 'Space Mono',monospace; animation:brDown 1.6s infinite; }
+  @keyframes brDown{ 0%,100%{ transform:translate(-50%,0); opacity:.5; } 50%{ transform:translate(-50%,8px); opacity:1; } }
+  /* entidades: siluetas que cruzan, y ojos en lo hondo */
+  .br-ent{ position:absolute; bottom:6vh; width:34px; height:120px; z-index:11; pointer-events:none;
+    background:radial-gradient(circle at 50% 12%, #000 12px, transparent 13px),
+               linear-gradient(transparent 8%, #000 20%, #000 100%);
+    filter:blur(1.5px); opacity:0; transition:opacity .5s; }
+  .br-ojos{ position:absolute; z-index:11; width:34px; height:10px; cursor:pointer; }
+  .br-ojos i{ position:absolute; top:0; width:9px; height:9px; border-radius:50%;
+    background:#ffefad; box-shadow:0 0 9px #ffefad; animation:brBlink 4.2s infinite; }
+  .br-ojos i:last-child{ right:0; }
+  @keyframes brBlink{ 0%,88%,100%{ transform:scaleY(1); } 92%,96%{ transform:scaleY(.06); } }
+  .br-q{ font-family:'Space Mono',monospace; font-size:12px; letter-spacing:1px; color:#c9bd7a;
+    line-height:1.7; margin-bottom:10px; }
+  @media(prefers-reduced-motion:reduce){
+    #backrooms.br-trauma{ animation:none; }
+    .br-trap:before,.br-ojos i{ animation:none; }
+  }
+</style>
