@@ -1,0 +1,81 @@
+
+  // ── ＋ desde un link: pegás la URL y aparece el cuerpo ──
+  function desdeLink(){
+    $('tf-add').innerHTML='<div class="ta-w">'+
+      '<div class="ti-eye">◆ AGREGAR AL UNIVERSO</div>'+
+      '<h3 class="ti-t" style="font-size:19px">PEGÁ EL LINK DE ALGO TUYO</h3>'+
+      '<input class="ti-in" id="tl-u" placeholder="https://tu-producto.com" inputmode="url" aria-label="Link">'+
+      '<input class="ti-in" id="tl-n" placeholder="nombre (si lo dejás vacío, uso el dominio)" aria-label="Nombre">'+
+      '<p class="ti-out" style="border:none;background:none;padding:0;color:#5A6478">Traigo el ícono del sitio para que el cuerpo se parezca a lo que es. '+
+      'El título y la imagen grande no los puedo leer desde el navegador sin un permiso del otro sitio — por eso el nombre lo ponés vos.</p>'+
+      '<div class="ti-acts"><button class="tf-b on" id="tl-ok">＋ CREAR EL CUERPO</button>'+
+      '<button class="tf-b" id="tl-x">CANCELAR</button></div></div>';
+    const A=$('tf-add'); A.classList.add('open');
+    setTimeout(()=>{ const e=$('tl-u'); if(e) e.focus(); },30);
+    $('tl-x').onclick=()=>A.classList.remove('open');
+    $('tl-ok').onclick=()=>{
+      const u=($('tl-u').value||'').trim(), n=($('tl-n').value||'').trim();
+      const ok=safeUrl(u);
+      if(!ok){ avisar('Ese link no sirve — tiene que empezar con http.'); $('tl-u').focus(); return; }
+      let host=''; try{ host=new URL(ok).hostname.replace(/^www\./,''); }catch(e){ host=''; }
+      const c=cuerpo({ t:(n||host||'SIN NOMBRE').toUpperCase(), url:ok,
+        fav: host? 'https://www.google.com/s2/favicons?domain='+encodeURIComponent(host)+'&sz=64' : '',
+        color: COLORES[F.length%COLORES.length], orb:1+(F.length%ANILLOS),
+        job:{tipo:'link',valor:ok,prompt:'',agente:'prioritizer'} });
+      F.push(c); const g1=guardar(); F=leer();
+      const quedo=F.some(x=>x.id===c.id);
+      A.classList.remove('open'); vacio();
+      avisar(quedo? 'Cuerpo creado en la órbita '+c.orb+'.' : 'No se pudo guardar.');
+      if(quedo) inspector(c.id);
+      log('formas','creó un cuerpo desde '+host);
+    };
+  }
+
+  // ── traer los proyectos que ya viven en el universo ──
+  function importar(){
+    const fuentes=[];
+    try{ if(typeof NODES!=='undefined') NODES.forEach(n=>fuentes.push({t:n.label,color:n.color,tam:n.size,forma:'esfera'})); }catch(e){}
+    try{ if(typeof PROJECTS!=='undefined') PROJECTS.forEach(p=>fuentes.push({t:(p.label||p.id||'').toUpperCase(),
+      color:p.color||'#9FE8FF', tam:Math.min(30,(p.size||18)), forma:'anillo'})); }catch(e){}
+    if(!fuentes.length){ avisar('No encontré proyectos en esta página.'); return; }
+    const ya=new Set(F.map(c=>(c.t||'').toUpperCase()));
+    let n=0;
+    fuentes.forEach((s,i)=>{ if(ya.has((s.t||'').toUpperCase())) return;
+      F.push(cuerpo(Object.assign({}, s, { orb:1+(n%ANILLOS), ang:(n*0.9)%TAU }))); n++; });
+    guardar(); F=leer(); vacio();
+    avisar(n? n+' proyecto(s) traído(s) al taller. Los que ya estaban no se duplicaron.'
+             : 'Ya estaban todos acá — no dupliqué nada.');
+    log('formas','importó '+n+' proyectos');
+  }
+
+  function vacio(){ const v=$('tf-vacio'); if(v) v.hidden = F.length>0; }
+
+  // ── abrir / cerrar ──
+  let ultimo=null;
+  function abrir(){ const el=$('tf'); if(el.classList.contains('open')) return;
+    F=leer(); el.classList.add('open'); ultimo=document.activeElement;
+    corriendo=true; fit(); vacio(); requestAnimationFrame(pintar);
+    setTimeout(()=>{ const b=$('tf-close'); if(b) b.focus(); },30);
+    log('formas','abrió el taller de formas'); }
+  function cerrar(){ const el=$('tf'); if(!el.classList.contains('open')) return;
+    corriendo=false; el.classList.remove('open'); $('tf-ins').classList.remove('open');
+    $('tf-add').classList.remove('open'); sel=null;
+    if(ultimo&&ultimo.focus) ultimo.focus(); ultimo=null; }
+
+  $('tf-close').onclick=cerrar;
+  $('tf-new').onclick=desdeLink;
+  $('tf-new2').onclick=desdeLink;
+  $('tf-import').onclick=importar;
+  addEventListener('keydown',e=>{
+    if(/INPUT|TEXTAREA|SELECT/.test((document.activeElement||{}).tagName||'')) return;
+    if(!$('tf').classList.contains('open')) return;
+    if(e.key==='Escape'){ e.stopImmediatePropagation();
+      if($('tf-add').classList.contains('open')) $('tf-add').classList.remove('open');
+      else if($('tf-ins').classList.contains('open')){ $('tf-ins').classList.remove('open'); sel=null; }
+      else cerrar(); }
+  }, true);
+
+  window.Formas={ open:abrir, close:cerrar, desdeLink, importar,
+    cuerpos:()=>JSON.parse(JSON.stringify(F)), version:'1' };
+})();
+</script>

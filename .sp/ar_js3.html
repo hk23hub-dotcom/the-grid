@@ -1,0 +1,109 @@
+
+  // ── subir una obra: la foto se convierte en relieve 3D de verdad ──
+  function avisar(t){ let el=$('ar-live');
+    if(!el){ el=document.createElement('div'); el.id='ar-live'; el.setAttribute('aria-live','polite');
+      el.style.cssText='position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)'; $('ar').appendChild(el); }
+    el.textContent=t; }
+  // el brillo de cada zona de la foto pasa a ser profundidad. Así se talla un relieve.
+  function fotoARelieve(img, n){
+    const oc=document.createElement('canvas'); oc.width=oc.height=n;
+    const x=oc.getContext('2d', {willReadFrequently:true});
+    const lado=Math.min(img.width,img.height);
+    x.drawImage(img,(img.width-lado)/2,(img.height-lado)/2,lado,lado,0,0,n,n);
+    const d=x.getImageData(0,0,n,n).data, m=[];
+    let min=1, max=0;
+    for(let r=0;r<n;r++){ m.push([]);
+      for(let c=0;c<n;c++){ const i=(r*n+c)*4;
+        const l=(0.2126*d[i]+0.7152*d[i+1]+0.0722*d[i+2])/255;
+        m[r].push(l); if(l<min)min=l; if(l>max)max=l; } }
+    const rango=Math.max(0.08,max-min);
+    for(let r=0;r<n;r++) for(let c=0;c<n;c++) m[r][c]=(m[r][c]-min)/rango;   // estirar el contraste
+    return m;
+  }
+  function subir(){
+    $('ar-panel').innerHTML='<div class="ap-w">'+
+      '<div class="ap-eye">◆ HK23ART</div><h3 class="ap-t">SUBÍ UNA OBRA TUYA</h3>'+
+      '<div class="ap-drop" id="ap-drop">Tocá para elegir una foto de la pieza<br>'+
+      '<span style="font-size:9px;letter-spacing:2px">SE TALLA EN 3D DESDE LA FOTO</span></div>'+
+      '<input type="file" id="ap-file" accept="image/*" style="display:none">'+
+      '<label class="ap-f"><span>TÍTULO</span><input id="ap-t" placeholder="cómo se llama"></label>'+
+      '<label class="ap-f"><span>CATEGORÍA</span><select id="ap-c">'+
+        CATS.filter(c=>c[0]!=='todo').map(c=>'<option value="'+c[0]+'">'+c[1]+'</option>').join('')+'</select></label>'+
+      '<label class="ap-f"><span>MATERIAL</span><input id="ap-m" placeholder="raulí, MDF, resina…"></label>'+
+      '<label class="ap-f"><span>AÑO</span><input id="ap-y" placeholder="2026"></label>'+
+      '<label class="ap-f"><span>PRECIO — si la vendés</span><input id="ap-p" placeholder="$"></label>'+
+      '<label class="ap-f"><span>NOTA</span><textarea id="ap-n" placeholder="qué es, de dónde salió"></textarea></label>'+
+      '<p class="ap-note">La foto no sale de tu dispositivo: la leo acá mismo para calcular el relieve. '+
+      'El brillo de cada zona pasa a ser profundidad — lo claro sobresale, lo oscuro se hunde. '+
+      'Funciona mejor con una foto frontal y con luz pareja.</p>'+
+      '<div class="ap-acts"><button class="ar-b on" id="ap-ok">＋ TALLARLA</button>'+
+      '<button class="ar-b" id="ap-x">CANCELAR</button></div></div>';
+    const P=$('ar-panel'); P.classList.add('open');
+    let depth=null, n=30, nombreArch='';
+    $('ap-drop').onclick=()=>$('ap-file').click();
+    $('ap-file').onchange=e=>{
+      const f=e.target.files&&e.target.files[0]; if(!f) return;
+      nombreArch=f.name.replace(/\.[a-z0-9]+$/i,'');
+      const fr=new FileReader();
+      fr.onload=()=>{ const img=new Image();
+        img.onload=()=>{ try{ depth=fotoARelieve(img,n);
+            $('ap-drop').classList.add('hay');
+            $('ap-drop').innerHTML='✓ '+esc(f.name)+'<br><span style="font-size:9px;letter-spacing:2px">RELIEVE CALCULADO — '+n+'×'+n+'</span>';
+            if(!$('ap-t').value) $('ap-t').value=nombreArch.toUpperCase();
+            avisar('Relieve calculado desde la foto.');
+          }catch(err){ depth=null;
+            $('ap-drop').innerHTML='✕ No pude leer esa imagen: '+esc(String(err.message||err).slice(0,60)); } };
+        img.onerror=()=>{ depth=null; $('ap-drop').innerHTML='✕ Ese archivo no es una imagen que pueda abrir.'; };
+        img.src=fr.result; };
+      fr.onerror=()=>{ $('ap-drop').innerHTML='✕ No pude leer el archivo.'; };
+      fr.readAsDataURL(f);
+    };
+    $('ap-x').onclick=()=>P.classList.remove('open');
+    $('ap-ok').onclick=()=>{
+      const t=($('ap-t').value||'').trim();
+      if(!t){ avisar('Ponele un título.'); $('ap-t').focus(); return; }
+      if(!depth){ $('ap-drop').innerHTML='✕ Falta la foto — sin foto no hay relieve que tallar.'; return; }
+      const o={ id:'o'+Date.now().toString(36), t:t.toUpperCase(), cat:$('ap-c').value,
+        mat:($('ap-m').value||'').trim(), anio:($('ap-y').value||'').trim(),
+        precio:($('ap-p').value||'').trim(), nota:($('ap-n').value||'').trim(),
+        n, depth, demo:false };
+      OBRAS.push(o); const ok=guardar(); OBRAS=leer();
+      const quedo=OBRAS.some(x=>x.id===o.id);
+      P.classList.remove('open');
+      if(quedo){ cat=o.cat; idx=0; pintarCats(); avisar('Obra tallada y guardada.'); log('arte','subió '+o.t); }
+      else avisar('No se pudo guardar — la foto puede ser muy pesada para el navegador.');
+    };
+    setTimeout(()=>$('ap-drop').focus&&$('ap-drop').focus(),30);
+  }
+
+  function pintarCats(){
+    const el=$('ar-cats'); if(!el) return;
+    el.innerHTML=CATS.map(([k,l])=>{
+      const n=k==='todo'?OBRAS.length:OBRAS.filter(o=>o.cat===k).length;
+      return '<button class="ar-b'+(cat===k?' on':'')+'" data-c="'+k+'">'+esc(l)+
+        (n?' <span style="opacity:.6">'+n+'</span>':'')+'</button>'; }).join('');
+    el.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{ cat=b.dataset.c; idx=0; pintarCats(); });
+  }
+
+  let ultimo=null;
+  function abrir(){ const el=$('ar'); if(el.classList.contains('open')) return;
+    OBRAS=leer(); el.classList.add('open'); ultimo=document.activeElement;
+    corriendo=true; fit(); pintarCats(); requestAnimationFrame(pintar);
+    setTimeout(()=>{ const b=$('ar-close'); if(b) b.focus(); },30);
+    log('arte','entró a HK23ART'); }
+  function cerrar(){ const el=$('ar'); if(!el.classList.contains('open')) return;
+    corriendo=false; el.classList.remove('open'); $('ar-panel').classList.remove('open');
+    if(ultimo&&ultimo.focus) ultimo.focus(); ultimo=null; }
+  $('ar-close').onclick=cerrar; $('ar-new').onclick=subir;
+  addEventListener('keydown',e=>{
+    if(/INPUT|TEXTAREA|SELECT/.test((document.activeElement||{}).tagName||'')) return;
+    if(!$('ar').classList.contains('open')) return;
+    if(e.key==='Escape'){ e.stopImmediatePropagation();
+      if($('ar-panel').classList.contains('open')) $('ar-panel').classList.remove('open'); else cerrar(); }
+    if(e.key==='ArrowRight'){ const L=lista(); if(L.length>1) idx=(idx+1)%L.length; }
+    if(e.key==='ArrowLeft'){ const L=lista(); if(L.length>1) idx=(idx-1+L.length)%L.length; }
+  }, true);
+
+  window.HK23Art={ open:abrir, close:cerrar, subir, obras:()=>JSON.parse(JSON.stringify(OBRAS)), version:'1' };
+})();
+</script>

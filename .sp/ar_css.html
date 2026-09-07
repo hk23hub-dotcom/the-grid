@@ -1,0 +1,63 @@
+<!-- ═══════════ HK23ART — el canvas gigante: tu obra en 3D, cubriendo todo ═══════════ -->
+<style id="ar-style">
+  #ar{ position:fixed; inset:0; z-index:977; display:none; background:#07060A; overflow:hidden;
+    font-family:'Space Mono',ui-monospace,monospace; color:#EDE7DE; }
+  #ar.open{ display:block; }
+  #ar-cv{ position:absolute; inset:0; width:100%; height:100%; touch-action:none; cursor:grab; }
+  #ar-cv.girando{ cursor:grabbing; }
+  .ar-top{ position:absolute; left:0; right:0; top:0; z-index:3; display:flex; align-items:center; gap:8px;
+    padding:14px; padding-top:calc(14px + env(safe-area-inset-top,0px)); flex-wrap:wrap;
+    background:linear-gradient(#07060ADD,#07060A00); pointer-events:none; }
+  .ar-top > *{ pointer-events:auto; }
+  .ar-top b{ font-size:12px; letter-spacing:5px; }
+  .ar-top i{ font-size:8px; letter-spacing:3px; color:#7A7268; font-style:normal; }
+  .ar-b{ font-size:9px; letter-spacing:2px; color:#E8C86A; background:transparent; border:1px solid #3A3228;
+    border-radius:3px; padding:11px 13px; cursor:pointer; min-height:44px; }
+  .ar-b.on{ background:#E8C86A; color:#07060A; font-weight:700; border-color:#E8C86A; }
+  .ar-b:focus-visible{ outline:2px solid #E8C86A; outline-offset:2px; }
+  .ar-x{ margin-left:auto; font-size:11px; letter-spacing:2px; color:#07060A; background:#EDE7DE;
+    border:none; border-radius:3px; padding:11px 15px; cursor:pointer; min-height:44px; }
+  /* las categorías: tu arte no es todo lo mismo */
+  .ar-cats{ position:absolute; left:0; right:0; bottom:0; z-index:3; display:flex; gap:6px; overflow-x:auto;
+    padding:14px; padding-bottom:calc(14px + env(safe-area-inset-bottom,0px));
+    background:linear-gradient(#07060A00,#07060ADD 40%); -webkit-overflow-scrolling:touch; }
+  .ar-cats button{ flex:0 0 auto; }
+  .ar-ficha{ position:absolute; left:14px; bottom:78px; z-index:3; max-width:min(420px,86vw);
+    background:rgba(7,6,10,.86); border:1px solid #241E18; border-left:3px solid #E8C86A;
+    border-radius:4px; padding:13px 15px; backdrop-filter:blur(8px); }
+  .ar-ficha b{ display:block; font-size:15px; letter-spacing:-.2px; margin-bottom:3px; }
+  .ar-ficha i{ display:block; font-style:normal; font-size:9px; letter-spacing:2px; color:#7A7268; margin-bottom:7px; }
+  .ar-ficha p{ margin:0; font-size:11px; line-height:1.7; color:#B8AEA2; }
+  .ar-ficha .demo{ display:inline-block; font-size:8px; letter-spacing:2px; color:#07060A;
+    background:#C1543A; border-radius:2px; padding:3px 7px; font-weight:700; margin-top:8px; }
+  #ar-panel{ position:absolute; inset:0; z-index:8; display:none; background:rgba(7,6,10,.97); overflow-y:auto; }
+  #ar-panel.open{ display:block; }
+  .ap-w{ max-width:560px; margin:0 auto; padding:26px 18px calc(50px + env(safe-area-inset-bottom,0px)); }
+  .ap-eye{ font-size:8px; letter-spacing:4px; color:#7A7268; margin-bottom:8px; }
+  .ap-t{ font-size:21px; font-weight:700; margin:0 0 16px; letter-spacing:-.3px; }
+  .ap-f{ display:block; margin-bottom:11px; }
+  .ap-f span{ display:block; font-size:8px; letter-spacing:3px; color:#7A7268; margin-bottom:6px; }
+  .ap-f input,.ap-f select,.ap-f textarea{ width:100%; background:#0C0A10; border:1px solid #2A241E;
+    border-radius:3px; color:#EDE7DE; font:400 13px 'Space Mono',ui-monospace,monospace; padding:12px; min-height:46px; }
+  .ap-f textarea{ min-height:80px; line-height:1.7; resize:vertical; }
+  .ap-f input:focus-visible,.ap-f select:focus-visible,.ap-f textarea:focus-visible{
+    outline:2px solid #E8C86A; outline-offset:1px; }
+  .ap-drop{ border:1px dashed #3A3228; border-radius:5px; padding:22px 16px; text-align:center;
+    font-size:11px; line-height:1.8; color:#8A8076; cursor:pointer; margin-bottom:12px; }
+  .ap-drop.hay{ border-color:#E8C86A; color:#E8C86A; }
+  .ap-acts{ display:flex; gap:8px; flex-wrap:wrap; margin-top:18px; }
+  .ap-note{ font-size:10px; line-height:1.8; color:#7A7268; border-left:2px solid #241E18;
+    padding-left:11px; margin:14px 0 0; }
+  @media(prefers-reduced-motion:reduce){ #ar *{ animation:none !important; transition:none !important; } }
+</style>
+<div id="ar" role="dialog" aria-modal="true" aria-label="HK23ART — el canvas gigante">
+  <canvas id="ar-cv"></canvas>
+  <div class="ar-top">
+    <b>HK23ART</b><i>ARRASTRÁ PARA GIRAR LA PIEZA</i>
+    <button class="ar-b" id="ar-new">＋ SUBIR UNA OBRA</button>
+    <button class="ar-x" id="ar-close">✕</button>
+  </div>
+  <div class="ar-ficha" id="ar-ficha"></div>
+  <div class="ar-cats" id="ar-cats"></div>
+  <div id="ar-panel" role="dialog" aria-label="Subir una obra"></div>
+</div>

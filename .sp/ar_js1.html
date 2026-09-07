@@ -1,0 +1,60 @@
+<script>
+// ═══ HK23ART — la pieza en 3D ocupa la pantalla entera. El mundo ES la obra. ═══
+(function(){
+  const $=id=>document.getElementById(id);
+  const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  const log=(a,b)=>{ try{ (window.hkLog||function(){})(a,b); }catch(e){} };
+
+  // tu arte no es todo lo mismo
+  const CATS=[['todo','TODO'],['madera','MADERA'],['geometrico','GEOMÉTRICO'],['difusor','DIFUSORES'],
+              ['escultura','ESCULTURAS'],['diseno','DISEÑOS'],['ilustracion','ILUSTRACIONES']];
+
+  const K='hk23_obras';
+  const leer=()=>{ try{ return JSON.parse(localStorage.getItem(K))||[]; }catch(e){ return []; } };
+  const guardar=()=>{ try{ localStorage.setItem(K,JSON.stringify(OBRAS)); return true; }catch(e){ return false; } };
+  let OBRAS=leer(), cat='todo', idx=0;
+
+  // la pieza que se ve mientras no cargaste ninguna: generada, y marcada como tal
+  function relieveSemilla(n){
+    const d=[];
+    for(let r=0;r<n;r++){ d.push([]);
+      for(let c=0;c<n;c++){
+        const u=c/(n-1)-0.5, v=r/(n-1)-0.5;
+        const rad=Math.hypot(u,v);
+        const h=0.5+0.5*Math.sin(rad*13-Math.atan2(v,u)*3)*Math.exp(-rad*2.2);
+        d[r].push(Math.max(0,Math.min(1,h)));
+      } }
+    return d;
+  }
+  const SEMILLA={ id:'demo', t:'RELIEVE 01', cat:'geometrico', mat:'generado', anio:'',
+    nota:'Esta pieza no es tuya: la generé para que el taller no esté vacío. Subí una foto de una obra real y esto se reemplaza.',
+    demo:true, n:26, depth:relieveSemilla(26), img:null, precio:'' };
+
+  const lista=()=>{ const L=OBRAS.filter(o=>cat==='todo'||o.cat===cat);
+    return L.length?L:(cat==='todo'?[SEMILLA]:[]); };
+
+  // ── lienzo 3D ──
+  const cv=$('ar-cv'), g=cv.getContext('2d');
+  let W=0,H=0,DPR=1, rotY=-0.55, rotX=0.62, girando=false, px=0, py=0, corriendo=false, auto=true;
+  function fit(){ const r=cv.getBoundingClientRect(); DPR=Math.min(2,window.devicePixelRatio||1);
+    const w=Math.round(r.width*DPR), h=Math.round(r.height*DPR);
+    if(cv.width!==w||cv.height!==h){ cv.width=w; cv.height=h; }
+    W=cv.width; H=cv.height; }
+  addEventListener('resize',fit);
+
+  // proyección: giro en Y, inclinación en X, perspectiva
+  function proyectar(x,y,z,esc,cx,cy){
+    const cY=Math.cos(rotY), sY=Math.sin(rotY);
+    let X=x*cY - z*sY, Z=x*sY + z*cY;
+    const cX=Math.cos(rotX), sX=Math.sin(rotX);
+    let Y=y*cX - Z*sX; Z=y*sX + Z*cX;
+    const f=3.0/(3.0+Z);
+    return { x:cx+X*esc*f, y:cy+Y*esc*f, z:Z, f };
+  }
+  const mezcla=(a,b,t)=>a.map((v,i)=>Math.round(v+(b[i]-v)*t));
+  const rgb=c=>'rgb('+c[0]+','+c[1]+','+c[2]+')';
+  // paleta por material: la madera no se ve como el metal
+  const PAL={ madera:[[62,40,24],[214,166,110]], geometrico:[[24,26,38],[210,224,246]],
+    difusor:[[44,32,20],[226,196,142]], escultura:[[34,32,30],[224,220,214]],
+    diseno:[[20,22,30],[232,200,106]], ilustracion:[[30,20,28],[236,180,200]], generado:[[26,24,34],[232,200,106]] };

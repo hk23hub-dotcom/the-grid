@@ -1,0 +1,48 @@
+
+    // ── ASESORÍA — una sesión de verdad, con lo que hay ──
+    function pintarBook(){
+      const p=$('cvx-book');
+      let g=null; try{ g=JSON.parse(localStorage.getItem('hk23_asesoria')||'null'); }catch(e){}
+      p.innerHTML='<div class="cvx-w">'+
+        '<div class="cvx-eye">CRYPTO VICE · UNO A UNO</div>'+
+        '<h2 class="cvx-t">SESIÓN PARA<br><em>partir bien.</em></h2>'+
+        '<p class="cvx-sub">Una hora, vos y yo. Salís con tu billetera creada, tu frase guardada como corresponde, '+
+        'tu primera compra hecha y un plan que entendés. No con una lista de monedas para comprar.</p>'+
+        '<div class="cvx-card"><b>QUÉ INCLUYE</b><i>'+
+          '· Billetera creada y asegurada — la frase, dónde y cómo se guarda<br>'+
+          '· Tu primera operación hecha con vos mirando, no por vos<br>'+
+          '· Cómo reconocer una estafa antes de que te toque<br>'+
+          '· Un plan escrito para tus próximos 90 días</i></div>'+
+        '<div class="cvx-h">RESERVAR</div>'+
+        '<input class="cvx-in" id="cvx-bn" placeholder="tu nombre" value="'+esc((g&&g.n)||'')+'">'+
+        '<input class="cvx-in" id="cvx-bc" placeholder="tu correo o WhatsApp" value="'+esc((g&&g.c)||'')+'">'+
+        '<textarea class="cvx-ta" id="cvx-bq" placeholder="¿en qué estás hoy? ¿ya compraste algo? ¿qué te frena?">'+esc((g&&g.q)||'')+'</textarea>'+
+        '<div class="cvx-row"><button class="cvx-b" id="cvx-bgo">◷ PEDIR LA SESIÓN</button></div>'+
+        '<div id="cvx-bout"></div></div>';
+      $('cvx-bgo').onclick=async()=>{
+        const n=($('cvx-bn').value||'').trim(), c=($('cvx-bc').value||'').trim(), q=($('cvx-bq').value||'').trim();
+        const out=$('cvx-bout');
+        if(!n||!c){ out.className='cvx-out err'; out.textContent='Necesito tu nombre y por dónde te contesto.'; return; }
+        const row={ n, c, q, cuando:new Date().toISOString() };
+        let guardado=false;
+        try{ localStorage.setItem('hk23_asesoria',JSON.stringify(row));
+          guardado = !!JSON.parse(localStorage.getItem('hk23_asesoria')||'null'); }catch(e){}
+        out.className='cvx-out';
+        out.textContent = guardado
+          ? 'Pedido anotado en este dispositivo:\n\n'+n+'\n'+c+(q?'\n\n'+q:'')+
+            '\n\n— Todavía no viaja solo: esto queda guardado acá hasta que conectemos el envío. '+
+            'Copiá y mandámelo, o esperá a que lo enchufe a Supabase.'
+          : 'No se pudo guardar en este dispositivo. Copiá tus datos y mandámelos directo.';
+        avisar('Pedido de sesión anotado.');
+        log('crypto','pidió una sesión de asesoría');
+      };
+    }
+
+    function pintar(k){ if(k==='cvx-ask') return pintarAsk();
+      if(k==='cvx-guard') return pintarGuard(); if(k==='cvx-book') return pintarBook(); }
+
+    window.CryptoVice={ preguntar:()=>ir('cvx-ask'), guardia:()=>ir('cvx-guard'),
+      asesoria:()=>ir('cvx-book'), version:'1' };
+  }
+})();
+</script>

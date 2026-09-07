@@ -1,0 +1,68 @@
+<script>
+// ═══ CRYPTO VICE ++ — preguntar, protegerse, señales, asesoría ═══
+(function(){
+  function esperar(){ const m=document.getElementById('cw-modes');
+    if(!m){ return setTimeout(esperar,300); } armar(m); }
+  esperar();
+
+  function armar(modos){
+    const $=id=>document.getElementById(id);
+    const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    const cw=$('cw');
+    const log=(a,b)=>{ try{ (window.hkLog||function(){})(a,b); }catch(e){} };
+    const TABS=[['cvx-ask','◈ PREGUNTÁ'],['cvx-guard','🛡 EL GUARDIA'],['cvx-book','◷ ASESORÍA']];
+
+    // pestañas nuevas junto a las que ya estaban
+    TABS.forEach(([k,l])=>{ if($('t-'+k)) return;
+      const b=document.createElement('button'); b.className='cwm'; b.id='t-'+k; b.textContent=l;
+      b.onclick=()=>ir(k); modos.appendChild(b); });
+    if(!$('t-cvx-sig')){ const b=document.createElement('button'); b.className='cwm'; b.id='t-cvx-sig';
+      b.textContent='⚑ SEÑALES';
+      b.onclick=()=>{ try{ if(window.CryptoWorld) window.CryptoWorld.close(); }catch(e){}
+        setTimeout(()=>{ if(window.CryptoSignals&&window.CryptoSignals.open) window.CryptoSignals.open();
+          else avisar('El mundo de señales no responde en esta página.'); },140); };
+      modos.appendChild(b); }
+
+    // los paneles
+    TABS.forEach(([k])=>{ if($(k)) return;
+      const d=document.createElement('div'); d.id=k; d.className='cvx-panel'; cw.appendChild(d); });
+
+    let actual=null;
+    function ocultarNativos(){ ['cw-lib','cw-mkt'].forEach(i=>{ const e=$(i); if(e) e.classList.remove('show'); });
+      const cs=$('cw-coinsel'); if(cs) cs.classList.remove('show'); }
+    function ir(k){
+      actual=k; ocultarNativos();
+      TABS.forEach(([x])=>{ const p=$(x); if(p) p.classList.toggle('show', x===k); });
+      document.querySelectorAll('#cw-modes .cwm').forEach(b=>b.classList.toggle('on', b.id==='t-'+k));
+      pintar(k); log('crypto','crypto vice → '+k);
+    }
+    // si tocan una pestaña original, las mías se apagan
+    modos.addEventListener('click',e=>{ const b=e.target.closest('.cwm'); if(!b||!b.dataset.m) return;
+      actual=null; TABS.forEach(([x])=>{ const p=$(x); if(p) p.classList.remove('show'); }); }, true);
+
+    function avisar(t){ let el=$('cvx-live');
+      if(!el){ el=document.createElement('div'); el.id='cvx-live'; el.setAttribute('aria-live','polite');
+        el.style.cssText='position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)'; cw.appendChild(el); }
+      el.textContent=t; }
+
+    // ── llamar al runner de verdad ──
+    async function correr(agente, prompt, out, btn, textoBtn){
+      out.className='cvx-out'; out.textContent='Pensando…';
+      if(btn){ btn.disabled=true; btn.textContent='CORRIENDO…'; }
+      try{
+        const r=await fetch('/api/run',{method:'POST',
+          headers:{'Content-Type':'application/json','x-run-token':'hk23-run-9x'},
+          body:JSON.stringify({action:'agent',agent:agente,prompt})});
+        const j=await r.json().catch(()=>({}));
+        if(!r.ok){ out.className='cvx-out err';
+          out.textContent='No corrió. HTTP '+r.status+(j.error?' — '+j.error:'')+
+            (r.status===429?'\n\nDemasiadas consultas seguidas. Esperá unos minutos.':'')+
+            (r.status===404?'\n\n/api/run no existe en este despliegue.':'');
+          return null; }
+        const t=j.text||j.output||j.result||JSON.stringify(j,null,2);
+        out.className='cvx-out'; out.textContent=t; return t;
+      }catch(e){ out.className='cvx-out err';
+        out.textContent='No se pudo llamar al agente: '+(e&&e.message||e); return null; }
+      finally{ if(btn){ btn.disabled=false; btn.textContent=textoBtn; } }
+    }
