@@ -1,0 +1,78 @@
+
+  // ── pintar la cancha viva ──
+  const lerp=(a,b,t)=>a+(b-a)*t;
+  function posEnRuta(ruta,t01){
+    const n=ruta.length-1, s=Math.max(0,Math.min(0.999,t01))*n, i=Math.floor(s), f=s-i;
+    return { x:lerp(ruta[i][0],ruta[i+1][0],f), z:lerp(ruta[i][1],ruta[i+1][1],f) };
+  }
+  function pintar(ts){
+    if(!corriendo) return;
+    requestAnimationFrame(pintar);
+    fit(); const dt=t0?Math.min(0.05,(ts-t0)/1000):0.016; t0=ts;
+    if(modo==='kicker') fisicaKick(dt); else playT=(playT+dt)%(play.dur+1.2);
+    g.fillStyle='#04070A'; g.fillRect(0,0,W,H);
+    for(let i=0;i<60;i++){ const a=Math.sin(i*12.9898)*43758.5453,b2=Math.sin(i*78.233)*12345.6789;
+      g.globalAlpha=0.05+((Math.sin(i*3.17)+1)/2)*0.2; g.fillStyle='#e8f4f8';
+      g.beginPath(); g.arc((a-Math.floor(a))*W,(b2-Math.floor(b2))*H*0.35,Math.max(0.6,W*0.0006),0,TAU); g.fill(); }
+    g.globalAlpha=1;
+    // el pasto
+    const p00=proy(-1.05,0), p10=proy(1.05,0), p01=proy(-1.05,100), p11=proy(1.05,100);
+    const grd=g.createLinearGradient(0,p01.y,0,p00.y);
+    grd.addColorStop(0,'#0a1f14'); grd.addColorStop(1,'#10301e');
+    g.beginPath(); g.moveTo(p00.x,p00.y); g.lineTo(p10.x,p10.y); g.lineTo(p11.x,p11.y); g.lineTo(p01.x,p01.y);
+    g.closePath(); g.fillStyle=grd; g.fill();
+    // las líneas de verdad: 22 · 10 · mitad · 10 · 22 · try
+    [[5,'#e8f4f822'],[22,'#e8f4f844'],[40,'#e8f4f833'],[50,'#e8f4f855'],[60,'#e8f4f833'],[78,'#e8f4f844'],[95,'#00F0FF66']]
+      .forEach(([z,c])=>{ const a=proy(-1.05,z), b3=proy(1.05,z);
+        g.beginPath(); g.moveTo(a.x,a.y); g.lineTo(b3.x,b3.y);
+        g.strokeStyle=c; g.lineWidth=Math.max(1,W*0.0011); g.stroke(); });
+    // los postes en la línea de try
+    const pl=proy(-0.16,95), pr=proy(0.16,95), alto=H*0.16*pl.per;
+    g.strokeStyle='#e8f4f8'; g.lineWidth=Math.max(1.6,W*0.0018);
+    [[pl],[pr]].forEach(([p])=>{ g.beginPath(); g.moveTo(p.x,p.y); g.lineTo(p.x,p.y-alto*1.7); g.stroke(); });
+    g.beginPath(); g.moveTo(pl.x,pl.y-alto*0.55); g.lineTo(pr.x,pr.y-alto*0.55); g.stroke();
+
+    if(modo==='jugada'){
+      // los mini agentes corren la jugada seleccionada, en loop
+      const t01=Math.min(1, playT/play.dur);
+      const pos=play.rutas.map(r=>posEnRuta(r,t01));
+      // la pelota: en manos de quién está según el guion
+      let portador=play.pelota[0][0], desde=null, hacia=null, fpase=0;
+      for(let i=0;i<play.pelota.length;i++){ if(playT>=play.pelota[i][1]) portador=play.pelota[i][0];
+        else { desde=play.pelota[i-1]; hacia=play.pelota[i];
+          fpase=(playT-desde[1])/Math.max(0.4,hacia[1]-desde[1]); break; } }
+      pos.forEach((p,i)=>{ const s=proy(p.x,p.z);
+        g.beginPath(); g.arc(s.x,s.y,Math.max(5,W*0.009)*s.per,0,TAU);
+        g.fillStyle= i===portador ? '#00F0FF' : '#e8f4f8'; g.fill();
+        g.font='700 '+Math.max(9,W*0.009)+'px "JetBrains Mono",monospace';
+        g.textAlign='center'; g.fillStyle='#04070A';
+        g.fillText(String(i+1), s.x, s.y+Math.max(3,W*0.003)); });
+      // pase en el aire: la pelota viaja entre dos agentes
+      if(hacia && fpase<1 && fpase>0){ const a=pos[desde[0]], b4=pos[hacia[0]];
+        const s=proy(lerp(a.x,b4.x,fpase), lerp(a.z,b4.z,fpase), Math.sin(fpase*Math.PI)*0.25);
+        g.beginPath(); g.ellipse(s.x,s.y,Math.max(4,W*0.006)*s.per,Math.max(2.6,W*0.004)*s.per,0.5,0,TAU);
+        g.fillStyle='#C6A15B'; g.fill(); }
+      g.font='400 '+Math.max(15,W*0.02)+'px "Bebas Neue",sans-serif'; g.textAlign='left';
+      g.fillStyle='#00F0FF'; g.fillText(play.n, W*0.045, H*0.30);
+      g.font='400 '+Math.max(10,W*0.011)+'px "JetBrains Mono",monospace'; g.fillStyle='#8aa0aa';
+      g.fillText('el planificador la corre en loop · cambiala en PLAYBOOK', W*0.045, H*0.30+Math.max(16,W*0.018));
+    } else {
+      // EL KICKER
+      const pb=proy(K.spot.x,K.spot.z,0);
+      if(arrastre){ g.beginPath(); g.moveTo(pb.x,pb.y);
+        g.lineTo(pb.x-arrastre.dx*1.5, pb.y-arrastre.dy*1.5);
+        g.strokeStyle='#00F0FF'; g.setLineDash([6,5]); g.lineWidth=Math.max(1.5,W*0.0018); g.stroke(); g.setLineDash([]); }
+      if(K.bola){ const s=proy(K.bola.x,K.bola.z,K.bola.alt);
+        g.beginPath(); g.ellipse(s.x,s.y,Math.max(4.5,W*0.007)*s.per,Math.max(3,W*0.0046)*s.per,0.5,0,TAU);
+        g.fillStyle='#C6A15B'; g.fill(); }
+      else { g.beginPath(); g.ellipse(pb.x,pb.y,Math.max(4.5,W*0.007),Math.max(3,W*0.0046),0.5,0,TAU);
+        g.fillStyle='#C6A15B'; g.fill(); }
+      if(K.res){ g.font='400 '+Math.max(26,W*0.042)+'px "Bebas Neue",sans-serif'; g.textAlign='center';
+        g.fillStyle=/ENTRE/.test(K.res)?'#00F0FF':'#ef4444'; g.fillText(K.res, W/2, H*0.30); }
+    }
+  }
+  function hud(){
+    $('rv-hud').innerHTML = modo==='kicker'
+      ? 'KICK TRACKER<br>palos: <b>'+K.marca.m+'/'+K.marca.a+'</b><br>desde los <b>'+Math.round(100-K.spot.z)+'m</b>'
+      : 'EN CANCHA: <b>'+play.n+'</b><br>4 agentes · pelota viva';
+  }
