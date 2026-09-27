@@ -27,6 +27,10 @@
       "destination": "/hk23-universe.html"
     },
     {
+      "source": "/universo-copia",
+      "destination": "/universo-copia.html"
+    },
+    {
       "source": "/frequency",
       "destination": "/hk23-universe.html?g=frequency"
     },
