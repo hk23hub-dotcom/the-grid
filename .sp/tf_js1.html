@@ -1,0 +1,67 @@
+<script>
+// ═══ EL TALLER DE FORMAS — las formas son objetos que se agarran, no dibujos ═══
+(function(){
+  const $=id=>document.getElementById(id);
+  const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  const safeUrl=u=>/^https?:\/\//i.test(u||'')?encodeURI(u):'';
+  const log=(a,b)=>{ try{ (window.hkLog||function(){})(a,b); }catch(e){} };
+  const TAU=Math.PI*2;
+
+  const FORMAS=[['esfera','ESFERA'],['anillo','ANILLO'],['cubo','CUBO'],['disco','DISCO'],
+                ['nube','NUBE'],['estrella','ESTRELLA'],['rombo','ROMBO']];
+  const ANIMS =[['quieto','QUIETO'],['orbita','ORBITAR'],['pulso','PULSO'],['giro','GIRO']];
+  const COLORES=['#FF6B00','#9FE8FF','#AAFF00','#B84DFF','#FFD200','#FF3AC8','#5FA8D3','#E8C86A','#4FE0A8','#E6E4DE'];
+  const TRABAJOS=[['nada','NADA'],['link','ABRIR LINK'],['mundo','ABRIR MUNDO'],['agente','CORRER AGENTE']];
+  const MUNDOS=[['Winamp','WINAMP',o=>o&&o.open],['MVB','MVB',o=>o&&o.open],['Taller','TALLER',o=>o&&o.open],
+    ['Inquilinos','INQUILINOS',o=>o&&o.open],['MusicaHK','MÚSICA',o=>o&&o.open],['Atlas','ATLAS',o=>o&&o.open],
+    ['CryptoSignals','CRYPTO',o=>o&&o.open],['hkBiblioteca','BIBLIOTECA',o=>o],['hkOracle','ORACLE',o=>o],
+    ['hkGalaxia','GALAXIA',o=>o],['hkDefensa','DEFENSA',o=>o],['hkBackrooms','BACKROOMS',o=>o]];
+  const AGENTES=[['prioritizer','PRIORIZAR'],['strategist','ESTRATEGIA'],['writer','ESCRIBIR'],
+                 ['analyst','ANALIZAR'],['aduanero','ADUANERO'],['futures','FUTUROS'],['gta6','GTA6']];
+
+  // ── los cuerpos. Tuyos, guardados, nada inventado. ──
+  const K='hk23_formas';
+  const leer=()=>{ try{ return JSON.parse(localStorage.getItem(K))||[]; }catch(e){ return []; } };
+  const guardar=()=>{ try{ localStorage.setItem(K,JSON.stringify(F)); return true; }catch(e){ return false; } };
+  let F=leer();
+  const nuevoId=()=>'f'+Date.now().toString(36)+Math.floor(Math.random()*1e3).toString(36);
+  function cuerpo(o){ return Object.assign({ id:nuevoId(), t:'SIN NOMBRE', url:'', fav:'',
+    orb:1, ang:Math.random()*TAU, forma:'esfera', tam:14, color:'#9FE8FF',
+    anim:'orbita', vel:0.6, job:{tipo:'nada',valor:'',prompt:'',agente:'prioritizer'} }, o||{}); }
+
+  // ── lienzo ──
+  const cv=$('tf-cv'), g=cv.getContext('2d');
+  let W=0,H=0,DPR=1,CX=0,CY=0,R0=0,R1=0,ANILLOS=5;
+  function fit(){ const r=cv.getBoundingClientRect();
+    DPR=Math.min(2,window.devicePixelRatio||1);
+    const w=Math.round(r.width*DPR), h=Math.round(r.height*DPR);
+    if(cv.width!==w||cv.height!==h){ cv.width=w; cv.height=h; }
+    W=cv.width; H=cv.height;
+    CX=W*0.5; CY=H*0.52; R0=Math.min(W,H)*0.14; R1=Math.min(W,H)*0.44; }
+  const radio=orb=>orb<=0?0:R0+(R1-R0)*((orb-1)/Math.max(1,ANILLOS-1));
+  addEventListener('resize',()=>{ fit(); });
+
+  // ── dibujar cada forma. La forma es la forma: se distingue de lejos. ──
+  function pintarForma(x,y,r,col,forma,t,vivo,rot){
+    g.save(); g.translate(x,y); if(rot) g.rotate(rot);
+    const gr=g.createRadialGradient(-r*0.34,-r*0.36,r*0.05,0,0,r);
+    gr.addColorStop(0, vivo?'#FFFFFF':'#A8B4C6'); gr.addColorStop(0.30,col); gr.addColorStop(1,'#05070E');
+    g.fillStyle=gr; g.strokeStyle=col; g.lineWidth=Math.max(1.2,r*0.10);
+    if(forma==='esfera'){ g.beginPath(); g.arc(0,0,r,0,TAU); g.fill(); }
+    else if(forma==='cubo'){ const s=r*1.55; g.fillRect(-s/2,-s/2,s,s);
+      g.strokeRect(-s/2,-s/2,s,s); }
+    else if(forma==='rombo'){ g.beginPath(); g.moveTo(0,-r*1.3); g.lineTo(r*1.1,0); g.lineTo(0,r*1.3);
+      g.lineTo(-r*1.1,0); g.closePath(); g.fill(); g.stroke(); }
+    else if(forma==='disco'){ g.beginPath(); g.ellipse(0,0,r*1.5,r*0.42,0,0,TAU); g.fill(); g.stroke(); }
+    else if(forma==='anillo'){ g.beginPath(); g.arc(0,0,r*0.72,0,TAU); g.fill();
+      for(let k=0;k<2;k++){ g.beginPath(); g.ellipse(0,0,r*(1.7+k*0.34),r*(0.52+k*0.10),-0.4,0,TAU);
+        g.strokeStyle=col+(k?'77':'CC'); g.lineWidth=Math.max(1.1,r*(0.14-k*0.05)); g.stroke(); } }
+    else if(forma==='nube'){ [[0,0,1],[-0.8,0.15,0.72],[0.8,0.15,0.72],[-0.4,-0.4,0.6],[0.45,-0.35,0.62]]
+      .forEach(([dx,dy,k])=>{ g.beginPath(); g.arc(dx*r,dy*r,r*k,0,TAU); g.fill(); }); }
+    else if(forma==='estrella'){ g.beginPath();
+      for(let i=0;i<10;i++){ const a=i/10*TAU-Math.PI/2, rr=i%2?r*0.46:r*1.45;
+        i?g.lineTo(Math.cos(a)*rr,Math.sin(a)*rr):g.moveTo(Math.cos(a)*rr,Math.sin(a)*rr); }
+      g.closePath(); g.fill(); g.stroke(); }
+    g.restore();
+  }

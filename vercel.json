@@ -23,6 +23,22 @@
   ],
   "rewrites": [
     {
+      "source": "/universe-os",
+      "destination": "/hk23-universe.html"
+    },
+    {
+      "source": "/universo-copia",
+      "destination": "/universo-copia.html"
+    },
+    {
+      "source": "/frequency",
+      "destination": "/hk23-universe.html?g=frequency"
+    },
+    {
+      "source": "/jc",
+      "destination": "/hk23-universe.html?g=frequency"
+    },
+    {
       "source": "/g/:slug",
       "destination": "/hk23-universe.html?g=:slug"
     }

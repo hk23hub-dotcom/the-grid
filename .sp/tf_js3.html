@@ -1,0 +1,91 @@
+
+  // ── el inspector: acá se cambia la forma de verdad ──
+  function avisar(t){ let el=$('tf-live');
+    if(!el){ el=document.createElement('div'); el.id='tf-live'; el.setAttribute('aria-live','polite');
+      el.style.cssText='position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)'; $('tf').appendChild(el); }
+    el.textContent=t; }
+  function inspector(id){
+    const c=F.find(x=>x.id===id); const P=$('tf-ins');
+    if(!c){ P.classList.remove('open'); return; }
+    sel=id;
+    const job=c.job||{tipo:'nada'};
+    const chips=(arr,k,val)=>arr.map(([v,l])=>
+      '<button class="ti-chip'+(val===v?' on':'')+'" data-set="'+k+'" data-val="'+esc(v)+'">'+esc(l)+'</button>').join('');
+    P.innerHTML='<div class="ti-w">'+
+      '<div class="ti-eye">◆ LA FORMA</div><h3 class="ti-t">'+esc(c.t||'—')+'</h3>'+
+      '<input class="ti-in" id="ti-nom" value="'+esc(c.t||'')+'" placeholder="nombre" aria-label="Nombre">'+
+      '<div class="ti-h">FORMA</div><div class="ti-row">'+chips(FORMAS,'forma',c.forma)+'</div>'+
+      '<div class="ti-h">TAMAÑO · '+c.tam+'</div>'+
+      '<input class="ti-sl" type="range" id="ti-tam" min="6" max="46" value="'+c.tam+'" aria-label="Tamaño">'+
+      '<div class="ti-h">COLOR</div><div class="ti-row">'+COLORES.map(k=>
+        '<button class="ti-col'+(c.color===k?' on':'')+'" style="background:'+k+'" data-set="color" data-val="'+k+
+        '" aria-label="Color '+k+'"></button>').join('')+'</div>'+
+      '<div class="ti-h">ANIMACIÓN</div><div class="ti-row">'+chips(ANIMS,'anim',c.anim)+'</div>'+
+      '<div class="ti-h">VELOCIDAD · '+(c.vel||0).toFixed(1)+'</div>'+
+      '<input class="ti-sl" type="range" id="ti-vel" min="0" max="20" value="'+Math.round((c.vel||0)*10)+'" aria-label="Velocidad">'+
+      '<div class="ti-h">ÓRBITA · '+c.orb+'</div>'+
+      '<input class="ti-sl" type="range" id="ti-orb" min="1" max="'+ANILLOS+'" value="'+c.orb+'" aria-label="Órbita">'+
+      '<div class="ti-h">TRABAJO — QUÉ HACE ESTA FORMA</div><div class="ti-row">'+chips(TRABAJOS,'jobtipo',job.tipo)+'</div>'+
+      (job.tipo==='link'? '<input class="ti-in" id="ti-jv" style="margin-top:8px" value="'+esc(job.valor||c.url||'')+'" placeholder="https://…" aria-label="Link">' :
+       job.tipo==='mundo'? '<div class="ti-row" style="margin-top:8px">'+MUNDOS.map(([k,l])=>
+          '<button class="ti-chip'+(job.valor===k?' on':'')+'" data-set="jobvalor" data-val="'+k+'">'+l+'</button>').join('')+'</div>' :
+       job.tipo==='agente'? '<div class="ti-row" style="margin-top:8px">'+AGENTES.map(([k,l])=>
+          '<button class="ti-chip'+((job.agente||'prioritizer')===k?' on':'')+'" data-set="jobagente" data-val="'+k+'">'+l+'</button>').join('')+
+          '</div><input class="ti-in" id="ti-jp" style="margin-top:8px" value="'+esc(job.prompt||'')+'" placeholder="qué le pedís al agente" aria-label="Prompt">' : '')+
+      '<div id="ti-out"></div>'+
+      '<div class="ti-acts">'+
+        (job.tipo!=='nada'?'<button class="tf-b on" id="ti-run">▶ HACERLO TRABAJAR</button>':'')+
+        '<button class="tf-b" id="ti-dup">⧉ DUPLICAR</button>'+
+        '<button class="tf-b" id="ti-del">✕ BORRAR</button>'+
+        '<button class="tf-b" id="ti-cls">CERRAR</button>'+
+      '</div></div>';
+    P.classList.add('open');
+    P.querySelectorAll('[data-set]').forEach(b=>b.onclick=()=>{
+      const k=b.dataset.set, v=b.dataset.val;
+      if(k==='jobtipo'){ c.job=Object.assign({valor:'',prompt:'',agente:'prioritizer'},c.job,{tipo:v}); }
+      else if(k==='jobvalor'){ c.job=Object.assign({},c.job,{valor:v}); }
+      else if(k==='jobagente'){ c.job=Object.assign({},c.job,{agente:v}); }
+      else c[k]=v;
+      guardar(); inspector(id); });
+    const liga=(el,fn)=>{ const e=$(el); if(e) e.oninput=()=>{ fn(e.value); guardar(); }; };
+    liga('ti-tam',v=>{ c.tam=+v; const h=P.querySelector('.ti-h'); });
+    liga('ti-vel',v=>{ c.vel=+v/10; });
+    liga('ti-orb',v=>{ c.orb=+v; });
+    const nom=$('ti-nom'); if(nom) nom.oninput=()=>{ c.t=nom.value; guardar(); };
+    const jv=$('ti-jv'); if(jv) jv.oninput=()=>{ c.job=Object.assign({},c.job,{valor:jv.value}); guardar(); };
+    const jp=$('ti-jp'); if(jp) jp.oninput=()=>{ c.job=Object.assign({},c.job,{prompt:jp.value}); guardar(); };
+    if($('ti-run')) $('ti-run').onclick=()=>trabajar(c);
+    $('ti-dup').onclick=()=>{ const n=cuerpo(Object.assign({},c,{id:nuevoId(),ang:c.ang+0.4,t:(c.t||'')+' ·2'}));
+      delete n._x; delete n._y; F.push(n); guardar(); vacio(); inspector(n.id); };
+    $('ti-del').onclick=()=>{ F=F.filter(x=>x.id!==c.id); guardar(); sel=null;
+      P.classList.remove('open'); vacio(); avisar('Forma borrada.'); };
+    $('ti-cls').onclick=()=>{ P.classList.remove('open'); sel=null; };
+  }
+
+  // ── una forma con trabajo es un mini agente ──
+  async function trabajar(c){
+    const job=c.job||{}, out=$('ti-out');
+    const di=(t,err)=>{ if(out){ out.className='ti-out'+(err?' err':''); out.textContent=t; } avisar(t.slice(0,90)); };
+    if(job.tipo==='link'){ const u=safeUrl(job.valor||c.url);
+      if(!u) return di('Esa forma no tiene un link válido.',1);
+      window.open(u,'_blank','noopener'); return di('Abriendo '+u); }
+    if(job.tipo==='mundo'){ const m=MUNDOS.find(x=>x[0]===job.valor);
+      if(!m) return di('Elegí qué mundo abre.',1);
+      let fn=null; try{ fn=m[2](window[m[0]]); }catch(e){}
+      if(typeof fn!=='function') return di('El mundo '+m[1]+' no responde en esta página.',1);
+      cerrar(); setTimeout(()=>{ try{ fn(); }catch(e){} },140); return; }
+    if(job.tipo==='agente'){
+      const p=(job.prompt||'').trim();
+      if(!p) return di('Escribile qué querés que haga.',1);
+      di('Corriendo…');
+      try{
+        const r=await fetch('/api/run',{method:'POST',
+          headers:{'Content-Type':'application/json','x-run-token':'hk23-run-9x'},
+          body:JSON.stringify({action:'agent',agent:job.agente||'prioritizer',prompt:p})});
+        const j=await r.json().catch(()=>({}));
+        if(!r.ok) return di('No corrió. HTTP '+r.status+(j.error?' — '+j.error:''),1);
+        di(j.text||j.output||JSON.stringify(j,null,2));
+        log('formas',c.t+' corrió el agente '+(job.agente||''));
+      }catch(e){ di('No se pudo llamar al runner: '+(e&&e.message||e),1); }
+    }
+  }

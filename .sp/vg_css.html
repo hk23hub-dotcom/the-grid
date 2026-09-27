@@ -1,0 +1,80 @@
+<!-- ═══════════ VICEGOLFER — no un planeta: el green. Tu marca, tu protocolo, tu línea al 2030. ═══════════ -->
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;700&family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
+<style id="vg-style">
+  #vg{ position:fixed; inset:0; z-index:976; display:none; background:#060608; overflow:hidden;
+    font-family:'Montserrat',system-ui,sans-serif; color:#e8e8ec; }
+  #vg.open{ display:block; }
+  #vg-cv{ position:absolute; inset:0; width:100%; height:100%; touch-action:none; }
+  .vg-top{ position:absolute; left:0; right:0; top:0; z-index:3; display:flex; align-items:center; gap:10px;
+    padding:14px; padding-top:calc(14px + env(safe-area-inset-top,0px));
+    background:linear-gradient(#060608E8,#06060800); pointer-events:none; }
+  .vg-top > *{ pointer-events:auto; }
+  .vg-top b{ font-family:'Bebas Neue',sans-serif; font-size:24px; letter-spacing:3px; line-height:1;
+    color:#e8e8ec; font-weight:400; }
+  .vg-top b em{ font-style:normal; color:#C6A15B; }
+  .vg-top i{ font-family:'JetBrains Mono',monospace; font-size:8px; letter-spacing:3px; color:#5a5a66; font-style:normal; }
+  .vg-x{ margin-left:auto; font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:2px;
+    color:#060608; background:#e8e8ec; border:none; border-radius:3px; padding:11px 15px; cursor:pointer; min-height:44px; }
+  .vg-tabs{ position:absolute; left:0; right:0; bottom:0; z-index:3; display:flex; gap:6px; overflow-x:auto;
+    padding:12px 14px calc(12px + env(safe-area-inset-bottom,0px));
+    background:linear-gradient(#06060800,#060608E8 40%); -webkit-overflow-scrolling:touch; }
+  .vg-t{ flex:0 0 auto; font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:2px;
+    color:#a0a0aa; background:transparent; border:1px solid #2a2a32; border-radius:3px;
+    padding:11px 14px; cursor:pointer; min-height:44px; }
+  .vg-t.on{ background:#C6A15B; color:#060608; border-color:#C6A15B; font-weight:700; }
+  .vg-t:focus-visible{ outline:2px solid #C6A15B; outline-offset:2px; }
+  .vg-hud{ position:absolute; left:14px; top:74px; z-index:3; font-family:'JetBrains Mono',monospace;
+    font-size:10px; letter-spacing:1px; color:#a0a0aa; line-height:2; pointer-events:none; }
+  .vg-hud b{ color:#C6A15B; font-weight:700; }
+  .vg-dists{ position:absolute; right:14px; top:74px; z-index:3; display:flex; flex-direction:column; gap:6px; }
+  .vg-d{ font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:2px; color:#a0a0aa;
+    background:#0e0f14CC; border:1px solid #2a2a32; border-radius:3px; padding:10px 13px;
+    cursor:pointer; min-height:44px; min-width:64px; text-align:center; }
+  .vg-d.on{ background:#C6A15B; color:#060608; border-color:#C6A15B; font-weight:700; }
+  .vg-panel{ position:absolute; inset:0; z-index:6; display:none; background:#060608F5; overflow-y:auto;
+    -webkit-overflow-scrolling:touch; }
+  .vg-panel.show{ display:block; }
+  .vp-w{ max-width:680px; margin:0 auto; padding:88px 18px calc(96px + env(safe-area-inset-bottom,0px)); }
+  .vp-eye{ font-family:'JetBrains Mono',monospace; font-size:8px; letter-spacing:4px; color:#5a5a66; margin-bottom:8px; }
+  .vp-t{ font-family:'Bebas Neue',sans-serif; font-size:44px; letter-spacing:2px; line-height:.95;
+    margin:0 0 14px; font-weight:400; }
+  .vp-t em{ font-style:normal; color:#C6A15B; }
+  .vp-h{ font-family:'JetBrains Mono',monospace; font-size:8px; letter-spacing:4px; color:#5a5a66;
+    margin:24px 0 10px; border-bottom:1px solid #1c1d24; padding-bottom:7px; }
+  .vp-card{ background:#0e0f14; border:1px solid #1c1d24; border-radius:6px; padding:14px 15px; margin-bottom:9px; }
+  .vp-card b{ display:block; font-size:14px; font-weight:800; margin-bottom:4px; }
+  .vp-card i{ display:block; font-style:normal; font-family:'JetBrains Mono',monospace; font-size:9px;
+    letter-spacing:1px; color:#5a5a66; margin-bottom:6px; }
+  .vp-card p{ margin:0; font-size:12.5px; line-height:1.7; color:#a0a0aa; }
+  .vp-in,.vp-ta,.vp-sel{ width:100%; background:#0e0f14; border:1px solid #2a2a32; border-radius:4px;
+    color:#e8e8ec; font:400 13px 'JetBrains Mono',monospace; padding:12px; min-height:46px; margin-bottom:9px; }
+  .vp-ta{ min-height:80px; line-height:1.7; resize:vertical; font-family:'Montserrat',sans-serif; }
+  .vp-in:focus-visible,.vp-ta:focus-visible{ outline:2px solid #C6A15B; outline-offset:1px; }
+  .vp-b{ background:#C6A15B; color:#060608; border:none; border-radius:4px; padding:13px 17px;
+    font:700 11px 'JetBrains Mono',monospace; letter-spacing:2px; cursor:pointer; min-height:46px; }
+  .vp-b2{ background:transparent; border:1px solid #2a2a32; color:#a0a0aa; border-radius:4px;
+    padding:12px 15px; font:400 10px 'JetBrains Mono',monospace; letter-spacing:1px; cursor:pointer; min-height:46px; }
+  .vp-row{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .vp-note{ font-size:11px; line-height:1.75; color:#5a5a66; border-left:2px solid #1c1d24;
+    padding-left:11px; margin:14px 0 0; }
+  .vp-stat{ display:inline-block; font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:1px;
+    border-radius:3px; padding:4px 8px; font-weight:700; }
+  /* la línea al 2030 */
+  .vg-tl{ position:relative; padding-left:26px; }
+  .vg-tl:before{ content:''; position:absolute; left:8px; top:6px; bottom:6px; width:2px; background:#2a2a32; }
+  .vg-hito{ position:relative; margin-bottom:14px; }
+  .vg-hito:before{ content:''; position:absolute; left:-24px; top:6px; width:12px; height:12px;
+    border-radius:50%; background:#0e0f14; border:2px solid #5a5a66; }
+  .vg-hito.hecho:before{ background:#C6A15B; border-color:#C6A15B; }
+  .vg-hito .anio{ font-family:'Bebas Neue',sans-serif; font-size:19px; letter-spacing:2px; color:#C6A15B; }
+  @media(prefers-reduced-motion:reduce){ #vg *{ animation:none !important; transition:none !important; } }
+</style>
+<div id="vg" role="dialog" aria-modal="true" aria-label="ViceGolfer">
+  <canvas id="vg-cv"></canvas>
+  <div class="vg-top"><b>VICE<em>GOLFER</em></b><i>ARRASTRÁ DESDE LA BOLA · SOLTÁ PARA PATEAR</i>
+    <button class="vg-x" id="vg-close">✕</button></div>
+  <div class="vg-hud" id="vg-hud"></div>
+  <div class="vg-dists" id="vg-dists"></div>
+  <div class="vg-tabs" id="vg-tabs"></div>
+  <div class="vg-panel" id="vg-p"></div>
+</div>

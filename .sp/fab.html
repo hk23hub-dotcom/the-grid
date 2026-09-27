@@ -1,0 +1,21 @@
+<script>
+// ═══ El botón DASHBOARD vivía en z-index 9000 y tapaba todos los mundos. Se aparta. ═══
+(function(){
+  const MUNDOS='#ar.open, #tf.open, #mp.open, #atlas.open, #cw.open, #mvb.open, #taller.open, #wa.open, .hkov.open';
+  function revisar(){
+    const fab=document.getElementById('dash-fab');
+    if(!fab) return;
+    const panel=document.getElementById('dash-panel');
+    const abierto=!!document.querySelector(MUNDOS);
+    const dashAbierto=panel&&panel.classList.contains('open');
+    fab.style.display = (abierto && !dashAbierto) ? 'none' : '';
+  }
+  const arranca=()=>{
+    if(!document.getElementById('dash-fab')) return setTimeout(arranca,400);
+    revisar();
+    new MutationObserver(revisar).observe(document.body,
+      { attributes:true, subtree:true, attributeFilter:['class','style'] });
+  };
+  arranca();
+})();
+</script>

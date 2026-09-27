@@ -1,0 +1,113 @@
+
+  // ── las secciones ──
+  const TABS=[['cancha','⬢ CANCHA'],['playbook','▤ PLAYBOOK'],['reglas','§ REGLAS'],
+              ['skills','↗ SKILLS'],['merch','◈ MERCH']];
+  let tab='cancha';
+  const REGLAS=[
+    ['EL TRY — 5 PUNTOS','Apoyar la pelota con control en el in-goal rival. La conversión que sigue vale 2.'],
+    ['PENAL 3 · DROP 3','La patada a los palos desde el suelo vale 3. El drop, soltando y pateando al bote, también.'],
+    ['EL PASE ES HACIA ATRÁS','Adelante con la mano no existe: knock-on o forward pass, scrum para el rival.'],
+    ['OFFSIDE','Si estás delante del último pie del ruck, no jugás. Volvé o regalás penal.'],
+    ['EL TACKLE','Solo al portador, debajo de la línea de los hombros. Al suelo, soltás: el que tacklea libera.'],
+    ['RUCK Y MAUL','Pelota en el suelo con jugadores encima: ruck — se entra por atrás. Pelota en mano sostenida: maul.'],
+    ['15 CONTRA 15','8 forwards que chocan, 7 backs que corren. 80 minutos. El que llega mejor al 70, gana.']
+  ];
+  const SKILLS=[['pase','PASE'],['tackle','TACKLE'],['kick','KICKING'],['ruck','RUCK'],['mental','MENTAL']];
+  function avisar(t){ let el=$('rv-live');
+    if(!el){ el=document.createElement('div'); el.id='rv-live'; el.setAttribute('aria-live','polite');
+      el.style.cssText='position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)'; $('rv').appendChild(el); }
+    el.textContent=t; }
+  function ir(t){ tab=t;
+    document.querySelectorAll('#rv-tabs .rv-t').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
+    const enCancha=t==='cancha';
+    $('rv-p').classList.toggle('show',!enCancha);
+    $('rv-modo').style.display=enCancha?'':'none';
+    $('rv-hud').style.display=enCancha?'':'none';
+    if(!enCancha) pinta(t); }
+  function pinta(t){
+    const P=$('rv-p');
+    if(t==='playbook'){
+      const propias=st.get('hk23_rv_plays',[]);
+      P.innerHTML='<div class="rp-w"><div class="rp-eye">RUGBY VICE · EL GUION</div>'+
+        '<h2 class="rp-t">PLAY<em>BOOK.</em></h2>'+
+        '<div class="rp-h">JUGADAS EN LA CANCHA — TOCÁ Y SE CORRE</div>'+
+        PLAYS.map(p=>'<div class="rp-card"><b>'+esc(p.n)+'</b><p>'+esc(p.d)+'</p>'+
+          '<div class="rp-row" style="margin-top:10px"><button class="rp-b" data-run="'+esc(p.k)+'">▶ CORRERLA</button></div></div>').join('')+
+        '<div class="rp-h">LAS TUYAS ('+propias.length+')</div>'+
+        (propias.length? propias.slice().reverse().map(p=>'<div class="rp-card"><b>'+esc(p.n)+'</b><p>'+esc(p.d)+'</p></div>').join('')
+          : '<div class="rp-card"><p>Todavía ninguna. Las tres de arriba son clásicas del juego — las tuyas anotalas acá, con tu nombre y tu idea.</p></div>')+
+        '<input class="rp-in" id="rp-pn" placeholder="nombre de la jugada">'+
+        '<textarea class="rp-ta" id="rp-pd" placeholder="cómo se corre — quién toca, quién engaña, quién rompe"></textarea>'+
+        '<button class="rp-b" id="rp-pok">＋ AL PLAYBOOK</button></div>';
+      P.querySelectorAll('[data-run]').forEach(b=>b.onclick=()=>{ play=PLAYS.find(p=>p.k===b.dataset.run);
+        playT=0; modo='jugada'; sincModo(); ir('cancha'); hud(); log('rugby','corrió '+play.n); });
+      $('rp-pok').onclick=()=>{ const n=($('rp-pn').value||'').trim(), d=($('rp-pd').value||'').trim();
+        if(!n){ avisar('Nombre, mínimo.'); return; }
+        const L=st.get('hk23_rv_plays',[]); L.push({n,d}); st.set('hk23_rv_plays',L);
+        avisar('Jugada anotada.'); pinta('playbook'); };
+      return;
+    }
+    if(t==='reglas'){
+      P.innerHTML='<div class="rp-w"><div class="rp-eye">RUGBY VICE · LO QUE HAY QUE SABER</div>'+
+        '<h2 class="rp-t">LAS <em>REGLAS.</em></h2>'+
+        REGLAS.map(([a,b5])=>'<div class="rp-card"><b>'+esc(a)+'</b><p>'+esc(b5)+'</p></div>').join('')+
+        '<p class="rp-note">Las siete que explican el 90% de lo que ves en una cancha. El reglamento entero de World Rugby tiene más — esto es para entrar.</p></div>';
+      return;
+    }
+    if(t==='skills'){
+      const S=st.get('hk23_rv_skills',{});
+      P.innerHTML='<div class="rp-w"><div class="rp-eye">RUGBY VICE · SKILL DEVELOPMENT</div>'+
+        '<h2 class="rp-t">EL QUE ENTRENA, <em>GANA.</em></h2>'+
+        SKILLS.map(([k,l])=>{ const v=S[k]||0;
+          return '<div class="rp-card"><b>'+esc(l)+' <span style="float:right;font-family:JetBrains Mono,monospace;font-size:11px;color:#00F0FF">NIVEL '+v+'/10</span></b>'+
+          '<div class="rp-bar"><div style="width:'+(v*10)+'%"></div></div>'+
+          '<div class="rp-row" style="margin-top:10px">'+
+          '<button class="rp-b2" data-sk="'+k+'" data-d="1">＋ SUBIR</button>'+
+          (v>0?'<button class="rp-b2" data-sk="'+k+'" data-d="-1">− BAJAR</button>':'')+
+          '</div></div>'; }).join('')+
+        '<p class="rp-note">El nivel lo ponés vos y se guarda en este aparato. Nadie más que vos sabe si es verdad — así que que sea verdad.</p></div>';
+      P.querySelectorAll('[data-sk]').forEach(b=>b.onclick=()=>{ const S2=st.get('hk23_rv_skills',{});
+        const k=b.dataset.sk; S2[k]=Math.max(0,Math.min(10,(S2[k]||0)+(+b.dataset.d)));
+        st.set('hk23_rv_skills',S2); pinta('skills'); });
+      return;
+    }
+    if(t==='merch'){
+      P.innerHTML='<div class="rp-w"><div class="rp-eye">RUGBY VICE · MERCH</div>'+
+        '<h2 class="rp-t">EL <em>QUIOSCO.</em></h2>'+
+        '<div class="rp-card"><p>Vacío y lo dice — el merch de Rugby Vice se publica desde el DASHBOARD → VENDER '+
+        'con precio y link de pago, y aparece acá cuando exista. No te muestro poleras inventadas.</p>'+
+        '<div class="rp-row" style="margin-top:10px"><button class="rp-b" id="rv-vender">▦ ABRIR VENDER</button></div></div></div>';
+      $('rv-vender').onclick=()=>{ cerrar(); setTimeout(()=>{ try{ window.DASH.toggle(); window.DASHX.vender(); }catch(e){} },160); };
+      return;
+    }
+  }
+
+  // ── armar ──
+  function sincModo(){ document.querySelectorAll('.rv-m').forEach(b=>b.classList.toggle('on',b.dataset.mo===modo)); }
+  $('rv-tabs').innerHTML=TABS.map(([k,l])=>'<button class="rv-t'+(k==='cancha'?' on':'')+'" data-t="'+k+'">'+l+'</button>').join('');
+  document.querySelectorAll('#rv-tabs .rv-t').forEach(b=>b.onclick=()=>ir(b.dataset.t));
+  $('rv-modo').innerHTML='<button class="rv-m on" data-mo="jugada">▶ LA JUGADA</button>'+
+    '<button class="rv-m" data-mo="kicker">⚡ EL KICKER</button>';
+  document.querySelectorAll('.rv-m').forEach(b=>b.onclick=()=>{ modo=b.dataset.mo; sincModo(); hud();
+    avisar(modo==='kicker'?'Kicker: arrastrá desde la pelota y soltá.':'La jugada corre en loop.'); });
+
+  let ultimo=null;
+  function abrir(){ const el=$('rv'); if(el.classList.contains('open')) return;
+    el.classList.add('open'); ultimo=document.activeElement;
+    corriendo=true; t0=null; playT=0; fit(); hud(); ir('cancha'); requestAnimationFrame(pintar);
+    setTimeout(()=>{ const b=$('rv-close'); if(b) b.focus(); },30);
+    log('rugby','entró a RUGBY VICE'); }
+  function cerrar(){ const el=$('rv'); if(!el.classList.contains('open')) return;
+    corriendo=false; el.classList.remove('open');
+    if(ultimo&&ultimo.focus) ultimo.focus(); ultimo=null; }
+  $('rv-close').onclick=cerrar;
+  addEventListener('keydown',e=>{
+    if(/INPUT|TEXTAREA|SELECT/.test((document.activeElement||{}).tagName||'')) return;
+    if(!$('rv').classList.contains('open')) return;
+    if(e.key==='Escape'){ e.stopImmediatePropagation();
+      if(tab!=='cancha') ir('cancha'); else cerrar(); }
+  }, true);
+
+  window.RugbyVice={ open:abrir, close:cerrar, ir, kicks:()=>st.get('hk23_rv_kicks',{m:0,a:0}), version:'1' };
+})();
+</script>

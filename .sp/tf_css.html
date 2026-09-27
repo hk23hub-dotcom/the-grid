@@ -1,0 +1,72 @@
+<!-- ═══════════ EL TALLER DE FORMAS — agarralas, movelas, cambialas, ponelas a trabajar ═══════════ -->
+<style id="tf-style">
+  #tf{ position:fixed; inset:0; z-index:979; display:none; background:#03040A;
+    font-family:'Space Mono',ui-monospace,monospace; color:#E6E4DE; overflow:hidden; }
+  #tf.open{ display:block; }
+  #tf-cv{ position:absolute; inset:0; width:100%; height:100%; touch-action:none; cursor:grab; }
+  #tf-cv.agarrando{ cursor:grabbing; }
+  .tf-top{ position:absolute; left:0; right:0; top:0; z-index:3; display:flex; align-items:center; gap:8px;
+    padding:14px; padding-top:calc(14px + env(safe-area-inset-top,0px)); flex-wrap:wrap;
+    background:linear-gradient(#03040A,#03040A00); pointer-events:none; }
+  .tf-top > *{ pointer-events:auto; }
+  .tf-top b{ font-size:12px; letter-spacing:5px; }
+  .tf-top i{ font-size:8px; letter-spacing:3px; color:#5A6478; font-style:normal; }
+  .tf-b{ font-size:9px; letter-spacing:2px; color:#9FE8FF; background:transparent; border:1px solid #24384A;
+    border-radius:4px; padding:11px 13px; cursor:pointer; min-height:44px; }
+  .tf-b.on{ background:#9FE8FF; color:#03040A; font-weight:700; }
+  .tf-b:focus-visible{ outline:2px solid #9FE8FF; outline-offset:2px; }
+  .tf-x{ margin-left:auto; font-size:11px; letter-spacing:2px; color:#03040A; background:#E6E4DE;
+    border:none; border-radius:4px; padding:11px 15px; cursor:pointer; min-height:44px; }
+
+  /* el inspector: lo que cambia la forma seleccionada */
+  #tf-ins{ position:absolute; right:0; top:0; bottom:0; width:340px; max-width:92vw; z-index:5;
+    background:rgba(5,7,14,.97); border-left:1px solid #182230; overflow-y:auto;
+    transform:translateX(100%); transition:transform .18s ease; }
+  #tf-ins.open{ transform:translateX(0); }
+  .ti-w{ padding:20px 16px calc(40px + env(safe-area-inset-bottom,0px)); }
+  .ti-eye{ font-size:8px; letter-spacing:4px; color:#5A6478; margin-bottom:6px; }
+  .ti-t{ font-size:17px; font-weight:700; letter-spacing:-.2px; margin:0 0 16px; word-break:break-word; }
+  .ti-h{ font-size:8px; letter-spacing:4px; color:#5A6478; margin:18px 0 8px;
+    border-bottom:1px solid #141C26; padding-bottom:6px; }
+  .ti-row{ display:flex; gap:6px; flex-wrap:wrap; }
+  .ti-chip{ font-size:9px; letter-spacing:1px; background:transparent; border:1px solid #24384A; color:#8C97A8;
+    border-radius:4px; padding:10px 11px; cursor:pointer; min-height:44px; flex:1 0 auto; }
+  .ti-chip.on{ background:#9FE8FF; color:#03040A; border-color:#9FE8FF; font-weight:700; }
+  .ti-col{ width:34px; height:34px; border-radius:50%; border:2px solid transparent; cursor:pointer; padding:0; }
+  .ti-col.on{ border-color:#E6E4DE; }
+  .ti-sl{ width:100%; height:44px; accent-color:#9FE8FF; }
+  .ti-in{ width:100%; background:#03040A; border:1px solid #24384A; border-radius:4px; color:#E6E4DE;
+    font:400 12px 'Space Mono',ui-monospace,monospace; padding:11px; min-height:44px; margin-bottom:8px; }
+  .ti-in:focus-visible{ outline:2px solid #9FE8FF; outline-offset:1px; }
+  .ti-out{ white-space:pre-wrap; font-size:11px; line-height:1.7; color:#C7CFDA; background:#080B12;
+    border:1px solid #141C26; border-radius:5px; padding:11px; margin-top:8px; }
+  .ti-out.err{ border-color:#4A2216; color:#FF8A6A; }
+  .ti-acts{ display:flex; gap:6px; flex-wrap:wrap; margin-top:18px; }
+  #tf-vacio{ position:absolute; inset:0; z-index:2; display:flex; align-items:center; justify-content:center;
+    padding:28px; pointer-events:none; }
+  #tf-vacio[hidden]{ display:none !important; }
+  #tf-vacio div{ max-width:430px; text-align:center; pointer-events:auto; }
+  #tf-vacio p{ font-size:12px; line-height:1.9; color:#8C97A8; margin:0 0 16px; }
+  #tf-add{ position:absolute; inset:0; z-index:8; display:none; background:rgba(3,4,10,.97); overflow-y:auto; }
+  #tf-add.open{ display:block; }
+  .ta-w{ max-width:520px; margin:0 auto; padding:26px 18px; }
+  @media(max-width:560px){ #tf-ins{ width:100%; top:auto; height:66vh; border-left:none; border-top:1px solid #182230;
+    transform:translateY(100%); } #tf-ins.open{ transform:translateY(0); } }
+  @media(prefers-reduced-motion:reduce){ #tf *{ animation:none !important; transition:none !important; } }
+</style>
+<div id="tf" role="dialog" aria-modal="true" aria-label="El taller de formas">
+  <canvas id="tf-cv"></canvas>
+  <div class="tf-top">
+    <b>FORMAS</b><i>ARRASTRÁ · TOCÁ PARA EDITAR</i>
+    <button class="tf-b" id="tf-new">＋ DESDE UN LINK</button>
+    <button class="tf-b" id="tf-import">↧ MIS PROYECTOS</button>
+    <button class="tf-x" id="tf-close">✕</button>
+  </div>
+  <div id="tf-vacio" hidden><div>
+    <p>Órbitas vacías. Pegá el link de un producto tuyo y aparece acá como cuerpo —<br>
+       después lo movés, le cambiás la forma, el tamaño, el color, y le das un trabajo.</p>
+    <button class="tf-b on" id="tf-new2">＋ PEGAR UN LINK</button>
+  </div></div>
+  <div id="tf-ins" role="region" aria-label="Editor de la forma"></div>
+  <div id="tf-add" role="dialog" aria-label="Agregar desde un link"></div>
+</div>
