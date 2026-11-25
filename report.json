@@ -1,6 +1,6 @@
 {
-  "generated": "2026-11-24T20:01:26.165Z",
-  "date": "2026-11-24",
+  "generated": "2026-11-25T19:01:35.363Z",
+  "date": "2026-11-25",
   "worlds": [
     {
       "id": "hk23-universe",
@@ -62,7 +62,7 @@
   },
   "featured": "chile-goldmine",
   "commits24h": [
-    "dc4e1a3 oracle: reporte diario 2026-11-23"
+    "7e0df94 oracle: reporte diario 2026-11-24"
   ],
   "weekCommitCount": 6,
   "actions": [
@@ -72,6 +72,7 @@
     "Repartir links ?ref= de la semana a los referidos"
   ],
   "reports": [
+    "2026-11-25.md",
     "2026-11-24.md",
     "2026-11-23.md",
     "2026-11-22.md",
@@ -100,7 +101,6 @@
     "2026-10-30.md",
     "2026-10-29.md",
     "2026-10-28.md",
-    "2026-10-27.md",
-    "2026-10-26.md"
+    "2026-10-27.md"
   ]
 }
